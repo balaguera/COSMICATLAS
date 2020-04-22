@@ -1,0 +1,19 @@
+Abrl 5 
+Bam.cpp0 es la version de Bam que usa arrays con las NCBIN incluidos, que coresponden a las invariantes del tensor de marea.
+La version Bam.cpp usa flags del procesador para usar los arreglos con 6 o 4 indices dependieno si se usa o no 2 dinvariantes.
+
+Abril 18
+Bam.cppAbril18 es la version que tiene como miembros de la duncion Bam las funciones
+que calculan la cwclass. 
+La version Bam.cpp tiene ahora un miembro privado del tipo Cwclass. La nueva clase Cwclass se encarga
+de hacer las clasificaciones en comic weo
+
+Abril 21
+Incorporando la opcion de usar el P pesado con la masa
+La idea es que en todo el proceso se usara el kernel obtenido del los espèctros
+pesados con la masa para convolucionar el DM, mientras qeu el Bias(Ncounts) para
+para asignar N y el Bias(M) para asignar masa.
+Si _USE_MASS_WEIGHTED_FIELD_ no esta definido, entonces el kernel que se usa
+por defecto es el obtenido a partir de los espectros.
+El espectro "marcado " aun no esta construido en PowerSpectrumF, aun que ya hay 
+un meimbro de esa clase con ese nombre, que es el mismo compute_power_specrum.
