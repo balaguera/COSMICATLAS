@@ -1,0 +1,990 @@
+void Bam::get_mock_grid(bool new_dm_field, string property)
+{
+  bool silent=true;
+  int NTHREADS;
+  
+#ifdef _USE_OMP_
+#ifdef _GET_BAM_REALIZATIONS_  //if bam mocks
+  NTHREADS = 1;  //This is because I have a problem with paralelization when we apply BAM to other DM fields
+  
+#ifdef _SHOW_ISSUES_
+  this->So.message_screen("Issue at line", __LINE__, ": omp is not working when kernel and bias are applied to new DM field");
+#endif
+  
+#elif !defined _GET_BAM_REALIZATIONS_    //if calibration
+  NTHREADS = omp_get_max_threads(); 
+#endif
+  omp_set_num_threads(NTHREADS);
+#elif !defined _USE_OMP_
+  NTHREADS=1;
+#endif
+  
+  // Define seed vector for each thread in the paralellized run
+  
+  int nx=this->NX;  // Number of bins id DM
+  
+  //fix this. use an if for the property, foe this>new_nbins_y has the latest update, which might bne that of the mass bins
+  //  int ny = property == _COUNTS_ ? this->new_nbins_y: this->new_nbins_y_MW;  // Number of bins in the reference property
+  int ny = this->new_nbins_y; //: this->new_nbins_y_MW;  // Number of bins in the reference property
+
+  
+  
+  // ****************************************************************************
+  // ****************************************************************************
+  // *********************NEW DARK MATTER FIELD *********************************
+  // ****************************************************************************
+  // ****************************************************************************
+  // ****************************************************************************
+  // At the end of the iteration process for the Kernel, we load a new target density field,
+  // e.g., another realization from the approximated method run with the same initial conditions (diff seed)
+  // This new density field is convolved with the current state of the kernel. Then CWC and MK are determined thereafter.
+  // This target DM is then sampled using the BIAS_NCOUNTS from  obtained from the current step, which used the
+  // the "original DM"
+  
+  //ANDRES: HERE WE HAVE TO ADD A FLAG, FOR IT MIGHT BE THAT THE DM FIELD HAS BEEN ALREADY CREATED IN THE PREVIOUS CALL OF get_mock_grid()
+
+  if(true==new_dm_field)
+    {
+      cout<<endl;
+      this->So.message_screen("CHANGING TO NEW TARGET DENSITY FIELD, line", __LINE__, "of file",__FILE__);
+      cout<<endl;
+
+      real_prec num_in_log_x = true==this->Convert_Density_to_Delta_X ? NUM_IN_LOG: 0.;
+      string file_X;
+      string file_Y;
+      string file_Vx;
+      string file_Vy;
+      string file_Vz;
+
+     
+      this->delta_X.clear();
+      this->delta_X.resize(this->NGRID,0);
+      this->delta_X_ini.clear();
+      this->delta_X_ini.resize(this->NGRID,0);
+      
+      int n_realization=this->step - this->N_iterations_Kernel + this->N_dm_initial-1;
+      real_prec nmean=0;
+      
+      // #ifndef _USE_PATCHY_  //If we cannot run patchy, we need to read DM files from somewhere, so we read them from paths hard coded here
+      //       string dir_dm;
+      //       this->So.message("Reading DM fields from ALPT+IC Minerva in /scratch/marcos/DMforBAM/");
+      //       if(n_realization<10)
+      // 	dir_dm= "/scratch/marcos/DMforBAM/DM_dens_ALPT_000"+to_string(n_realization)+"/";
+      //       else if(n_realization>=10 && n_realization<100)
+      // 	dir_dm= "/scratch/marcos/DMforBAM/DM_dens_ALPT_00"+to_string(n_realization)+"/";
+      //       else
+      // 	dir_dm= "/scratch/marcos/DMforBAM/DM_dens_ALPT_0"+to_string(n_realization)+"/";
+      
+      //       this->File.read_array(dir_dm+this->Name_Catalog_X_NEW, this->delta_X_ini);
+
+
+
+#ifndef _USE_PATCHY_  //If we cannot run patchy, we need to read DM files from somewhere, so we read them from paths hard coded here
+      this->File.read_array(this->Output_directory+this->Name_Catalog_X_NEW, this->delta_X_ini);
+
+
+      
+#ifdef _USE_VELOCITIES_
+      file_Vx="../";
+      file_Vy="../";
+      file_Vz="../"; 
+      this->Velx_X.resize(this->NGRID,0);
+      this->Vely_X.resize(this->NGRID,0);
+      this->Velz_X.resize(this->NGRID,0);
+      this->File.read_array(file_Vx, this->Velx_X);
+      this->File.read_array(file_Vy, this->Vely_X);
+      this->File.read_array(file_Vz, this->Velz_X);
+#endif
+      
+
+      nmean=get_nobjects(this->delta_X_ini);
+      So.message_screen("Total number of X objects (new) =", nmean);
+      nmean/=static_cast<real_prec>(this->NGRID);
+      So.message_screen("Average number of X objects (new) =", nmean);
+      cout<<endl;
+
+
+      // #ifdef _GET_POWER_REFS_
+      this->get_power_spectrum("DM_REF_NEW");  
+      // #endif      
+
+
+      get_overdens(this->delta_X_ini, this->delta_X_ini);
+
+            
+#else
+      // ***************************************************************************
+      {
+	
+	const gsl_rng_type *rng_t;
+	gsl_rng **gBaseRand;
+	gsl_rng_env_setup();
+	rng_t = gsl_rng_mt19937;// gsl_rng_default;
+	int nt=omp_get_max_threads();
+	gBaseRand = (gsl_rng **) malloc(nt * sizeof(gsl_rng *));
+	
+#pragma omp parallel for num_threads(nt)
+	for(int i=0;i<nt;i++)
+	  {
+	    gBaseRand[i] = gsl_rng_alloc(rng_t);
+	    gsl_rng_set(gBaseRand[i],this->seed);
+	  }
+	
+
+        /*
+	//Construct strings with names for output fiels in patchy.
+        //this->patchy.set_fnames();// we did this before. If needed, update names by accessing the public variables
+	
+	string dir_ic; //path to initial conditions (White Noise)
+	string dir_icdelta; //path to delta (innitial delta with input power)
+	if(n_realization<10)
+	  {
+	    dir_ic= this->params._dir()+this->params._ic_WN_dir()+"c_renorm_000"+to_string(n_realization)+"_500_delta";
+	    dir_icdelta=this->params._dir()+this->params._ic_WN_dir()+"c_renorm_000"+to_string(n_realization)+"_500_deltaICField";
+	  }
+	else if(n_realization>=10 && n_realization<100)
+	  {
+	    dir_ic=  this->params._dir()+this->params._ic_WN_dir()+"c_renorm_00"+to_string(n_realization)+"_500_delta";
+	    dir_icdelta=this->params._dir()+this->params._ic_WN_dir()+"c_renorm_00"+to_string(n_realization)+"_500_deltaICField";
+	  }
+	else
+	  {
+	    dir_ic=  this->params._dir()+this->params._ic_WN_dir()+"c_renorm_0"+to_string(n_realization)+"_500_delta";
+	    dir_icdelta=this->params._dir()+this->params._ic_WN_dir()+"c_renorm_0"+to_string(n_realization)+"_500_deltaICField";
+	  }
+	
+
+	// Set the new name of the intial conditions
+        this->patchy.fnameIC=dir_ic;
+
+        // Set the new name of the DM filed generated by Patchy
+        this->patchy.fnameDM += "realization"+to_string(n_realization);
+
+	this->patchy.fnameICDELTA=dir_icdelta;
+
+
+        */
+
+	
+        time_t start_patchy;
+	time(&start_patchy);
+
+        if(false==dm_already_done) //COmpute DM if it has not been done before through a call of this function
+	  {
+#ifdef OMPPARRAN
+	    this->patchy.get_dm_field(gBaseRand);
+#else
+	    this->patchy.get_dm_field(gBaseRand);
+#endif
+	    this->dm_already_done=true;
+	    this->So.message_screen("Patchy has created DMDF using ALPT");
+	    cout<<endl;
+
+	  }
+	// Patchy has written in files, so now we read them
+	file_X=this->patchy.fnameDM+".dat";
+
+#ifdef _USE_TRACER_HR_
+	file_Y=this->Input_Directory_Y+this->Name_Catalog_Y_HR;
+#else
+	file_Y=this->Input_Directory_Y+this->Name_Catalog_Y;
+#endif	
+
+        this->delta_X_ini.resize(this->NGRID,0);
+
+#ifdef _USE_VELOCITIES_
+	//here we have to read the vels of the newly created density field
+	file_Vx=this->patchy.fnameVX+".dat";
+	file_Vy=this->patchy.fnameVY+".dat";
+	file_Vz=this->patchy.fnameVZ+".dat";
+	this->Velx_X.resize(this->NGRID,0);
+	this->Vely_X.resize(this->NGRID,0);
+	this->Velz_X.resize(this->NGRID,0);
+	this->File.read_array(file_Vx, this->Velx_X);
+	this->File.read_array(file_Vy, this->Vely_X);
+	this->File.read_array(file_Vz, this->Velz_X);
+#endif // end ifdef _USE_VELOCITIES_
+
+        // read the just created density field
+        this->File.read_array(file_X, this->delta_X_ini);
+
+
+	//#ifdef _GET_POWER_REFS_
+ 	this->get_power_spectrum("DM_REF_NEW");  
+	//#endif      
+	nmean=get_nobjects(this->delta_X_ini);
+	So.message_screen("Total number of X objects (new) =", nmean);
+	nmean/=static_cast<real_prec>(this->NGRID);
+	So.message_screen("Average number of X objects (new) =", nmean);
+
+// Tansform input DF to Overdensity field
+	get_overdens(this->delta_X_ini, this->delta_X_ini);
+		
+      }
+      
+
+#endif
+
+      
+      vector<real_prec>xbaux(this->NX, 0);
+      vector<real_prec>pdf_in(this->NX, 0);
+      this->pdf_ref.resize(this->NX, 0);
+      this->pdf_ini.resize(this->NX, 0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(int i=0;i<this->NX; ++i)
+	xbaux[i]=this->Xmin+static_cast<real_prec>(i+0.5)*(this->Xmax-this->Xmin)/(static_cast<real_prec>(this->NX));
+      
+      //Here we attemtp to apply rank ordering in order to map the pdf of the used DM to that of the DM used
+      // to calibrate the bias and the kernel
+      if(true==this->Apply_Rankordering)
+	{
+	  
+          string rest_file="_Nft"+to_string(this->Nft)+"_z"+dto_string(this->redshift)+".txt";
+
+	  ULONG NGRID_NEW;
+#ifdef _EXTRAPOLATE_VOLUME_
+	  NGRID_NEW=static_cast<ULONG>(this->Nft_low*this->Nft_low*this->Nft_low);
+#else
+	  NGRID_NEW=this->NGRID;
+#endif
+  
+	  So.message_screen("Measuring pdf of log(1+delta) DM: ");
+          calc_pdf("log",this->NGRID,this->NX, this->Xmax, this->Xmin, this->delta_X_ini, pdf_in);
+	  this->pdf_ini=pdf_in;
+#ifdef WRITE_PDF
+	  string filex=this->Output_directory+"pdf_X_"+this->XNAME+"_MASX"+to_string(this->iMAS_X)+rest_file;
+	  this->File.write_to_file(filex, xbaux,pdf_in);
+#endif
+
+
+	  string file_X_ref=this->Input_Directory_X_REF+this->Name_Catalog_X_REF_PDF; // TBDep
+	  this->delta_X_REF_PDF.resize(NGRID_NEW,0);
+	  this->File.read_array(file_X_ref, this->delta_X_REF_PDF);
+	  get_overdens(this->delta_X_REF_PDF, this->delta_X_REF_PDF);
+	  So.message_screen("Measuring pdf of log(1+delta) DM reference : ");
+          calc_pdf("log",NGRID_NEW,this->NX, this->Xmax, this->Xmin, this->delta_X_REF_PDF, this->pdf_ref);
+	  So.DONE();
+#ifdef WRITE_PDF
+	  filex=this->Output_directory+"pdf_X_"+this->XNAME+"_REF_MASX"+to_string(this->iMAS_X)+rest_file;
+          this->File.write_to_file(filex, xbaux,this->pdf_ref);
+#endif
+	  
+	  So.message_screen("Executing rank ordering: ");
+	  rankorder(this->step, xbaux, this->NGRID, this->NX,  this->Xmax, this->Xmin, this->delta_X_ini, pdf_in, this->pdf_ref);
+	  So.DONE();
+	  
+	  // Get pdf of the rank-ordered and write it to file
+	  So.message_screen("Measuring pdf of delta DM rank-ordered");
+
+          calc_pdf("log",this->NGRID,this->NX, this->Xmax, this->Xmin, this->delta_X_ini, pdf_in);
+	  So.DONE();
+
+#ifdef WRITE_PDF
+	  filex=this->Output_directory+"pdf_rank_ordered_X_"+this->XNAME+"_MASX"+to_string(this->iMAS_X)+rest_file;
+          this->File.write_to_file(filex, xbaux,pdf_in);
+#endif
+
+	  
+	} // end if apply rank ordering
+      
+ 
+     
+    
+      
+      
+#ifdef _USE_MASS_KNOTS_
+      this->cwclass.SKNOT_M_info.resize(this->NGRID, 0);
+#endif
+      
+      // The order is important: if we do CWC inside each loop,
+      // then we convolve the target DF with the updated kernel and then do the CWC
+      if(this->n_cwt > 1)
+	{
+	  
+#ifdef _USE_CWC_INSIDE_LOOP_
+	  this->Konvolve(this->delta_X_ini, this->delta_X, "DELTA");
+	  
+#ifdef _USE_CWC_
+          this->cwclass.do_CWC(this->delta_X);   //get the CW info
+#ifdef _USE_MASS_KNOTS_
+	  this->cwclass.get_fof_info(this->delta_X,nmean);  //get the MK info
+#endif //use_mass_knots
+
+#elif !defined _USE_CWC_
+#ifdef _USE_MASS_KNOTS_
+	  this->cwclass.do_CWC(this->delta_X);   //get the CW info
+	  this->cwclass.get_fof_info(this->delta_X,nmean);  //get the MK info
+#endif // use_mass_knots
+#endif	  // !use_cwc 
+	  
+
+	  // If the terms in the bias expansion are to be used, then :
+#if (defined (_USE_NABLA2DELTA_) || defined (_USE_S2_) || defined (_USE_S3_) ) && (!defined (_USE_CWC_))
+	  this->cwclass.get_bias_terms(this->delta_X);
+#endif
+
+	  // If we do CWC but only in the initial iteration, then, for the new density field (target)
+	  // we do the CWC and the convolve with the kernel. 
+	  
+#elif !defined _USE_CWC_INSIDE_LOOP_
+	  
+#ifdef _USE_CWC_
+	  this->cwclass.do_CWC(this->delta_X_ini);   //get the CW info
+#ifdef _USE_MASS_KNOTS_
+	  this->cwclass.get_fof_info(this->delta_X_ini,nmean);  //get the MK info
+#endif
+#elif !defined _USE_CWC_
+#ifdef _USE_MASS_KNOTS_
+          this->cwclass.do_CWC(this->delta_X);   //get the CW info
+	  this->cwclass.get_fof_info(this->delta_X,nmean);  //get the MK info
+#endif	  // use mass knots
+#endif //elif !def use cwc
+
+#if (defined (_USE_NABLA2DELTA_) || defined (_USE_S2_) || defined (_USE_S3_) ) && (!defined (_USE_CWC_))
+	  this->cwclass.get_bias_terms(this->delta_X_ini);
+#endif
+
+
+
+	  this->Konvolve(this->delta_X_ini, this->delta_X, "DELTA");
+#endif	  // endif use cwc inside
+	}
+      else // if n_cwt=1, anyway, do the convolution with the updated Kernel
+	this->Konvolve(this->delta_X_ini, this->delta_X, "DELTA");
+      
+      
+      // #ifdef _GET_POWER_REFS_
+      this->get_power_spectrum("DM_KONV"); // This has to be done *BEFORE* transfoming to LOg
+      // #endif
+      
+      if(this->Scale_X=="log")
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+	for(ULONG i = 0;i < this->NGRID ;++i)  //TRANSFORM DELTA TO LOG10(NUM_IN_LOG + DELTA)
+	  this->delta_X[i] = this->delta_X[i]<-1 ?  0 :  log10(num_in_log_x+ static_cast<real_prec>(this->delta_X[i]));
+      
+
+      // Once the delta field is obtained, get the limits. These limits mut be those of the last iteration of the bias
+      // but it is not guarateed that this is the case. Leave the limits fixed for the time being
+      this->get_new_min_max_properties();
+
+    }  // end of if(true==new_dm_field)
+
+  
+  
+  // ****************************************************************************
+  // ****************************************************************************
+  // ****************************************************************************
+  // ****************************************************************************
+  // ****************************************************************************
+  // ********************************************************************************************************************
+  // ********************************************************************************************************************
+  // ********************************************************************************************************************
+  this->So.message_screen(" ");
+  So.message_screen("Generating Mock (tracer) density field");
+  
+  // Initialize counter for those cells for which no available positions were found
+  ULONG counter_orphan=0;
+  
+  const gsl_rng_type *  T;
+  gsl_rng * r ;
+  
+  vector<int>vseeds(NTHREADS,0);   
+  for(int i=0;i<vseeds.size();++i)vseeds[i]=(i*665 + (this->step+1)*1151);
+  int jthread=0;
+  gsl_rng_env_setup();   
+  
+  
+  time_t start_mock;
+  time(&start_mock);
+
+
+
+
+  // Allocate memmory for the mock density field
+  this->delta_Y_new.resize(this->NGRID,0);
+
+#ifdef _DYNAMICAL_SAMPLING_
+  // Vector to allocate the Joint distribution updated after assigning Nhalos to a cell.
+  vector<ULONG> X_Y_hist_dynamical(this->BIAS_NCOUNTS.size());
+
+
+  // Initialize these vectors with the original distribution in each density bin.
+  X_Y_hist_dynamical=this->BIAS_NCOUNTS;
+
+  // Vector allocating the Joint distribution normalized within each Den bin, after having assigned a value of Nhalos to a cell.
+  // Initialize these vectors with the original Joint and the normalized distribution in each density bin.
+
+  vector<real_prec>  X_Y_hist_dynamical_normalized(this->BIAS_NCOUNTS_normalized.size());
+  X_Y_hist_dynamical_normalized=this->BIAS_NCOUNTS_normalized;
+#endif
+
+  // Vector to allocate the number of cells in a given density bin during the mapping */
+  vector<ULONG>Ncells_density_bin_new(this->BIAS_NCOUNTS.size() , 0);
+
+  // Vector containing the number of cells in a given density bin, updated everytime a cell has been assigend a value of Nhalos
+  vector<ULONG> NCELLSperDMBIN_now(N_CV_BIN1 * N_CV_BIN2* N_CV_BIN3 * N_C_BIN1 * N_C_BIN2* N_C_BIN3 * this->n_sknot_massbin * this->n_cwt * nx, 0);
+
+
+  // Vector containing the total number if cells in a given density bin and CWT and KNOT mass
+  vector<ULONG> NCELLSperDMBIN(N_CV_BIN1 * N_CV_BIN2* N_CV_BIN3* N_C_BIN1 * N_C_BIN2 * N_C_BIN3 * this->n_sknot_massbin * this->n_cwt * nx, 0);
+
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(int i=0; i< this->NX ;++i)
+    for(int w=0; w< this->n_cwt ; ++w)
+      for(int k=0; k< this->n_sknot_massbin; ++k)
+        for(int l1=0; l1< N_C_BIN1 ; ++l1)
+          for(int l2=0; l2< N_C_BIN2 ; ++l2)
+            for(int l3=0; l3< N_C_BIN3 ; ++l3)
+              for(int lv1=0; lv1< N_CV_BIN1 ; ++lv1)
+                for(int lv2=0; lv2< N_CV_BIN2 ; ++lv2)
+                  for(int lv3=0; lv3< N_CV_BIN3 ; ++lv3)
+                    for(int j=0; j< ny ; ++j)
+                      {
+                        ULONG index_h=index_10d(j,i,w,k,l1,l2,l3,lv1,lv2,lv3,this->NX,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3, N_CV_BIN1,N_CV_BIN2,N_CV_BIN3);
+                        ULONG index_l=index_9d(i,w,k,l1,l2,l3,lv1,lv2,lv3, this->n_cwt,this->n_sknot_massbin,N_C_BIN1, N_C_BIN2,N_C_BIN3, N_CV_BIN1,N_CV_BIN2,N_CV_BIN3);
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+                        NCELLSperDMBIN[index_l]+=this->BIAS_NCOUNTS[index_h];
+                        }
+
+{
+#ifndef _EXTRAPOLATE_VOLUME_
+  So.message_screen("Checking the number of cells accounted for in the bias (in function get_mock)");
+  ULONG KK = static_cast<ULONG>(get_nobjects(this->BIAS_NCOUNTS));
+
+  if(KK<this->NGRID)
+    So.message_warning("Missing cells in get_mock_grid(). Perhaps density range is not wide enough to contain all cells");
+  else
+    So.DONE();
+#endif
+  real_prec Kd = static_cast<real_prec>(get_nobjects(this->BIAS_NCOUNTS_normalized));
+
+  if(Kd<=0)
+    So.message_warning("Conditional probablity ill-defined");
+}
+
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel private (jthread, r, T)
+  {
+#endif
+    
+    T = gsl_rng_default; 
+    r = gsl_rng_alloc (T);
+    
+#ifdef _USE_OMP_
+    jthread=omp_get_thread_num();
+#endif
+    
+    gsl_rng_default_seed=vseeds[jthread];
+
+
+
+
+
+    // First block, meant to construct halo number counts
+
+#ifdef _USE_OMP_
+#pragma omp for reduction(+:counter_orphan)
+#endif
+    //Start loop over the cells
+    for(ULONG i=0;i<this->NGRID;++i)
+      {
+	real_prec dm = static_cast<real_prec>(this->delta_X[i]);
+
+        int I_X  = get_bin(dm,this->s_mins.prop1,this->NX,this->s_deltas.prop1,this->bin_accumulate_borders);
+
+        // Get the bin in the delta dark matter (or log 1+delta) in each cell
+
+        int I_CWT=0;
+#ifdef _USE_CWC_
+        I_CWT=this->cwclass.get_classification(i);
+#endif
+	
+        // Get the corresponding bin on Knot-mass. The current cell is in a cluster with a given mass falling in that particular bin
+        int I_MK=0;
+#ifdef _USE_MASS_KNOTS_
+        I_MK= (this->cwclass.cwt_used[this->cwclass.get_classification(i)]== I_KNOT ? this->cwclass.SKNOT_M_info[i]: 0);
+#endif
+	
+        // Get the corresponding bin in the two invariants of the shear of the tidal field
+        int I_C1=0;
+#ifdef _USE_INVARIANT_TIDAL_FIELD_I_
+	real_prec C1 = this->cwclass.Invariant_TF_I[i];
+	I_C1= get_bin(C1, this->s_mins.prop4, N_C_BIN1, s_deltas.prop4,this->bin_accumulate_borders);
+#elif defined _USE_DELTA_2_
+	real_prec C1 = this->cwclass.DELTA2[i];
+	I_C1= get_bin(C1, this->s_mins.prop4, N_C_BIN1, s_deltas.prop4,this->bin_accumulate_borders);
+#endif
+
+
+        int I_C2=0;
+#ifdef _USE_INVARIANT_TIDAL_FIELD_II_
+	real_prec C2 = this->cwclass.Invariant_TF_II[i];
+        I_C2= get_bin(C2, this->s_mins.prop5, N_C_BIN2, s_deltas.prop5,this->bin_accumulate_borders);
+#elif defined _USE_DELTA_3_
+	real_prec C2 = this->cwclass.DELTA3[i];
+        I_C2= get_bin(C2, this->s_mins.prop5, N_C_BIN2, s_deltas.prop5,this->bin_accumulate_borders);
+#endif
+
+        int I_C3=0;
+#ifdef _USE_TIDAL_ANISOTROPY_
+	real_prec C3 = this->cwclass.Tidal_Anisotropy[i];
+	I_C3= get_bin(C3, this->s_mins.prop6, N_C_BIN3, s_deltas.prop6,this->bin_accumulate_borders);
+#elif defined _USE_S2_
+	real_prec C3 = this->cwclass.S2[i];             // s²
+	I_C3= get_bin(C3, this->s_mins.prop6, N_C_BIN3, s_deltas.prop6,this->bin_accumulate_borders);
+#endif
+
+        int I_CV1=0;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_I_
+	real_prec CV1 = invariant_field_I(this->lambda1_vs[i],this->lambda2_vs[i],this->lambda3_vs[i]); // Not yet assigned to container
+	I_CV1= get_bin(CV1, CV1_MIN, N_CV_BIN1,DELTA_CV1, this->bin_accumulate_borders);
+#elif defined _USE_NABLA2DELTA_
+        real_prec CV1 = this->cwclass.N2D[i];      // Nabla² ð
+        I_CV1= get_bin(CV1, this->s_mins.prop7, N_CV_BIN1, s_deltas.prop7,this->bin_accumulate_borders);
+#endif
+
+	int I_CV2=0;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_II_
+	real_prec CV2 = invariant_field_II(this->lambda1_vs[i],this->lambda2_vs[i],this->lambda3_vs[i]);// Not yet assigned to container
+	I_CV2= get_bin(CV2, CV2_MIN, N_CV_BIN2,DELTA_CV2, this->bin_accumulate_borders);
+#elif defined _USE_S2DELTA_
+	real_prec CV2 = this->cwclass.S2DELTA[i];         // s²ð
+        I_CV2= get_bin(CV2, this->s_mins.prop8, N_CV_BIN2, s_deltas.prop8,this->bin_accumulate_borders);
+#endif
+
+
+        int I_CV3=0;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_III_
+	real_prec CV3 = invariant_field_III(this->lambda1_vs[i],this->lambda2_vs[i],this->lambda3_vs[i]);// Not yet assigned to container
+	I_CV3= get_bin(CV3, CV3_MIN, N_CV_BIN3,DELTA_CV3, this->bin_accumulate_borders);
+#elif defined _USE_S3_
+        real_prec CV3 = this->cwclass.S3[i];                                   // s³
+        I_CV3= get_bin(CV3, this->s_mins.prop9, N_CV_BIN3, s_deltas.prop9,this->bin_accumulate_borders);
+#endif
+
+	if(dm >=this->s_mins.prop1 && dm <=this->s_maxs.prop1)
+
+#if defined (_USE_INVARIANT_TIDAL_FIELD_I_) || defined (_USE_DELTA_2_)
+          if(C1<= this->s_max.prop4 && C1>= this->s_mins.prop4)
+#endif
+#if defined (_USE_INVARIANT_TIDAL_FIELD_II_) || defined (_USE_DELTA_3_)
+	    if(C2<= this->s_maxs.prop5 && C2>= this->s_mins.prop5)
+#endif
+#if defined (_USE_TIDAL_ANISOTROPY_) || defined (_USE_S2_)
+	      if(C3<= this->s_maxs.prop6 && C3>= this->s_mins.prop6)
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_I_) || defined (_USE_NABLA2DELTA_)
+		if(CV1<= this->s_maxs.prop7 && CV1>= this->s_mins.prop7)
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_II_) || defined (_USE_S2DELTA_)
+		  if(CV2<= this->s_maxs.prop8 && CV2>= this->s_mins.prop8)
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_III_) || defined (_USE_S3_)
+		    if(CV3<= this->s_maxs.prop9 && CV3>= this->s_mins.prop9)
+#endif
+
+		      {
+
+			// Get the bin in DM
+
+
+			// check if prob is zero for all possible valoes of Nh
+			// if aux_h=0, given that the quantity CWT_hist is always > 0, means that all values of prob in this bin are zero
+			// It means then that no cells with this DM were found to have at least one halo, with respect to the BIAS_NCOUNTS
+			// This is likely to happen when we apply the Bias and the Kernel to a different DM field in order toe create a mock.
+			real_prec aux_h=0;
+			for(int ih=0;ih<ny;++ih)
+                          aux_h+=this->BIAS_NCOUNTS_normalized[index_10d(ih,I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3,this->NX,this->n_cwt, this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)];
+				
+			int Nhalos_orfan;
+                         if(aux_h<0)
+			   exit(0);
+
+
+                         if(aux_h>0)
+			  {
+
+                            int halo_prop;
+
+			    ULONG N_available_positions_in_denbin_cwt_Mk = NCELLSperDMBIN[index_9d(I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)];
+
+			    // Number of cells in the density bin and CWT.
+			    // This is always greater than zero, by construction. A fixed value inside the loop
+			    ULONG N_used_positions_in_denbin_cwt_Mk = NCELLSperDMBIN_now[index_9d(I_X,I_CWT,I_MK,I_C1,I_C2,I_C3, I_CV1,I_CV2,I_CV3, this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)];
+
+			    // Number of used cells for the current bin of DM and CWT
+
+			    bool flag = true;
+			    // If the density bin to which this cell belongs to is already filled
+			    // then go below to get a value of Nhalos selected according to the original distribution in this density bin
+			    // setting a flag=false
+		
+		
+			    if (N_available_positions_in_denbin_cwt_Mk == N_used_positions_in_denbin_cwt_Mk)
+			      flag=false;
+
+
+			    // If the density bin still has available positions to be assigned, then proceed
+			    if(true==flag)
+			      {
+				bool cell_accepted=false;
+
+ 
+				// This density bin as available positions. Proceed until the cell is assigned a value of Nhalo
+				while (false==cell_accepted) 
+				  {
+				    // Throw one value of Nhalos in the range [0, nmax_y_onecell], where  nmax_y_onecell represents the
+				    // maximum number of tracers in one cell, read from the cell number counts.
+			    
+				    // Accept this number according to the normalized distribution of Nhalos in the corresponding density bin.
+				    // Everytime one cell is assigned this value of Nhalo, the normalized distribution is updated (below)
+				    // and computed extracting that position already assigned. This will ensure that more probability
+				    // is given to the remaining available positions.
+				    real_prec prob_ncounts=-10.0;
+				    real_prec ran = 10.0;
+
+				    // Probability for number counts
+                                    while (prob_ncounts<ran)
+				      {
+					if(property=="COUNTS")
+                                          halo_prop= static_cast<int>(floor((1.0+static_cast<real_prec>(this->nmax_y_onecell))*gsl_rng_uniform(r)));
+					else
+                                          halo_prop= static_cast<int>(floor(static_cast<real_prec>(this->new_nbins_y)*gsl_rng_uniform(r)));
+	
+					ran   = gsl_rng_uniform(r);
+#ifdef _DYNAMICAL_SAMPLING_
+                                        prob_ncounts  = static_cast<real_prec>(X_Y_hist_dynamical_normalized[index_10d(halo_prop,I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3,this->NX,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)]);
+				
+#else //this case is just as the one usnig mass, isn't it?
+                                        prob_ncounts  = static_cast<real_prec>(this->BIAS_NCOUNTS_normalized[index_10d(halo_prop,I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3, this->NX,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3, N_CV_BIN 1,N_CV_BIN2,N_CV_BIN3)]);
+				
+#endif
+				
+				      }
+
+
+
+				    ULONG index=0;
+				    ULONG index_low=0;
+                                    index    =index_10d(halo_prop,I_X,I_CWT, I_MK, I_C1,I_C2, I_C3, I_CV1,I_CV2,I_CV3, nx, this->n_cwt, this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3);
+				    index_low=index_9d(I_X, I_CWT, I_MK, I_C1,I_C2, I_C3, I_CV1,I_CV2, I_CV3, this->n_cwt, this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3);
+
+
+				    ULONG N_available_positions = this->BIAS_NCOUNTS[index];
+				    ULONG N_used_positions = Ncells_density_bin_new[index];
+				    // Now proceed to assign the value of Nhalos to the current cell i, only in case
+				    // that we have available positions in the current Den-Nh bin.
+				    // If there are no available positions, then cell_accepted will be false and we cannot
+				    // get out pf the while loop. A new Nhalo will be proposed.
+			    
+
+                                    //For the other properties such as Mass in a cell or the fraction of satellits, we
+                                     // we let the available number of cells be the driver criteria
+
+				    if(N_available_positions > N_used_positions)
+				      {
+                                        this->delta_Y_new[i]=static_cast<real_prec>(halo_prop);
+
+					// Claim the current cell as already assigned a value of Nhalos. This breaks the while and continues to the next cell.
+					cell_accepted=true;
+				  
+					// Add one (i.e, the accepted) to count the number of positions used in the current den-N bin
+#ifdef _USE_OMP_
+#pragma omp atomic
+#endif
+					Ncells_density_bin_new[index]++;
+				  
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+					NCELLSperDMBIN_now[index_low]++;
+				  
+					// -----------------------------------------------------------------
+					// In the current Den-N bin, subtract one (i.e, the accepted) in order
+					// to upgrade the distribution and give more weight to the remaining available positions
+					// Attention, do not ask whether this is <0, for it is an unsigned long 
+
+#ifdef _DYNAMICAL_SAMPLING_
+					if(X_Y_hist_dynamical[index] >=1)
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+					  X_Y_hist_dynamical[index]--;
+
+					else  
+					  X_Y_hist_dynamical[index]=0;
+				
+					// Normalize the dynamical histogram,  in each Den bin, to the maximum.
+					// The resulting distribution, in this den bin, will be used for the next cell 
+					// in order to accept or reject the new value of Nhalos, 
+					// such that more probability is given to the remaining available positions. 
+				
+					vector<long>AUX(ny,0);
+				
+					for(int j=0; j< ny ;++j)
+				  
+					  // Here we CANNOT use the definitions of index and index_low, for those depend on Nhalos, while here they depend on j
+					  AUX[j]=X_Y_hist_dynamical[index_10d(j,I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3, nx,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3, N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)];
+				
+				
+					long lkk=get_max<long>(AUX);
+				  
+					for(int j=0;j< ny ;++j)
+					  // Here we CANNOT use the definitions of index and index_low, for those depend on Nhalos, while here they depend on j
+                                          X_Y_hist_dynamical_normalized[index_10d(j,I_X,I_CWT,I_MK,I_C1,I_C2,I_C3,I_CV1,I_CV2,I_CV3, this->NX,this->n_cwt,this->n_sknot_massbin,N_C_BIN1,N_C_BIN2,N_C_BIN3,N_CV_BIN1,N_CV_BIN2,N_CV_BIN3)]= (lkk == 0  ? 0.0 :  static_cast<real_prec>(AUX[j])/static_cast<real_prec>(lkk));
+
+					AUX.clear();
+					AUX.shrink_to_fit();
+#endif
+				
+				      }   // end if(N_cells > N_cells_now).
+			    
+				  }// end while(cell_accepted==false && true==flag[I_X])
+			      } // end of if(true==flag)
+			    else
+			      // If the density bin has been already filled, we call the distribution in that bin to assign randomly the value Nhalo according to the other properties
+			      {
+				real_prec prob=-1.0;
+				real_prec ran=0.0;
+				while(prob<ran)
+				  {
+				    if(property=="COUNTS")
+				      Nhalos_orfan= static_cast<int>(floor((1.0+static_cast<real_prec>(this->nmax_y_onecell))*gsl_rng_uniform(r)));
+				    else
+				      Nhalos_orfan= static_cast<int>(floor(static_cast<real_prec>(this->new_nbins_y)*gsl_rng_uniform(r)));
+			    
+                                    prob = this->BIAS_NCOUNTS_normalized[index_10d(Nhalos_orfan,I_X,I_CWT,I_MK, I_C1,I_C2, I_C3, I_CV1,I_CV2, I_CV3,this->NX,this->n_cwt, this->n_sknot_massbin,N_C_BIN1,N_C_BIN2, N_C_BIN3, N_CV_BIN1,N_CV_BIN2, N_CV_BIN3)];
+				    ran = gsl_rng_uniform(r);
+				    counter_orphan++;
+                                  }
+
+                                this->delta_Y_new[i]= static_cast<real_prec>(Nhalos_orfan);
+
+			      }// end else
+			  }// end of if(aux_h>0)
+			else // if in the dm bin the prob is zero always, then
+			  {
+
+			    if(this->step==this->N_iterations_Kernel)
+			      this->delta_Y_new[i]= 0;
+			  }
+		      }// end if(dm is in the edfined range)
+      }// end loop over cells
+    gsl_rng_free (r);
+#ifdef _USE_OMP_
+  }// end parallelized region
+#endif
+
+  So.DONE();
+  So.message_time_mock(start_mock);
+
+  // ******************************************** end assigning ncounts*******************************
+
+
+
+
+
+  // ----------------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------------
+  
+  if(counter_orphan>0)
+    So.message_screen("Fraction of orfan cells =", 100.0*static_cast<real_prec>(counter_orphan)/static_cast<real_prec>(this->NGRID), "%");
+
+  if(property==_COUNTS_)
+    {
+      real_prec NMock=get_nobjects(this->delta_Y_new);
+
+      this->Nobjects=NMock;
+
+      So.message_screen("Number of objects = ", NMock);
+      So.message_screen("Mean number denisty = ", NMock/pow(Lbox, 3), "(Mpc / h )⁻³");
+
+#ifdef _DO_BAM_CALIBRATION_
+#ifndef _EXTRAPOLATE_VOLUME_
+      if(NMock< this->N_objects_Y)
+	So.message_screen("Less objects assigned to mock. Fraction = ", fabs(100.0-100.0*(static_cast<real_prec>(NMock)/this->N_objects_Y)), "%");
+      if(NMock> this->N_objects_Y)
+	So.message_screen("More objects assigned to mock. Fraction = ", fabs(100.0-100.0*(static_cast<real_prec>(NMock)/this->N_objects_Y)), "%");
+#endif
+#endif
+
+      if(false==silent)
+	{
+	  real_prec anmean=NMock/static_cast<real_prec>(this->NGRID);
+	  So.message_screen("<N> objects in mock =", anmean);
+      
+	  // ----------------------------------------------------------------------------------
+	  int nyy=30;
+	  real_prec dmax=300.0;
+
+	  vector<real_prec>DELTA_HIST(nyy,0);
+
+	  real_prec delta_delta= (dmax+1.0)/static_cast<real_prec>(nyy);  //deltamax - deltamin
+#ifdef _USE_OMP_
+#pragma omp for
+#endif
+	  for(ULONG i=0;i< this->NGRID;++i)
+	    {
+	      real_prec delta_mock= (this->delta_Y_new[i]/static_cast<real_prec>(anmean) - 1.0);
+	      if(delta_mock>=-1.0 && delta_mock<=dmax)
+		{
+		  int ID=static_cast<int>(floor(delta_mock +1.0)/delta_delta); 
+		  if(ID==nyy)ID--;
+#ifdef _USE_OMP_
+#pragma omp atomic
+#endif
+		  DELTA_HIST[ID]++;
+		}  
+	    }
+      
+	  real_prec lkk=get_max<real_prec>(DELTA_HIST); 
+	  for(int j=0;j< nyy ;++j)
+	    DELTA_HIST[j]= lkk == 0  ? 0.0 :  static_cast<real_prec>(DELTA_HIST[j])/static_cast<real_prec>(lkk);
+      
+	  ofstream aja;
+	  aja.open("delta_mock_dist.txt");
+	  for (int i=0;i<DELTA_HIST.size();++i)aja<<i<<"\t"<<DELTA_HIST[i]<<endl;
+	  aja.close();
+	  DELTA_HIST.clear();
+	  DELTA_HIST.shrink_to_fit();
+
+	  vector<real_prec>AUX(this->NGRID,0);
+
+#ifdef _USE_OMP_
+#pragma omp for
+#endif
+	  for(ULONG i=0; i< this->NGRID ;++i)
+	    AUX[i]=this->delta_Y_new[i]/static_cast<real_prec>(anmean) - 1.0;
+      
+	  lkk=get_max<real_prec>(AUX);
+	  So.message_screen("Maximum delta in mock =", lkk);
+      
+	  lkk=get_min<real_prec>(AUX);
+	  So.message_screen("Minimum delta in mock =", lkk);
+	  AUX.clear();
+	  AUX.shrink_to_fit();
+      
+	  // ----------------------------------------------------------------------------------
+	  if(true==this->Write_PDF_number_counts) 	  // Write the PDF of the outcome */
+	    {
+
+                  string fileY=this->Output_directory+"PDF_NC"+"_Y_MOCK_"+this->new_Name_Property_Y+"_MASY"+to_string(this->iMAS_Y)+"_Nft"+to_string(this->Nft)+"_z"+dto_string(this->redshift)+".txt";
+	  
+	      So.message_screen("Writting PDF_NC for Y in file ", fileY);
+	      int NPART=20; // Number of particles in cells
+	  
+	      this->PDF_NC_Y.clear(); 
+	      this->PDF_NC_Y.resize(NPART, 0); 
+
+#ifdef _USE_OMP_
+#pragma omp for
+#endif
+	      for(ULONG i=0;i< this->NGRID;++i) 
+#ifdef _USE_OMP_
+#pragma omp atomic
+#endif
+		this->PDF_NC_Y[static_cast<int>(this->delta_Y_new[i])]++; 
+	  
+
+	      this->File.write_to_file_i(fileY,this->PDF_NC_Y);
+	  
+	      vector<int> cells_with_one;
+	      for(int i=0;i<this->PDF_NC_Y.size();++i)
+		if(this->PDF_NC_Y[i]>0)
+		  cells_with_one.push_back(i);
+	  
+	      So.message_screen("Maximum number of mock-objects in one cell =", get_max<int>(cells_with_one) );
+	  
+	      cells_with_one.clear();
+	      this->PDF_NC_X.clear();
+	      cells_with_one.shrink_to_fit();
+	      this->PDF_NC_X.shrink_to_fit();
+	    }
+	}
+  
+    }
+  
+  string pname;
+  if(this->step <=this->N_iterations_Kernel)
+    pname ="_iteration"+to_string(this->step);
+  else
+    pname= "_realization"+to_string(this->step - (this->N_iterations_Kernel)+this->N_dm_initial-1);
+  string fname=this->Output_directory+"MOCK_TR"+pname+"_"+"MASY"+to_string(this->iMAS_Y)+"_Nft"+to_string(this->Nft)+"_z"+dto_string(this->redshift);
+
+  this->fnameMOCK=fname;
+
+
+#ifdef  _EXTRAPOLATE_VOLUME_  
+#ifdef _WRITE_TR_DENSITY_FIELD_
+  this->File.write_array(fname, this->delta_Y_new);
+#endif
+#endif
+
+
+  if(this->Name_Property_Y!="COUNTS")
+
+    #ifdef _USE_OMP_
+    #pragma omp for
+    #endif
+    for(ULONG i=0;i< this->NGRID;++i)
+      {
+	this->delta_Y_new[i]=this->ldelta_Y_min+(static_cast<int>(delta_Y_new[i])+0.5)*this->DELTAY;   // Get value of log10(2+delta_y)
+	this->delta_Y_new[i]=this->Mean_density_Y*(1.0+pow(10,delta_Y_new[i])-NUM_IN_LOG);                                        // Get nbar*(1+delta_y)
+
+      }
+
+
+#ifdef _USE_MASS_TRACERS_    //tbc
+#ifdef _USE_OMP_
+#pragma omp for
+#endif
+for(ULONG i=0;i< this->NGRID;++i)
+  {
+    this->delta_Y_MW_new[i]=this->ldelta_Y_min+(static_cast<int>(delta_Y_MW_new[i])+0.5)*this->DELTAY;   // Get value of log10(2+delta_y)
+    this->delta_Y_MW_new[i]=this->Mean_density_Y*(1.0+pow(10,delta_Y_new[i])-NUM_IN_LOG);                                        // Get nbar*(1+delta_y)
+  }
+
+#endif
+
+
+#ifdef _USE_SAT_FRACTION_    //tbc
+#ifdef _USE_OMP_
+#pragma omp for
+#endif
+for(ULONG i=0;i< this->NGRID;++i)
+  {
+    this->delta_Y_SF_new[i]=this->ldelta_Y_min+(static_cast<int>(delta_Y_SF_new[i])+0.5)*this->DELTAY;   // Get value of log10(2+delta_y)
+    this->delta_Y_SF_new[i]=this->Mean_density_Y*(1.0+pow(10,delta_Y_new[i])-NUM_IN_LOG);                                        // Get nbar*(1+delta_y)
+  }
+
+#endif
+
+
+
+
+  auto out_it = std::find(std::begin(this->output_at_iteration), std::end(this->output_at_iteration), this->step);
+  if((this->step==this->N_iterations_Kernel) || (out_it != std::end(this->output_at_iteration)))
+    this->File.write_array(fname, this->delta_Y_new);
+   
+  // Get power spectrum
+  this->get_power_spectrum("TR_MOCK");
+
+
+#ifndef _TUNE_POSITIONS_
+  this->delta_Y_new.clear();
+  this->delta_Y_new.shrink_to_fit();
+#endif
+
+}
