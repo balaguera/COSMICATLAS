@@ -22,11 +22,11 @@
 
 using namespace std;
 
-#include "../Headers/def.h"
+//#include "../Headers/def.h"
+#include "../Headers/NumericalMethods.h"
 #include "../Headers/Type_structures_def.h"
 #include "../Headers/FftwFunctions.h"
 #include "../Headers/massFunctions.h"
-#include "../Headers/NumericalMethods.h"
 #include "../Headers/ScreenOutput.h"
 
 
@@ -87,11 +87,15 @@ void getDensity_NGP(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, rea
 #endif
     for(ULONG i=0;i<delta.size();++i)
       count+=delta[i];
+#ifdef _FULL_VERBOSE_
     So.message_screen("Number of objects assigned to grid =",count);
 #endif
+#endif
 
+#ifdef _FULL_VERBOSE_
   if(NLOSS!=0)
     if(NLOSS!=0) So.message_screen("mass assignment found",NLOSS," particles outside mesh boundary");
+#endif
 
 }
 
@@ -151,7 +155,15 @@ void getDensity_NGPv(s_params_box_mas *params, const vector<s_Halo>&Halo, vector
 	    tracer_weight=Halo[n].mass;
 	  else if (weight_prop==_SAT_FRACTION_)
 	    tracer_weight=Halo[n].number_sub_structures;
-	  
+          else if (weight_prop==_RS_)
+            tracer_weight=Halo[n].rs;
+          else if (weight_prop==_VMAX_)
+            tracer_weight=Halo[n].vmax;
+          else if (weight_prop==_VIRIAL_)
+            tracer_weight=Halo[n].virial;
+          else if (weight_prop==_SPIN_)
+            tracer_weight=Halo[n].spin;
+
           delta[index]    += tracer_weight;
 	  
 	}
@@ -172,8 +184,10 @@ void getDensity_NGPv(s_params_box_mas *params, const vector<s_Halo>&Halo, vector
 #endif
       for(ULONG i=0;i<delta.size();++i)
 	count+=delta[i];
+#ifdef _FULL_VERBOSE_
       So.message_screen("Number of objects assigned to grid =",count);
       if(NLOSS!=0) So.message_screen("mass assignment found",NLOSS,"particles outside mesh boundary");
+#endif
     }
   
 }
@@ -232,19 +246,19 @@ void getDensity_CICSHIFT(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2
 	tz = num_1 - dz;
 
 // Take care this assumes periodic boundary conditions. This conserves Mass when using FFTs to deconvolve with CIC kernel, as the FFT assumes periodicity
-	
-	real_prec mass=num_1;
-	if (weightmass==true)
-	  mass=Par_mass[n];
-	
-	delta[k+N3*(j+N2*i)]    += mass*tx*ty*tz;
-	delta[k+N3*(j+N2*ii)]   += mass*dx*ty*tz;
-	delta[k+N3*(jj+N2*i)]   += mass*tx*dy*tz;
-	delta[kk+N3*(j+N2*i)]   += mass*tx*ty*dz;
-	delta[k+N3*(jj+N2*ii)]  += mass*dx*dy*tz;
-	delta[kk+N3*(j+N2*ii)]  += mass*dx*ty*dz;
-	delta[kk+N3*(jj+N2*i)]  += mass*tx*dy*dz;
-	delta[kk+N3*(jj+N2*ii)] += mass*dx*dy*dz;
+
+        real_prec mass=num_1;
+        if (weightmass==true)
+          mass=Par_mass[n];
+
+        delta[k+N3*(j+N2*i)]    += mass*tx*ty*tz;
+        delta[k+N3*(j+N2*ii)]   += mass*dx*ty*tz;
+        delta[k+N3*(jj+N2*i)]   += mass*tx*dy*tz;
+        delta[kk+N3*(j+N2*i)]   += mass*tx*ty*dz;
+        delta[k+N3*(jj+N2*ii)]  += mass*dx*dy*tz;
+        delta[kk+N3*(j+N2*ii)]  += mass*dx*ty*dz;
+        delta[kk+N3*(jj+N2*i)]  += mass*tx*dy*dz;
+        delta[kk+N3*(jj+N2*ii)] += mass*dx*dy*dz;
 	
      }
       //else NLOSS++;	
@@ -349,7 +363,8 @@ inline void get_tetrahedron_centroid_comp( real_prec d1, real_prec d2, real_prec
 
 void getDensity_TETCIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3, real_prec min1, real_prec min2, real_prec min3,const vector<real_prec>&xp, const vector<real_prec>& yp,const vector<real_prec>&zp, const vector<real_prec>&Par_mass, ULONG N_OBJ, vector<real_prec> &delta, bool weightmass)
 {
-
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
 
   static real_prec to_slab_fac=static_cast<real_prec>(N1)/L1;
 
@@ -395,58 +410,57 @@ void getDensity_TETCIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, 
   for( ix=0;ix<nbase; ++ix )
     for( iy=0; iy<nbase; ++iy )
       for( iz=0; iz<nbase; ++iz )
-	{
-	  int l;
-          static vector<int>cube_vertices(8,0);
-	  for( l=0; l<8; ++l )
-	    cube_vertices[l] = (((ix+vert[l][0])%nbase)*nbase + (iy+vert[l][1])%nbase)*nbase + (iz+vert[l][2])%nbase;
+				{
+  		   int l;
+         static vector<int>cube_vertices(8,0);
+	       for( l=0; l<8; ++l )
+		       cube_vertices[l] = (((ix+vert[l][0])%nbase)*nbase + (iy+vert[l][1])%nbase)*nbase + (iz+vert[l][2])%nbase;
 	  
-	  for( l=0; l<6; ++l )
-	    {
-              static vector<int> vertids(4,0);
-	      int m;
-	      for( m=0; m<4; ++m )
+			  for( l=0; l<6; ++l )
+	   		{
+         static vector<int> vertids(4,0);
+	       int m;
+	       for( m=0; m<4; ++m )
 		vertids[m] = cube_vertices[conn[l][m]];
 	      
               static vector<float> xcc(3,0);
-	      get_tetrahedron_centroid( allpos, vertids, boxsize, boxhalf, xcc );
-	      
+	      get_tetrahedron_centroid( allpos, vertids, boxsize, boxhalf, xcc );      
 	      
 	      xpos=xcc[0];
 	      ypos=xcc[1];
 	      zpos=xcc[2];
 	      
 	      if((xpos>=min1 && xpos<min1+L1) && (ypos>=min2 && ypos<min2+L2) && (zpos>=min3 && zpos<min3+L3))
-		{	
-		  i = static_cast<ULONG>(floor((xpos-min1)/d1)); // indices of the cell of the particle
-	      j = static_cast<ULONG>(floor((ypos-min2)/d2));
-	      k = static_cast<ULONG>(floor((zpos-min3)/d3));
+				{	
+				  i = static_cast<ULONG>(floor((xpos-min1)/d1)); // indices of the cell of the particle
+	      	j = static_cast<ULONG>(floor((ypos-min2)/d2));
+	      	k = static_cast<ULONG>(floor((zpos-min3)/d3));
 
 	//printf("%f, %f, %f\n", xpos, ypos, zpos);		
 	      
-	      i = static_cast<ULONG>(fmod(real_prec(i),real_prec(N1)));
-	      j = static_cast<ULONG>(fmod(real_prec(j),real_prec(N2)));
-	      k = static_cast<ULONG>(fmod(real_prec(k),real_prec(N3)));
+		      i = static_cast<ULONG>(fmod(real_prec(i),real_prec(N1)));
+		      j = static_cast<ULONG>(fmod(real_prec(j),real_prec(N2)));
+		      k = static_cast<ULONG>(fmod(real_prec(k),real_prec(N3)));
 	      
-	      ii = static_cast<ULONG>(fmod(real_prec(i+1),real_prec(N1)));
-	      jj = static_cast<ULONG>(fmod(real_prec(j+1),real_prec(N2)));
-	      kk = static_cast<ULONG>(fmod(real_prec(k+1),real_prec(N3)));
+		      ii = static_cast<ULONG>(fmod(real_prec(i+1),real_prec(N1)));
+	 	  	  jj = static_cast<ULONG>(fmod(real_prec(j+1),real_prec(N2)));
+	 		    kk = static_cast<ULONG>(fmod(real_prec(k+1),real_prec(N3)));
 
-	      xc = static_cast<real_prec>(i); 
-	      yc = static_cast<real_prec>(j);
-	      zc = static_cast<real_prec>(k);
+	      	xc = static_cast<real_prec>(i); 
+	      	yc = static_cast<real_prec>(j);
+	      	zc = static_cast<real_prec>(k);
 	      
-	      dx = (xpos-min1)/d1 - xc; // distance of particle to center of the cell
-	      dy = (ypos-min2)/d2 - yc;
-	      dz = (zpos-min3)/d3 - zc;
+	      	dx = (xpos-min1)/d1 - xc; // distance of particle to center of the cell
+	      	dy = (ypos-min2)/d2 - yc;
+	      	dz = (zpos-min3)/d3 - zc;
 	
-	      tx = num_1 - dx;
-	      ty = num_1 - dy;
-	      tz = num_1 - dz;
+		      tx = num_1 - dx;
+	 	     ty = num_1 - dy;
+	 	     tz = num_1 - dz;
 
 // Take care this assumes periodic boundary conditions. This conserves Mass when using FFTs to deconvolve with CIC kernel, as the FFT assumes periodicity
 
-	      real_prec mass=pweight;
+	       real_prec mass=pweight;
 
 	      if (weightmass==true)
 		mass*=Par_mass[iz+N1*(iy+N1*ix)];
@@ -511,6 +525,8 @@ void getDensity_TETCIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, 
 void getDensity_TETCIC_comp(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3, real_prec min1, real_prec min2, real_prec min3,const vector<real_prec>&xp, const vector<real_prec>&yp, const vector<real_prec>&zp, const vector<real_prec> &Par_mass, ULONG N_OBJ, vector<real_prec>&delta,bool weightmass)
 {
 
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
 
   static real_prec to_slab_fac=static_cast<real_prec>(N1)/L1;
 
@@ -666,7 +682,8 @@ void getDensity_CIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, rea
   ULONG i, j, k, ii, jj, kk, n;
   ULONG N_OBJ=xp.size();
 
-  
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
   
   
 #ifndef  _GET_INTERPOLATED_FIELDS_FROM_BIN_FILES_
@@ -682,8 +699,6 @@ void getDensity_CIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, rea
   for (n=0; n<N_OBJ; n++)
     {
       
-      
-      //      grid_assignment_cic(deltax, N1, L1, xp[n],yp[n],zp[n],1.0,delta);
       
       xpos=xp[n]-num_0_5*d1;
       ypos=yp[n]-num_0_5*d2;
@@ -746,7 +761,7 @@ void getDensity_CIC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, rea
 	  // Take care this assumes periodic boundary conditions. This conserves Mass when using FFTs to deconvolve with CIC kernel, as the FFT assumes periodicity
 	  
 	  real_prec mass=num_1;
-	  if (weightmass==true)
+	  if (true==weightmass)
 	    mass=Par_mass[n];
 	  
 	  delta[k+N3*(j+N2*i)]    += mass*tx*ty*tz;
@@ -799,7 +814,9 @@ void getDensity_CICv(s_params_box_mas *params,const vector<s_Halo>&Halo, vector<
   real_prec d3=params->d3;
 
   //#define DELTA(i,j,k) delta[k+N3*(j+N2*i)]
-    
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+
 #pragma omp parallel for
   for (i=0;i<delta.size(); i++)
     delta[i]= 0.;  //-1 if we want to calculate overdensity
@@ -872,20 +889,28 @@ void getDensity_CICv(s_params_box_mas *params,const vector<s_Halo>&Halo, vector<
 	  
 	  // Take care this assumes periodic boundary conditions. This conserves Mass when using FFTs to deconvolve with CIC kernel, as the FFT assumes periodicity
 	  
-	  real_prec mass=1.0;
-	  if (weight_prop==_MASS_)
-	    mass=Halo[n].mass;
-	  else if (weight_prop == _SAT_FRACTION_)
-	    mass=Halo[n].number_sub_structures;
-	  
-	  delta[k+N3*(j+N2*i)]    += mass*tx*ty*tz;
-	  delta[k+N3*(j+N2*ii)]   += mass*dx*ty*tz;
-	  delta[k+N3*(jj+N2*i)]   += mass*tx*dy*tz;
-	  delta[kk+N3*(j+N2*i)]   += mass*tx*ty*dz;
-	  delta[k+N3*(jj+N2*ii)]  += mass*dx*dy*tz;
-	  delta[kk+N3*(j+N2*ii)]  += mass*dx*ty*dz;
-	  delta[kk+N3*(jj+N2*i)]  += mass*tx*dy*dz;
-	  delta[kk+N3*(jj+N2*ii)] += mass*dx*dy*dz;
+          real_prec tracer_weight=num_1;
+          if (weight_prop==_MASS_)
+            tracer_weight=Halo[n].mass;
+          else if (weight_prop==_SAT_FRACTION_)
+            tracer_weight=Halo[n].number_sub_structures;
+          else if (weight_prop==_RS_)
+            tracer_weight=Halo[n].rs;
+          else if (weight_prop==_VMAX_)
+            tracer_weight=Halo[n].vmax;
+          else if (weight_prop==_VIRIAL_)
+            tracer_weight=Halo[n].virial;
+          else if (weight_prop==_SPIN_)
+            tracer_weight=Halo[n].spin;
+
+          delta[k+N3*(j+N2*i)]    += tracer_weight*tx*ty*tz;
+          delta[k+N3*(j+N2*ii)]   += tracer_weight*dx*ty*tz;
+          delta[k+N3*(jj+N2*i)]   += tracer_weight*tx*dy*tz;
+          delta[kk+N3*(j+N2*i)]   += tracer_weight*tx*ty*dz;
+          delta[k+N3*(jj+N2*ii)]  += tracer_weight*dx*dy*tz;
+          delta[kk+N3*(j+N2*ii)]  += tracer_weight*dx*ty*dz;
+          delta[kk+N3*(jj+N2*i)]  += tracer_weight*tx*dy*dz;
+          delta[kk+N3*(jj+N2*ii)] += tracer_weight*dx*dy*dz;
 	}
       else NLOSS++;	
     }
@@ -911,6 +936,9 @@ void getDensity_CICv(s_params_box_mas *params,const vector<s_Halo>&Halo, vector<
 
 void getDensity_CICWEIGHT(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3, real_prec min1, real_prec min2, real_prec min3, const vector<real_prec>&xp, const vector<real_prec>&yp, const vector<real_prec>&zp, const vector<real_prec> &Par_mass, ULONG N_OBJ, vector<real_prec>&delta, bool weightmass)
 {
+
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
 
     real_prec xc, yc, zc;
     real_prec dx, dy, dz, tx, tz, ty;    
@@ -1022,6 +1050,8 @@ if(NLOSS!=0) cout << " >>> mass assignment found "<<NLOSS<<" particles outside m
 void getDensity_TSC(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3, real_prec min1, real_prec min2, real_prec min3, const vector<real_prec>&xp, const vector<real_prec>&yp, const vector<real_prec>&zp, const vector<real_prec> & Par_mass, vector<real_prec>&delta, bool weightmass)
 {
 
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
     real_prec xc, yc, zc;
     real_prec dx, dy, dz, hx0, hz0, hy0, hxp1,hyp1,hzp1, hxm1,hym1,hzm1;    
     ULONG i, j, k, ii, jj, kk,iii,jjj,kkk;
@@ -1144,6 +1174,9 @@ if(NLOSS!=0) cout << " >>> mass assignment found "<<NLOSS<<" particles outside m
 void getDensity_TSCv(s_params_box_mas *params, const vector<s_Halo>&Halo, vector<real_prec>&delta, string weight_prop)
 {
   
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+
   real_prec xc, yc, zc;
     real_prec dx, dy, dz, hx0, hz0, hy0, hxp1,hyp1,hzp1, hxm1,hym1,hzm1;    
     ULONG i, j, k, ii, jj, kk,iii,jjj,kkk;
@@ -1173,59 +1206,59 @@ void getDensity_TSCv(s_params_box_mas *params, const vector<s_Halo>&Halo, vector
   
     ULONG NLOSS=0;
     
-    for (n=0; n<N_OBJ; n++){
+  for (n=0; n<N_OBJ; n++){
       
-      //check if particle is in selected Domain, else discard it
-      if((Halo[n].coord1>=min1 && Halo[n].coord1<=min1+L1) && (Halo[n].coord2>=min2 &&  Halo[n].coord2<=min2+L2) && (Halo[n].coord3>=min3 && Halo[n].coord3<=min3+L3))
-	{
+//check if particle is in selected Domain, else discard it
+    if((Halo[n].coord1>=min1 && Halo[n].coord1<=min1+L1) && (Halo[n].coord2>=min2 &&  Halo[n].coord2<=min2+L2) && (Halo[n].coord3>=min3 && Halo[n].coord3<=min3+L3))
+		{
 	  
-	  i = static_cast<ULONG>(floor((Halo[n].coord1-min1)/d1)); // indices of the cell of the particle
-	  j = static_cast<ULONG>(floor((Halo[n].coord2-min2)/d2));
-	  k = static_cast<ULONG>(floor((Halo[n].coord3-min3)/d3));
+	   i = static_cast<ULONG>(floor((Halo[n].coord1-min1)/d1)); // indices of the cell of the particle
+	   j = static_cast<ULONG>(floor((Halo[n].coord2-min2)/d2));
+	   k = static_cast<ULONG>(floor((Halo[n].coord3-min3)/d3));
 	  
 	  
-	  i = static_cast<ULONG>(fmod(real_prec(i),real_prec(N1)));
-	  j = static_cast<ULONG>(fmod(real_prec(j),real_prec(N2)));
-	  k = static_cast<ULONG>(fmod(real_prec(k),real_prec(N3)));
+	   i = static_cast<ULONG>(fmod(real_prec(i),real_prec(N1)));
+	   j = static_cast<ULONG>(fmod(real_prec(j),real_prec(N2)));
+	   k = static_cast<ULONG>(fmod(real_prec(k),real_prec(N3)));
 	  
-	  ii = static_cast<ULONG>(fmod(real_prec(i+1),real_prec(N1)));
-	  jj = static_cast<ULONG>(fmod(real_prec(j+1),real_prec(N2)));
-	  kk = static_cast<ULONG>(fmod(real_prec(k+1),real_prec(N3)));
+	   ii = static_cast<ULONG>(fmod(real_prec(i+1),real_prec(N1)));
+	   jj = static_cast<ULONG>(fmod(real_prec(j+1),real_prec(N2)));
+	   kk = static_cast<ULONG>(fmod(real_prec(k+1),real_prec(N3)));
 	  
-	  iii= static_cast<ULONG>(fmod(real_prec(i-1+N1),real_prec(N1)));
-	  jjj= static_cast<ULONG>(fmod(real_prec(j-1+N2),real_prec(N2)));
-	  kkk= static_cast<ULONG>(fmod(real_prec(k-1+N3),real_prec(N3)));
+	   iii= static_cast<ULONG>(fmod(real_prec(i-1+N1),real_prec(N1)));
+	   jjj= static_cast<ULONG>(fmod(real_prec(j-1+N2),real_prec(N2)));
+	   kkk= static_cast<ULONG>(fmod(real_prec(k-1+N3),real_prec(N3)));
 	  
 	  
 	  //printf("%f, %f, %f\n", xp[n], yp[n], zp[n]);
 	  
-	  xc = static_cast<real_prec>(i)+static_cast<real_prec>(0.5); // centers of the cells
-	  yc = static_cast<real_prec>(j)+static_cast<real_prec>(0.5);
-	  zc = static_cast<real_prec>(k)+static_cast<real_prec>(0.5);
+	   xc = static_cast<real_prec>(i)+static_cast<real_prec>(0.5); // centers of the cells
+	   yc = static_cast<real_prec>(j)+static_cast<real_prec>(0.5);
+	   zc = static_cast<real_prec>(k)+static_cast<real_prec>(0.5);
 	  
-	  dx = (Halo[n].coord1-min1)/d1 - xc; // distance of particle to center of the cell
-	  dy = (Halo[n].coord2-min2)/d2 - yc;
-	  dz = (Halo[n].coord3-min3)/d3 - zc;
+	   dx = (Halo[n].coord1-min1)/d1 - xc; // distance of particle to center of the cell
+	   dy = (Halo[n].coord2-min2)/d2 - yc;
+	   dz = (Halo[n].coord3-min3)/d3 - zc;
 	  
 	  
-	  hx0=static_cast<real_prec>(0.75-dx*dx); // fraction of particle assigned
-	  hy0=static_cast<real_prec>(0.75-dy*dy); // fraction of particle assigned
-	  hz0=static_cast<real_prec>(0.75-dz*dz); // fraction of particle assigned
+	   hx0=static_cast<real_prec>(0.75-dx*dx); // fraction of particle assigned
+	   hy0=static_cast<real_prec>(0.75-dy*dy); // fraction of particle assigned
+	   hz0=static_cast<real_prec>(0.75-dz*dz); // fraction of particle assigned
 	  
-	  hxp1=static_cast<real_prec>(0.5*(0.5+dx)*(0.5+dx)); // fraction of particle assigned
-	  hyp1=static_cast<real_prec>(0.5*(0.5+dy)*(0.5+dy)); // fraction of particle assigned
-	  hzp1=static_cast<real_prec>(0.5*(0.5+dz)*(0.5+dz)); // fraction of particle assigned
+	   hxp1=static_cast<real_prec>(0.5*(0.5+dx)*(0.5+dx)); // fraction of particle assigned
+	   hyp1=static_cast<real_prec>(0.5*(0.5+dy)*(0.5+dy)); // fraction of particle assigned
+	   hzp1=static_cast<real_prec>(0.5*(0.5+dz)*(0.5+dz)); // fraction of particle assigned
 	  
-	  hxm1=static_cast<real_prec>(0.5*(0.5-dx)*(0.5-dx)); // fraction of particle assigned
-	  hym1=static_cast<real_prec>(0.5*(0.5-dy)*(0.5-dy)); // fraction of particle assigned
-	  hzm1=static_cast<real_prec>(0.5*(0.5-dz)*(0.5-dz)); // fraction of particle assigned
+	   hxm1=static_cast<real_prec>(0.5*(0.5-dx)*(0.5-dx)); // fraction of particle assigned
+	   hym1=static_cast<real_prec>(0.5*(0.5-dy)*(0.5-dy)); // fraction of particle assigned
+	   hzm1=static_cast<real_prec>(0.5*(0.5-dz)*(0.5-dz)); // fraction of particle assigned
 	  
-	  real_prec mass=num_1;
+	   real_prec mass=num_1;
 
-	  if (weight_prop==_MASS_)
-	    mass=Halo[n].mass;
-	  else if (weight_prop==_SAT_FRACTION_)
-	    mass=Halo[n].number_sub_structures;
+	   if (weight_prop==_MASS_)
+	     mass=Halo[n].mass;
+	   else if (weight_prop==_SAT_FRACTION_)
+	     mass=Halo[n].number_sub_structures;
 	  
 		  
 	  DELTA(i,j,k)    	+= mass*hx0*hy0*hz0;
@@ -1294,7 +1327,11 @@ void getDensity_TSCv(s_params_box_mas *params, const vector<s_Halo>&Halo, vector
 
 void cellbound(ULONG N1,ULONG N2,ULONG N3,real_prec L1,real_prec L2,real_prec L3, vector<real_prec>&v1, vector<real_prec>&v2, vector<real_prec>&v3)
 {
-  ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
+
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+
+    ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
 
   /* start: interpolate from cell center to cell boundaries */
   vector<real_prec> vx(N,0),vy(N,0),vz(N,0);

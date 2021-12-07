@@ -1,47 +1,55 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-// This file contains the methods of the class FFTW_FUNCTION used in the estimates     
-// of clustering for EUCLID                                                             
+// This file contains the methods of the class FileOutput  
 // Developer:  Andres Balaguera Antolinez                                              
 // e-mail:     abalant@gmail.com  
-// Afiliation: INAF, OAR. Uni. Roma3
-// 2013-2015
+// Afiliation: IAC
+// 2013-2021
 /////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-
+////////////////////////////////////////////////////////////////////////////////////////////
 
 # include "../Headers/FileOutput.h"
 # include <iostream>
 # include <fstream>
 # include <omp.h>
 
-unsigned long FileOutput::read_file(string fname, vector< real_prec > &prop_ob, int NTHREADS)
+
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+
+
+ULONG FileOutput::read_file(string fname, vector< real_prec > &prop_ob, int NTHREADS)
 {
   
   time_t start;
   time(&start);
   
-  
   cout<<CYAN;
+#ifdef _FULL_VERBOSE_
   So.message_screen("Reading input file",fname);
   So.message_screen("Nthreads = ",NTHREADS);
+#endif
 
   int items_per_line = 0;
   unsigned nElem = 0;
   
   ifstream inputf (fname.c_str(), ifstream::in);
-  if (!inputf) {
-   std::cerr<<"Error in opening the input file " << fname << "!" << endl; exit(1);
-  }
+  if (inputf.fail())
+    this->So.message_error_file(fname);
   
   // now counts how many doubles are in the first line
   // assuming that (1) that number is the same for all lines
   // and (2) that there is no header in the file
   
   nElem=m_countLines(inputf);
-  //  cout<<YELLOW<<"Number of lines = "<<CYAN<<nElem <<endl;
-  So.message_screen("Number of lines =",static_cast<int>(nElem));  
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Number of lines =",static_cast<int>(nElem));
+#endif
   string firstline;
   real_prec aa;
   if(!inputf.eof()) {
@@ -51,8 +59,9 @@ unsigned long FileOutput::read_file(string fname, vector< real_prec > &prop_ob, 
       items_per_line++;
   }
   inputf.seekg (0, inputf.beg);
-  So.message_screen("Number of columns =",items_per_line);  
-  
+#ifdef _FULL_VERBOSE_
+ So.message_screen("Number of columns =",items_per_line);
+#endif
   prop_ob.resize(nElem * items_per_line);
   
   size_t bufSize = min(static_cast<int>(m_getBuffer(inputf)), static_cast<int>(nElem));
@@ -68,42 +77,47 @@ unsigned long FileOutput::read_file(string fname, vector< real_prec > &prop_ob, 
   string line = ""; //line to read
   
   // parallel section to read file
-  
+#ifdef _USE_OMP_
 #pragma omp parallel num_threads(NTHREADS)
+#endif
   {
     
     
     while ( (doneElem < nElem) && (false == inputf.eof()) ){
+#ifdef _USE_OMP_
 #pragma omp single
-      {
-	load = min(static_cast<int>(bufSize), static_cast<int>(nElem - doneElem));
-	for (size_t i=0; i<load; ++i)
-	  getline(inputf, tmplines[i]);
-	nfail = 0;
-      }
+#endif
+    {
+    	load = min(static_cast<int>(bufSize), static_cast<int>(nElem - doneElem));
+	    for (size_t i=0; i<load; ++i)
+	       getline(inputf, tmplines[i]);
+        nfail = 0;
+    }
       
       
       // -- process buffer - parallel -
+#ifdef _USE_OMP_
 #pragma omp for reduction (+:nfail)
-      for (size_t i=0; i<load; ++i) 
-	{
-	  
-	  // skip empty lines (none of them should be empty)
-	  if (true == tmplines[i].empty())
-	    {
-	      nfail ++;
-	      continue;
-	    }
-	  int jj = 0;
-	  stringstream ss(tmplines[i]);
-	  real_prec bb;
-	  while (ss>>bb) prop_ob[(doneElem+i)*items_per_line + jj++] = static_cast<real_prec>(bb);
-	}
-      
+#endif
+    for (size_t i=0; i<load; ++i)
+	     {
+	  	  // skip empty lines (none of them should be empty)
+	       if (true == tmplines[i].empty())
+	         {
+	           nfail ++;
+	           continue;
+      	    }
+	       int jj = 0;
+	       stringstream ss(tmplines[i]);
+	       real_prec bb;
+	       while (ss>>bb) prop_ob[(doneElem+i)*items_per_line + jj++] = static_cast<real_prec>(bb);
+	     }
+#ifdef _USE_OMP_
 #pragma omp single
+#endif
       {
-	size_t effective = load - nfail;
-	doneElem += effective;
+      	size_t effective = load - nfail;
+	      doneElem += effective;
       }
     }
   } 
@@ -111,7 +125,8 @@ unsigned long FileOutput::read_file(string fname, vector< real_prec > &prop_ob, 
   
   inputf.clear();
   inputf.close();
-  
+/*
+#ifdef _FULL_VERBOSE_
   cout<<CYAN;
   time_t end; time (&end);
   double diff = difftime(end,start);
@@ -120,9 +135,56 @@ unsigned long FileOutput::read_file(string fname, vector< real_prec > &prop_ob, 
   else cout<<"Lapse: "<<diff/3600<<" hours"<<endl;
   cout<<RESET;
   So.DONE();
+#endif
+*/
   return static_cast<unsigned long>(nElem);
 }
 
+
+
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+// *********************************************************************************************
+
+ULONG FileOutput::read_binary_file(string inputFileName, vector<real_prec>&prop)
+{
+
+    So.enter(__PRETTY_FUNCTION__);
+#ifdef _FULL_VERBOSE_
+    this->So.message_screen("Reading BAM-binary file",inputFileName);
+#endif
+    ifstream input;
+    input.open(inputFileName.c_str(), ios::binary| ios::in);
+    if(input.fail())
+      this->So.message_error_file(inputFileName);
+
+    ULONG Nobjects;
+    input.read((char *)&Nobjects,sizeof(ULONG)); // Read the number of columns
+#ifdef _FULL_VERBOSE_
+    this->So.message_screen("Number of lines =", Nobjects);
+#endif
+    int Ncols;
+    input.read((char *)&Ncols,sizeof(int)); // Read the number of columns
+#ifdef _FULL_VERBOSE_
+    this->So.message_screen("Number of columns =", Ncols);
+#endif
+
+#ifdef _FULL_VERBOSE_
+    this->So.message_screen("Allocating");
+#endif
+    for(ULONG i=0;i<Nobjects*Ncols;++i)
+        {
+          float new_prop;
+          input.read((char *)&new_prop,sizeof(float)); // Read the number of columns
+          prop.push_back(new_prop);
+        }
+    So.DONE();
+    return Nobjects;
+}
 
 
 // *********************************************************************************************
@@ -141,10 +203,10 @@ int FileOutput::read_file_one(string fname, vector<real_prec> &prop_ob){
   
   //  ifstream inputf(fname.c_str());
   in.open(fname.c_str());
-  if (!in) { 
-   std::cerr<<"Error in opening the input file " << fname << "!" << endl; exit(1); 
-  }
-  
+  if (in.fail()) 
+    this->So.message_error_file(fname);
+
+ 
   real_prec aa;
   while(!in.eof())
     {
@@ -227,10 +289,10 @@ void FileOutput::read_file_one_N(long N, string fname, vector<real_prec> &prop_o
   So.message_screen("Input file",fname," with ",N);
 
   //  ifstream inputf(fname.c_str());
-  in.open(fname.c_str());
-  if (!this->in) {
-    std::cerr<<"Error in opening the input file " << fname << "!" << endl; exit(1);
-  }
+  this->in.open(fname.c_str());
+  if (!this->in) 
+   this->So.message_error_file(fname);
+
   
   prop_ob.resize(N,0);
   for(int i=0; i<N;++ i)
@@ -271,10 +333,8 @@ int FileOutput::read_file(string fname, vector<real_prec > &prop_ob){
   this->in.open(fname.c_str());
 
   if (!this->in)
-    {
-      std::cerr<<"Error in opening the input file " << fname << "!" << endl; exit(1);
-    }
-  
+      this->So.message_error_file(fname);
+ 
   cout<<CYAN;
   
   // now counts how many doubles are in the first line
@@ -309,19 +369,14 @@ int FileOutput::read_file(string fname, vector<real_prec > &prop_ob){
   ifstream dina;
   dina.open(fname.c_str(), ios::in);
   assert(dina);
-
-
-
   string line2;
   double bb;
 
-
-
   int NTHREADS = 1;//omp_get_max_threads();
-
+#ifdef _FULL_VERBOSE_
   cout<<CYAN;
   cout<<"Reading using "<<NTHREADS<<" thread(s)"<<endl;
-
+#endif
 
   vector<string> line(1000*NTHREADS);
 
@@ -333,48 +388,48 @@ int FileOutput::read_file(string fname, vector<real_prec > &prop_ob){
   int ii;
 
 
-
+#ifdef _USE_OMP_
 #pragma omp parallel num_threads(NTHREADS)
+#endif
   {
     double bb;
-
     while (!sstop) {  //mientras no se niege sstop, es decir, mientas sstop sea falso, dele
-
+#ifdef _USE_OMP_
 #pragma omp single
-      {
+#endif
+        {
         for(ii = 0; ii < line.size() && line_idx+ii < line_count; ii++)getline(dina,line[ii]);
-
         if(line_idx+ii == line_count) sstop = true; // si esto pasa, detiene todo porque ya llegamos al numero de lineas del file
-
       }
-
-
+#ifdef _USE_OMP_
 #pragma omp barrier
+#endif
 
-
-
+#ifdef _USE_OMP_
 #pragma omp for
-      for(int ll = 0; ll < ii; ll++)
+#endif
+            for(int ll = 0; ll < ii; ll++)
         {
           int jj = 0;
           real_prec bb;
 	  stringstream ss(line[ll]);
           while (ss>>bb) {prop_ob[(line_idx+ll)*items_per_line + jj++] = bb;}
         }
-
-
+#ifdef _USE_OMP_
 #pragma omp single
-      line_idx += ii;   //line_idx counts the number of lines
+#endif
+            line_idx += ii;   //line_idx counts the number of lines
 
     }
 
   }
-
+#ifdef _FULL_VERBOSE_
   cout<<"Number of columns = "<< items_per_line <<endl;
+#endif
   if(input_type=="catalog") if(items_per_line < 3) So.error_ncolumns(fname);
   dina.clear();
   dina.close();
-
+#ifdef _FULL_VERBOSE_
   cout<<RED;
   time_t end; time (&end);
   double diff = difftime(end,start);
@@ -382,6 +437,7 @@ int FileOutput::read_file(string fname, vector<real_prec > &prop_ob){
   else if (diff<3600) cout <<"Lapse: "<<diff/60<<" minutes"<<endl;
   else cout<<"Lapse: "<<diff/3600<<" hours"<<endl;
   cout<<RESET;
+#endif
   return items_per_line;
 }
 
@@ -418,12 +474,14 @@ void FileOutput::read_file(string fname, vector< vector<real_prec> > &prop_ob){
     prop_ob.push_back (nc);         //->fill array with all galaxies
   }
   
+#ifdef _FULL_VERBOSE_
   cout<<"Number of lines = "<<prop_ob.size()<<endl;
   cout<<"Number of columns = "<<prop_ob[0].size()<<endl;
+#endif
   if(prop_ob[0].size()<3)So.error_ncolumns(fname);
   this->in.clear();
   this->in.close();
-  
+#ifdef _FULL_VERBOSE_
   cout<<RED;
   time_t end; time (&end);
   double diff = difftime(end,start);
@@ -431,6 +489,7 @@ void FileOutput::read_file(string fname, vector< vector<real_prec> > &prop_ob){
   else if (diff<3600) cout <<"Lapse: "<<diff/60<<" minutes"<<endl;
   else cout<<"Lapse: "<<diff/3600<<" hours"<<endl;
   cout<<RESET;
+#endif
 }
 
 
@@ -510,9 +569,31 @@ void FileOutput::write_to_file2(string fname, vector<real_prec>& kve, vector<rea
   for(int i=0;i<kve.size();++i)this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<endl; 
   this->out.close();
   So.DONE();
-
 }
 
+// **********************************************************************************************
+// **********************************************************************************************
+
+void FileOutput::write_to_file2(string fname, vector<real_prec>& kve, vector<real_prec> &pk, vector<int> &si, bool cero)
+{
+  So.message_output_file(fname, kve.size(),3);
+  this->out.open(fname.c_str() , ios::out);
+  if(true==cero) 
+  {
+    if(pk[0]<1)
+      for(int i=1;i<kve.size();++i)
+         this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<endl;
+    else
+      for(int i=0;i<kve.size();++i)
+          this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<endl;
+  }
+  else
+    for(int i=0;i<kve.size();++i)
+        this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<endl;
+
+  this->out.close();
+  So.DONE();
+}
 // **********************************************************************************************
 // **********************************************************************************************
 
@@ -537,6 +618,15 @@ void FileOutput::write_to_file(string fname, vector<real_prec>& kve, vector<real
   So.DONE();
 }
 
+
+void FileOutput::write_to_file(string fname, vector<real_prec>& kve, vector<real_prec> &pk, vector<real_prec> &pkk,vector<real_prec> &pkkk, vector<int> &si)
+{
+  this->out.open(fname.c_str() , ios::out); 
+  So.message_output_file(fname, kve.size(),5);
+   for(int i=0;i<kve.size();++i)this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<pkk[i]<<"\t"<<pkkk[i]<<"\t"<<si[i]<<endl;
+  this->out.close(); 
+  So.DONE();
+}
 
 // **********************************************************************************************
 
@@ -736,10 +826,18 @@ void FileOutput::write_to_file(string fname, vector<real_prec> &kve, vector<real
 //##################################################################################
 void FileOutput::read_array(string fname,float *OUT,ULONG N)
 {
-  ScreenOutput So;
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+
   fftw_array<float> dummy(N);
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Reading binary file", fname);
+#endif
+  if(!fname.data())
+    this->So.message_error_file(fname);
+
   this->inStream.open(fname.data(),file_is_natural); 
+
   assert(this->inStream.is_open()); 
   this->inStream.get(dummy.data,N); 
   this->inStream.close(); 
@@ -756,36 +854,61 @@ void FileOutput::read_array(string fname,float *OUT,ULONG N)
 void FileOutput::read_array(string fname,vector<real_prec>&OUT)
 {
   ULONG N=OUT.size();
-  ScreenOutput So;
+ // ScreenOutput So;
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
   fftw_array<float> dummy(N);
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Reading binary file", fname);
-  this->inStream.open(fname.data(),file_is_natural); 
+#endif
+  if(!fname.data())
+   this->So.message_error_file(fname);
+
+  this->inStream.open(fname.data(),file_is_natural);
+
   assert(this->inStream.is_open()); 
   this->inStream.get(dummy.data,N); 
   this->inStream.close(); 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<N;i++)
     OUT[i]=static_cast<real_prec>(dummy[i]);
   So.DONE();
-  return ;
 }
 
 //##################################################################################
 void FileOutput::read_array(string fname,vector<ULONG>&OUT)
 {
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   ULONG N=OUT.size();
   fftw_array<float> dummy(N);
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Reading binary file", fname);
-  this->inStream.open(fname.data(),file_is_natural); 
+#endif
+  if(!fname.data())
+   this->So.message_error_file(fname);
+
+
+  this->inStream.open(fname.data(),file_is_natural);
+
+
   assert(this->inStream.is_open()); 
   this->inStream.get(dummy.data,N); 
   this->inStream.close(); 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<N;i++)
     OUT[i]=static_cast<ULONG>(dummy[i]);
   So.DONE();
-  return ;
 }
 
 //##################################################################################
@@ -797,7 +920,7 @@ bool FileOutput::exists(string fname)
   bool open = this->inStream.is_open();
   this->inStream.close(); 
   if(false==open)
-    this->So.message_screen("File not found");
+    this->So.message_error_file(fname);
   else
     this->So.message_screen("File found");
     
@@ -813,13 +936,22 @@ bool FileOutput::exists(string fname)
 void FileOutput::write_array(string fname,float *A_rm,ULONG N)
 {
   fftw_array<float> dummy(N);
-  
+
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<N;i++)
     dummy[i]=A_rm[i];
   
   string FNAME=fname+string(".dat");
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Writting in binary file", FNAME);
+#endif
+  if(!FNAME.data())
+   this->So.message_error_file(fname);
+
   bofstream outStream(FNAME.data(),file_is_natural);
   assert(outStream.is_open());
   outStream.put(dummy.data,N);
@@ -828,6 +960,12 @@ void FileOutput::write_array(string fname,float *A_rm,ULONG N)
   return;
 }
 
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
 //##################################################################################
 //##################################################################################
 
@@ -835,16 +973,51 @@ void FileOutput::write_array(string fname,float *A_rm,ULONG N)
 void FileOutput::write_array(string fname, vector<real_prec>&out)
 {
 
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   ULONG N=out.size();
+#ifdef OUTPUT_PREC_DOUBLE
+  fftw_array<double> dummy(N);
+#else
   fftw_array<float> dummy(N);
+#endif
 
 
+#ifdef DOUBLE_PREC
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<N;i++)
-    dummy[i]=static_cast<float>(out[i]);
+#ifdef OUTPUT_PREC_DOUBLE
+      dummy[i]=out[i];
+#else
+      dummy[i]=static_cast<float>(out[i]);
+#endif
+#else
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<N;i++)
+    dummy[i]=out[i];
+#endif
   
   string FNAME=fname+string(".dat");
-  this->So.message_screen("Writting in binary file", FNAME);
+#ifdef _FULL_VERBOSE_
+#ifdef OUTPUT_PREC_DOUBLE
+  this->So.message_screen("Writting in binary file in double prec.", FNAME);
+#else
+  this->So.message_screen("Writting in binary file in single prec.", FNAME);
+#endif
+
+#endif
+  if(!FNAME.data())
+    {
+      cout<<RED<<"File not found. Check input parameter file. Code exits here."<<RESET<<endl;
+      exit(0);
+    }
   bofstream outStream(FNAME.data(),file_is_natural);
   assert(outStream.is_open());
   outStream.put(dummy.data,N);
@@ -852,14 +1025,51 @@ void FileOutput::write_array(string fname, vector<real_prec>&out)
   So.DONE();
   return;
 }
-
-
 //##################################################################################
 //##################################################################################
-
-
+//##################################################################################
+//##################################################################################
 void FileOutput::write_array(string fname, vector<ULONG>&out)
 {
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+
+  ULONG N=out.size();
+  fftw_array<float> dummy(N);
+
+#pragma omp parallel for
+  for(ULONG i=0;i<N;i++)
+#ifdef OUTPUT_PREC_DOUBLE
+      dummy[i]=static_cast<double>(out[i]);
+#else
+      dummy[i]=static_cast<float>(out[i]);
+#endif
+  
+  string FNAME=fname+string(".dat");
+#ifdef _FULL_VERBOSE_
+#ifdef OUTPUT_PREC_DOUBLE
+  this->So.message_screen("Writting in binary file in double prec.", FNAME);
+#else
+  this->So.message_screen("Writting in binary file in single prec.", FNAME);
+#endif
+#endif
+  if(!FNAME.data())
+   this->So.message_error_file(fname);
+
+  bofstream outStream(FNAME.data(),file_is_natural);
+  assert(outStream.is_open());
+  outStream.put(dummy.data,N);
+  outStream.close();
+  So.DONE();
+  return;
+}
+//##################################################################################
+
+void FileOutput::write_array(string fname, vector<int>&out)
+{
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+
   ULONG N=out.size();
   fftw_array<float> dummy(N);
   ScreenOutput So;
@@ -867,9 +1077,13 @@ void FileOutput::write_array(string fname, vector<ULONG>&out)
 #pragma omp parallel for
   for(ULONG i=0;i<N;i++)
     dummy[i]=static_cast<float>(out[i]);
-  
+
   string FNAME=fname+string(".dat");
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Writting binary file", FNAME);
+#endif
+  if(!FNAME.data())
+     this->So.message_error_file(fname);
   bofstream outStream(FNAME.data(),file_is_natural);
   assert(outStream.is_open());
   outStream.put(dummy.data,N);
@@ -877,6 +1091,8 @@ void FileOutput::write_array(string fname, vector<ULONG>&out)
   So.DONE();
   return;
 }
+
+
 
 //##################################################################################
 //##################################################################################
@@ -974,8 +1190,8 @@ void FileOutput::write_to_file2(string fname, vector<gsl_real>& kve, vector<gsl_
 void FileOutput::write_to_file(string fname, vector<gsl_real>& kve, vector<gsl_real> &pk, vector<gsl_real> &si, vector<gsl_real> &sai)
 {
   this->out.open(fname.c_str() , ios::out); 
-    So.message_output_file(fname, kve.size(),4);
-    for(int i=0;i<kve.size();++i)this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<"\t"<<sai[i]<<endl;
+  So.message_output_file(fname, kve.size(),4);
+  for(int i=0;i<kve.size();++i)this->out<<kve[i]<<"\t"<<pk[i]<<"\t"<<si[i]<<"\t"<<sai[i]<<endl;
   this->out.close();
   So.DONE();
 }

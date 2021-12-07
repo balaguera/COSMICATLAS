@@ -157,7 +157,7 @@ void CoordinateSystem::compute_box_size(bool new_los, void *go, real_prec *Lside
 // ****************************************************************************************
 // ****************************************************************************************
 // ****************************************************************************************
-void CoordinateSystem::equatorial_to_cartesian(real_prec ra, real_prec dec, real_prec r, real_prec *x, real_prec *y, real_prec *z)
+void CoordinateSystem::equatorial_to_cartesian(real_prec ra, real_prec dec, real_prec r, real_prec &x, real_prec &y, real_prec &z)
 {
   // ********************************************************************************
   // Convert equatorial coordinates, i.e, right ascension, declination and distance * 
@@ -165,12 +165,9 @@ void CoordinateSystem::equatorial_to_cartesian(real_prec ra, real_prec dec, real
   // the output is in the units of r                                                *
   // ********************************************************************************
   real_prec fac=M_PI/180.;
-  real_prec sa=sin(0.5*M_PI-dec*fac);
-  real_prec ca=cos(0.5*M_PI-dec*fac);
-
-  *x  =r*cos(ra*fac)*sa;
-  *y  =r*sin(ra*fac)*sa;
-  *z  =r*ca;
+  x  =r*cos(ra*fac)*sin(0.5*M_PI-dec*fac);
+  y  =r*sin(ra*fac)*sin(0.5*M_PI-dec*fac);
+  z  =r*cos(0.5*M_PI-dec*fac);
 
   // // change x->z 
   // // and z to -x
@@ -187,7 +184,7 @@ void CoordinateSystem::equatorial_to_cartesian(real_prec ra, real_prec dec, real
 // ****************************************************************************************
 // ****************************************************************************************
 // ****************************************************************************************
-void CoordinateSystem::new_equatorial_to_cartesian(real_prec ra, real_prec dec, real_prec r, real_prec m_ra, real_prec m_dec, real_prec *x, real_prec *y, real_prec *z){
+void CoordinateSystem::new_equatorial_to_cartesian(real_prec ra, real_prec dec, real_prec r, real_prec m_ra, real_prec m_dec, real_prec &x, real_prec &y, real_prec &z){
   // ********************************************************************************
   // Convert equatorial coordinates, i.e, right ascension, declination and distance * 
   // to a new spherical coordinate system with the z-axis pointing towards          *
@@ -202,11 +199,7 @@ void CoordinateSystem::new_equatorial_to_cartesian(real_prec ra, real_prec dec, 
   // Convert to cartessian
   real_prec new_dec,new_ra;
   equatorial_to_equatorial(ra, dec, m_ra,m_dec,&new_ra,&new_dec); 
-  equatorial_to_cartesian(new_ra,new_dec,r, &xx, &yy, &zz);
-  // Redefine line of sight in the z-direction
-  *x=xx;
-  *y=yy;
-  *z=zz;
+  equatorial_to_cartesian(new_ra,new_dec,r, x, y, z);
 }
 
 

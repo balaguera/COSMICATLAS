@@ -49,8 +49,8 @@ gsl_real Statistics::iAs2sigma8(gsl_real lk,void *p){  /* Integrand for sigma^2 
 real_prec Statistics::sigma_masa(real_prec m, real_prec z, s_CosmologicalParameters *scp){
   /* Sigma as a function of mass */
 
-  real_prec lkmin=log10(scp->kmin_int);
-  real_prec lkmax=log10(scp->kmax_int);
+  real_prec lkmin=log10(1.09*scp->kmin_int);
+  real_prec lkmax=log10(0.99*scp->kmax_int);
   scp->aux_var1 = m;  //log10M
   scp->aux_var2 = z;
 
@@ -77,10 +77,16 @@ gsl_real Statistics::isigma(gsl_real lk,void *p){  /* Integrand for sigma^2 */
   Cosmology cf;
   real_prec k=pow(10,lk);
   s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
+  ps.use_external_power=s_cp->use_external_power;
   real_prec m= s_cp->aux_var1;
   real_prec z= s_cp->aux_var2;
   real_prec M=pow(10,m);
-  real_prec ans=(log(10.0)*k)*(1./(2.*pow(M_PI,2)))*pow(k,2)*ps.Linear_Matter_Power_Spectrum(s_cp,k)*pow(ps.window(k,cf.rr(M,z,p)),2);
+  real_prec power;
+  if(true==s_cp->use_external_power)
+      power= pow(s_cp->growth_factor,2)*gsl_inter_new(s_cp->kvector_external, s_cp->power_external, k);
+   else
+      power=ps.Linear_Matter_Power_Spectrum(s_cp,k);
+  real_prec ans=(log(10.0)*k)*(1./(2.*pow(M_PI,2)))*pow(k,2)*power*pow(ps.window(k,cf.rr(M,z,p)),2);
   return static_cast<gsl_real>(ans);
 }
 
@@ -151,7 +157,12 @@ gsl_real Statistics::dsigma_dR(gsl_real lk, void *p){  /* integrand to calculate
   real_prec k=pow(10,lk);
   real_prec r =Cf.rr(M,z,p);
   real_prec y=r*k;
-  return  (log(10.0)*k)*(1./(2.*pow(M_PI,2)))*pow(k,2)*ps.Linear_Matter_Power_Spectrum(s_cp,k)*2.0*fabs(ps.window(k,r))*k*fabs(((3.*pow(y,-2))*sin(y)-9.*pow(y,-4)*(sin(y)-y*cos(y))));
+  real_prec power=1.0;
+  if(true==s_cp->use_external_power)
+      power= pow(s_cp->growth_factor,2)*gsl_inter_new(s_cp->kvector_external, s_cp->power_external, k);
+   else
+      power=ps.Linear_Matter_Power_Spectrum(s_cp,k);
+  return  (log(10.0)*k)*(1./(2.*pow(M_PI,2)))*pow(k,2)*power*2.0*fabs(ps.window(k,r))*k*fabs(((3.*pow(y,-2))*sin(y)-9.*pow(y,-4)*(sin(y)-y*cos(y))));
 }
 
 

@@ -1,74 +1,47 @@
 #include "../Headers/Catalog.h"
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
+void Catalog::set_params_catalog(Params params)
+{
+  this->So.enter(__PRETTY_FUNCTION__);
+
+  this->Output_directory=params._Output_directory();
+  this->params=params;
+  this->box.masskernel=params._iMAS_Y();
+  this->box.Lbox=params._Lbox();
+  this->box.Nft=params._Nft();
+  this->box.NGRID=static_cast<ULONG>(params._Nft()*params._Nft()*params._Nft());
+  this->box.d1=params._d1();
+  this->box.d2=params._d2();
+  this->box.d3=params._d3();
+  this->box.min1=params._xllc();
+  this->box.min2=params._yllc();
+  this->box.min3=params._zllc();
+
+}
+
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 // This is the last function aded, Sep 24 2020
 // Meant to analyze the cat, and to be run under the option (updated at the same date) -c at executation time
 void Catalog::analyze_cat(){
     this->So.enter(__PRETTY_FUNCTION__);
+    this->set_params_catalog(this->params);
+
 #if defined (_USE_ALL_PK_) || defined (_USE_MASS_CUTS_PK_)
-    this->read_catalog(this->params._Input_dir_cat()+this->params._file_catalogue(),pow(10,this->params._LOGMASSmin()));
+    this->read_catalog(this->params._file_catalogue(),pow(10,this->params._LOGMASSmin()));
 #else
-    this->read_catalog(this->params._Input_dir_cat()+this->params._file_catalogue(),pow(10,this->params._LOGMASSmin()),pow(10,this->params._LOGMASSmax()));
+    this->read_catalog(this->params._file_catalogue(),pow(10,this->params._LOGMASSmin()),pow(10,this->params._LOGMASSmax()));
 #endif
+
     string file;
-/*
-
- // There is a bug related to memmory in jumping from get_neighbpuro to get_distribution. UNidentified.
-   if(true==this->params._get_distribution_min_separations())
-    {
-       vector<s_nearest_cells> ncells_info;
-      ncells_info.resize(this->params._NGRID());
-      So.message_screen("Identifying neighbour cells");
-      get_neighbour_cells_cat_analyze(this->params._Nft(), N_CELLS_BACK_FORTH, ncells_info);
-      So.DONE();
-      this->get_distribution_min_separations(this->type_of_object, ncells_info);
-    }
-*/
-
-
-// We must set sos ifs in order to aks what are we going to analyze from the catalog
-
-//    string fname_mass_function_Y = this->Output_directory+this->type_of_object+"_abundance_R"+to_string(this->params._realization())+".txt";
-//  this->get_property_function(fname_mass_function_Y);
-
-//this->get_pdf_vmax("VMAX");
-//this->get_sep_distribution(PROP_THRESHOLD_MULTI_SCALE_4);
-
-
-  //  string file;
-  //   file=this->params._Output_directory()+"Ncounts_Nft"+to_string(this->params._Nft())+"_MAS"+to_string(this->box.masskernel)+"_"+this->params._Name_survey();
- //    vector<real_prec>ncounts(this->params._NGRID() ,0);
-  //     this->get_density_field_grid(_COUNTS_,ncounts);
-//      this->get_density_field_grid(_COUNTS_,file);
-
-/*
-
-      this->gp_abundance<<"set log x \n";
-      this->gp_abundance<<"set border linewidth 2.2\n";
-      this->gp_abundance<<"set xlabel 'Tracer Mass [Ms / h]' font 'Times-Roman,12'\n";
-      this->gp_abundance<<"set ylabel 'Occupation Number in cells'  font 'Times-Roman,12'\n";
-      vector<pair<real_prec, real_prec> > xy_pts_m;
-      for(int i=0; i<this->NOBJS; ++i) 
-        xy_pts_m.push_back(std::make_pair(this->Halo[i].mass, ncounts[this->Halo[i].GridID]));
-      this->gp_abundance<<"plot"<<this->gp_abundance.file1d(xy_pts_m) << " w p ps 0.2 pt 7 title 'Mass'"<<endl;
-      xy_pts_m.clear(); xy_pts_m.shrink_to_fit();
-*/
-
-
-
     /*
       if(this->params._i_spin_g()>0 && this->params._i_spin_g()<this->NCOLS)
       {
@@ -105,325 +78,18 @@ void Catalog::analyze_cat(){
 
     */
 
-  file=this->params._Output_directory()+this->params._Name_survey()+"_Nres"+to_string(this->params._Nft())+"_MAS"+to_string(this->params._masskernel());
-  this->get_density_field_grid(_COUNTS_,file);
-  
-}
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+    file=this->params._Output_directory()+"UNITSIM_HALOS300dm_"+this->params._Name_survey()+"_Nres"+to_string(this->params._Nft())+"_MAS"+to_string(this->params._masskernel())+"mc";
+    this->get_density_field_grid(_COUNTS_,file);
 
-void Catalog::write_catalog_bin(string outputFileName)
-{
-    So.enter(__PRETTY_FUNCTION__);
-    real_prec conversion_factor=1.0;
-    int Nprop_file=MIN_N_PROP_CAT;
-
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-    Nprop_file++;
-#ifdef _ASSIGN_MASS_POST_
-    Nprop_file++;
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_    
-    Nprop_file++;
-#endif
-#ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
-    Nprop_file++;
-#endif
-#endif
-
-
-  
-
-
-#elif defined _USE_MASS_AS_OBSERVABLE_
-    Nprop_file++;
-#endif
-
-    // The structure pof the binary file will be:
-    //  ULONG Nlines
-    //  int Ncolumns = 10
-   //   Nlines*Ncolumns floats x,y,z,vx,vy,vz,M,vmax,Rs,s 
-    ofstream outStream;
-    this->So.message_screen("Writting to binary file", outputFileName);
-
-    outStream.open(outputFileName.c_str(), ios::binary|ios::out);
-
-    this->So.message_screen("Writting Number of tracers = ", this->NOBJS);
-    outStream.write(reinterpret_cast<char*>(&this->NOBJS), sizeof(ULONG));
-    this->So.DONE();
-    this->So.message_screen("Writting number of columns = ", Nprop_file);
-    outStream.write(reinterpret_cast<char*>(&Nprop_file), sizeof(ULONG));
-    this->So.DONE();
-
-    
-#ifdef _OUTPUT_WITH_HEADERS_
-    vector<string> data_i(Nprop_file+1);
-    data_i.push_back("#x(Mpc/h).");
-    data_i.push_back("y(Mpc/h).");
-    data_i.push_back("z(Mpc/h).");
-    data_i.push_back("vx(km/s).");
-    data_i.push_back("vy(km/s).");
-    data_i.push_back("vz(km/s).");
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-
-#ifdef _ASSIGN_MASS_POST_
-    data_i.push_back("Mass(Ms/h).)";
-    data_i.push_back("Vmax(km/s).)";
-#ifdef _USE_RS_AS_OBSERVABLE_POWER_
-    data_i.push_back("Rs(kpc/h).");
-#endif
-
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_
-    data_i.push_back("Spin.");
-#endif
-
-#endif // end for assign_mass_post
-
-#elif defined _USE_MASS_AS_OBSERVABLE_
-    data_i.push_back("Mass(Ms/h).)";
-#endif
-    data_i.push_back("Ntracers");
-    for(int i=0;i<Nprop_file+1;++i)
-    {
-        int sizes_i=data_i[i].size();
-        outStream.write((char *)&sizes_i, sizeof(sizes_i));
-        outStream.write(data_i[i].c_str(), sizes_i);
-    }
-#endif
-
-    for(ULONG i = 0; i< this->NOBJS; ++i)
-     {
-#ifdef _WRITE_COORDINATES_
-       float x=static_cast<float>(Halo[i].coord1);
-       float y=static_cast<float>(Halo[i].coord2);
-       float z=static_cast<float>(Halo[i].coord3);
-       outStream.write(reinterpret_cast<char*>(&x), sizeof(x));
-       outStream.write(reinterpret_cast<char*>(&y), sizeof(y)); 
-       outStream.write(reinterpret_cast<char*>(&z), sizeof(z));
-#endif
-
-#ifdef _WRITE_VELOCITIES_
-       float vx=static_cast<float>(Halo[i].vel1*conversion_factor);
-       float vy=static_cast<float>(Halo[i].vel2*conversion_factor);
-       float vz=static_cast<float>(Halo[i].vel3*conversion_factor);
-       outStream.write(reinterpret_cast<char*>(&vx), sizeof(vx));
-       outStream.write(reinterpret_cast<char*>(&vy), sizeof(vy));
-       outStream.write(reinterpret_cast<char*>(&vz), sizeof(vz));
-#endif
-
-#if defined _USE_MASS_AS_OBSERVABLE_ || defined (_ASSIGN_MASS_POST_) 
-       float mass=static_cast<float>(Halo[i].mass);
-       outStream.write(reinterpret_cast<char*>(&mass), sizeof(mass));
-#endif
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-       float vmax=static_cast<float>(Halo[i].vmax);
-       outStream.write(reinterpret_cast<char*>(&vmax), sizeof(vmax));
-#endif
-#ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
-        float rs=static_cast<float>(Halo[i].rs);
-        outStream.write(reinterpret_cast<char*>(&rs), sizeof(rs));
-#endif
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_
-       float spin=static_cast<float>(Halo[i].spin);
-       outStream.write(reinterpret_cast<char*>(&spin), sizeof(spin));
-#endif
-    }
-
-    outStream.close();
-    So.DONE();
 }
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
-
-void Catalog::write_catalog(string outputFileName)
-{
-  So.enter(__PRETTY_FUNCTION__);
-  real_prec conversion_factor=1.0;
-
-    int Nprop_file=MIN_N_PROP_CAT;
-
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-    Nprop_file++;
-#ifdef _ASSIGN_MASS_POST_
-    Nprop_file++;
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_    
-    Nprop_file++;
-#endif
-#ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
-    Nprop_file++;
-#endif
-#endif
-#endif
-    
-    
-#ifdef _WRITE_BINARY_BAM_FORMAT_
-    
-    
-    // The structure pof the binary file will be:
-    //  ULONG Nlines
-    //  int Ncolumns = 10
-    //   Nlines*Ncolumns floats x,y,z,vx,vy,vz,M,vmax,Rs,s 
-    ofstream outStream;
-    this->So.message_screen("Writting to binary file", outputFileName);
-    
-    outStream.open(outputFileName.c_str(), ios::binary|ios::out);
-    
-    this->So.message_screen("Writting Number of tracers = ", this->NOBJS);
-    outStream.write(reinterpret_cast<char*>(&this->NOBJS), sizeof(ULONG));
-    this->So.DONE();
-    this->So.message_screen("Writting number of columns = ", Nprop_file);
-    outStream.write(reinterpret_cast<char*>(&Nprop_file), sizeof(ULONG));
-    this->So.DONE();
-    
-    
-#ifdef _OUTPUT_WITH_HEADERS_
-    vector<string> data_i(Nprop_file+1);
-    data_i.push_back("#x(Mpc/h).");
-    data_i.push_back("y(Mpc/h).");
-    data_i.push_back("z(Mpc/h).");
-    data_i.push_back("vx(km/s).");
-    data_i.push_back("vy(km/s).");
-    data_i.push_back("vz(km/s).");
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-    
-#ifdef _ASSIGN_MASS_POST_
-    data_i.push_back("Mass(Ms/h).");
-    data_i.push_back("Vmax(km/s).");
-#ifdef _USE_RS_AS_OBSERVABLE_POWER_
-    data_i.push_back("Rs(kpc/h).");
-#endif
-    
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_
-    data_i.push_back("Spin.");
-#endif
-    
-#endif // end for assign_mass_post
-    
-#elif defined _USE_MASS_AS_OBSERVABLE_
-    data_i.push_back("Mass(Ms/h).");
-#endif
-    data_i.push_back("Ntracers");
-    for(int i=0;i<Nprop_file+1;++i)
-      {
-	int sizes_i=data_i[i].size();
-        outStream.write((char *)&sizes_i, sizeof(sizes_i));
-        outStream.write(data_i[i].c_str(), sizes_i);
-      }
-#endif
-    
-    for(ULONG i = 0; i< this->NOBJS; ++i)
-      {
-#ifdef _WRITE_COORDINATES_
-	float x=static_cast<float>(Halo[i].coord1);
-	float y=static_cast<float>(Halo[i].coord2);
-	float z=static_cast<float>(Halo[i].coord3);
-	outStream.write(reinterpret_cast<char*>(&x), sizeof(x));
-	outStream.write(reinterpret_cast<char*>(&y), sizeof(y)); 
-	outStream.write(reinterpret_cast<char*>(&z), sizeof(z));
-#endif
-	
-#ifdef _WRITE_VELOCITIES_
-	float vx=static_cast<float>(Halo[i].vel1*conversion_factor);
-	float vy=static_cast<float>(Halo[i].vel2*conversion_factor);
-	float vz=static_cast<float>(Halo[i].vel3*conversion_factor);
-	outStream.write(reinterpret_cast<char*>(&vx), sizeof(vx));
-	outStream.write(reinterpret_cast<char*>(&vy), sizeof(vy));
-	outStream.write(reinterpret_cast<char*>(&vz), sizeof(vz));
-#endif
-	
-#if defined _USE_MASS_AS_OBSERVABLE_ || defined (_ASSIGN_MASS_POST_) 
-	float mass=static_cast<float>(Halo[i].mass);
-	outStream.write(reinterpret_cast<char*>(&mass), sizeof(mass));
-#endif
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-	float vmax=static_cast<float>(Halo[i].vmax);
-	outStream.write(reinterpret_cast<char*>(&vmax), sizeof(vmax));
-#endif
-#ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
-	float rs=static_cast<float>(Halo[i].rs);
-        outStream.write(reinterpret_cast<char*>(&rs), sizeof(rs));
-#endif
-#ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_
-	float spin=static_cast<float>(Halo[i].spin);
-	outStream.write(reinterpret_cast<char*>(&spin), sizeof(spin));
-#endif
-      }
-
-#else  // else, write in ascii
-    
-    ofstream outStream;
-    outStream.precision(6);    
-    outStream.setf(ios::showpoint); 
-    outStream.setf(ios::scientific); 
-    outStream.open(outputFileName.c_str(), ios::out);
-    
-    this->So.message_screen("Writting to ascii file", outputFileName);
-    this->So.message_screen("with ", this->NOBJS, "objects");
-#endif
-    
-
-    for(ULONG i = 0; i< this->NOBJS; ++i)
-#ifdef _USE_VMAX_AS_OBSERVABLE_
-#if defined _WRITE_COORDINATES_ && defined _WRITE_VELOCITIES_ 
-//      outStream<<this->Halo[i].coord1<<"\t"<<this->Halo[i].coord2<<"\t"<<this->Halo[i].coord3<<"\t"<<this->Halo[i].vel1*conversion_factor<<"\t"<<this->Halo[i].vel2*conversion_factor<<"\t"<<this->Halo[i].vel3*conversion_factor<<"\t"<<this->Halo[i].mass<<"\t"<<this->Halo[i].vmax<<"\t"<<this->Halo[i].rs<<"\t"<<this->Halo[i].spin<<endl;
-      outStream<<Halo[i].coord1<<"\t"<<Halo[i].coord2<<"\t"<<Halo[i].coord3<<"\t"<<Halo[i].vel1*conversion_factor<<"\t"<<Halo[i].vel2*conversion_factor<<"\t"<<Halo[i].vel3*conversion_factor<<"\t"<<Halo[i].mass<<"\t"<<Halo[i].vmax<<"\t"<<Halo[i].identity<<endl;
-#elif defined _WRITE_COORDINATES_ && !defined _WRITE_VELOCITIES_ 
-    //      outStream<<Halo[i].coord1<<"\t"<<Halo[i].coord2<<"\t"<<Halo[i].coord3<<"\t"<<Halo[i].mass<<"\t"<<Halo[i].vmax<<"\t"<<Halo[i].rs<<" "<<Halo[i].spin<<endl;
-    //      outStream<<Halo[i].coord1<<"\t"<<Halo[i].coord2<<"\t"<<Halo[i].coord3<<"\t"<<Halo[i].mass<<"\t"<<Halo[i].vmax<<endl;
-#endif
-#endif    
-    //#ifdef _USE_MASS_AS_OBSERVABLE_
-    //      outStream<<this->Halo[i].coord1<<"\t"<<this->Halo[i].coord2<<"\t"<<this->Halo[i].coord3<<"\t"<<this->Halo[i].mass<<endl;
-    //#endif
-
-    outStream.close();
-    So.DONE();
-
-
-		     
-}
-
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 #ifdef _USE_VELOCITIES_
 void Catalog::read_catalog_bin(ULONG n, string filex, string filey, string filez,string filevx, string filevy, string filevz)
 #else
@@ -432,6 +98,7 @@ void Catalog::read_catalog_bin(ULONG n, string filex, string filey, string filez
 {
 
   this->So.enter(__PRETTY_FUNCTION__);
+
 
   this->xgal.clear();
   this->ygal.clear();
@@ -443,7 +110,7 @@ void Catalog::read_catalog_bin(ULONG n, string filex, string filey, string filez
   this->property.clear();
 
 //  string field=this->Output_directory;
-  string Ofile=this->params._Output_directory()+this->params._Name_survey()+"_L"+to_string(static_cast<int>(this->params._Lbox()))+"_Nft"+to_string(this->box.Nft)+"_IC"+to_string(this->params._IC_index())+"_";
+  string Ofile=this->params._Output_directory()+"UNITSIM_L"+to_string(static_cast<int>(this->params._Lbox()))+"_Nft"+to_string(this->box.Nft)+"_IC"+to_string(this->params._IC_index())+"_";
 
 
 #ifndef _USE_VELOCITIES_
@@ -699,20 +366,18 @@ void Catalog::read_catalog_bin(ULONG n, string filex, string filey, string filez
   this->property.resize(this->NOBJS, 0);
 }
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// **********************************************************o**************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// *****************************************************************************_bin(********************************************************************************************* //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
 
 #if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
@@ -721,24 +386,38 @@ void Catalog::read_catalog(string input_file, real_prec prop_min)
 void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop_max)
 #endif
 {
-    //************************************************************************
-    // In this function a catalog of DM or DM tracers, in ascii format, is read and their proeprtiess read, according to the request of the parameter file.
-    //************************************************************************
 
    this->So.enter(__PRETTY_FUNCTION__);
 
-   //if(this->type_of_object!="TRACER" || this->type_of_object!= "TRACER_REF" || this->type_of_object!="TRACER_MOCK" || this->type_of_object!="TRACER_MOCK_ONLY_COORDS" || this->type_of_object!="DM")
-   //     So.message_warning("Function read_catalog in class Catalog:: has not been provided with a right option for parameter type_of_Objec");
-
   // The input parameter min_mass cann be also VMAX min, according to preproc definitions
+
 
   int NTHREADS = _NTHREADS_;
   omp_set_num_threads(NTHREADS);
 
+#ifndef _POWER_
 
-#if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
-  real_prec prop_max=1e20;
+#ifdef _USE_MULTISCALE_PROPERTY_ASSIGNMENT_
+  this->Prop_threshold=pow(Prop_threshold, exponent_mass_tracer); // to be deprecated
+
+#ifdef _USE_MULTISCALE_LEVEL_1_
+  this->Prop_threshold_multi_scale_1=pow(PROP_THRESHOLD_MULTI_SCALE_1, exponent_mass_tracer);
 #endif
+
+#ifdef _USE_MULTISCALE_LEVEL_2_
+  this->Prop_threshold_multi_scale_2=pow(PROP_THRESHOLD_MULTI_SCALE_2, exponent_mass_tracer);
+#endif
+#ifdef _USE_MULTISCALE_LEVEL_3_
+  this->Prop_threshold_multi_scale_3=pow(PROP_THRESHOLD_MULTI_SCALE_3, exponent_mass_tracer);
+#endif
+#ifdef _USE_MULTISCALE_LEVEL_4_
+  this->Prop_threshold_multi_scale_4=pow(PROP_THRESHOLD_MULTI_SCALE_4, exponent_mass_tracer);
+#endif
+#endif
+
+#endif
+
+
   int i_x=-1;
   int i_y=-1;
   int i_z=-1;
@@ -791,6 +470,8 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
     }
 
 
+
+
   //We need to differentiate between observabloe and settings:
   //"Observable" will be using in case we want to do bins or cuts on a given property within a sample
   // -------------------------------------------------------------------------
@@ -801,7 +482,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
   real_prec min_cut=0;
 
 #ifdef _POWER_
-
 #ifdef _USE_MASS_AS_OBSERVABLE_POWER_
   i_observable=i_mass;
   i_setting=i_mass;
@@ -819,24 +499,21 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 
 #else
-
-
 #ifdef _USE_MASS_AS_OBSERVABLE_
   i_observable=i_mass;
   units_observable=this->params._MASS_units();
-#elif defined _USE_VMAX_AS_OBSERVABLE_
+#elif defined (_USE_VMAX_AS_OBSERVABLE_)
   i_observable=i_vmax;
   units_observable=1;
 #endif
-
   i_setting=i_mass;
   units_settings=this->params._MASS_units();
   min_cut=  min_cut=pow(10, this->params._LOGMASSmin());// Value of the settng-property defining the minimum setting property. Set mass by default.
 #endif
 
 
-  // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
 
 
 #if defined (_USE_VMAX_AS_OBSERVABLE_) || defined (_USE_VMAX_AS_OBSERVABLE_POWER_)
@@ -844,24 +521,16 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
     if(i_vmax<0)
       {
 	So.message_warning("No information for Vmax. Check .ini parameter");
-#ifndef mode_p
 	So.message_warning("Code ends here. Sorry");
 	exit(0);
-#endif
       }
 #endif
 
 
   vector<real_prec> prop;
-  ULONG NLINES =0;
-     // This is meant for ascie reading.
-#ifdef _READ_BINARY_BAM_FORMAT_
-   NLINES= this->File.read_binary_file(input_file, prop);
-#else
-  NLINES = this->File.read_file(input_file, prop,NTHREADS);
-#endif
-  this->NCOLS=(static_cast<ULONG>(prop.size()/NLINES));
+  ULONG NLINES = this->File.read_file(input_file, prop,NTHREADS);
 
+  this->NCOLS=(static_cast<ULONG>(prop.size()/NLINES));
 
   /*
     ofstream tea;
@@ -877,36 +546,30 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
   */
 
 
-  // **************************************************************************************************************
-  // **************************************************************************************************************
-  // **************************************************************************************************************
-  // We now proceed to allocate read and allcoate the different properties
-  // taking into account the different limits on properties.
- // This is done individually, since putting Nob ifs inside a M loop costs more than a single "if" outside each M loop
-
-  // **************************************************************************************************************
+  //************************** JUST COUNTING ABOVE LIMITS OR INTERVALS*********************************
   // The minimum mass (M or VMAX) defines the number of used tracers!!!!!!!!!!!!!
-  // First stage: counting number of objects above limits. The corresponding loop is paralleized and tested
+
+
 
 #ifdef _SET_CAT_WITH_CUT_
 #ifdef _FULL_VERBOSE_
-     So.message_screen("Catalog will be selected with mass cut at ", pow(10,this->params._LOGMASSmin()));
+     So.message_screen("Catalog selected with mass cut at ", pow(10,this->params._LOGMASSmin()));
+    cout<<endl;
 #endif
 #endif
 
   ULONG count_new_nobj=0;
 #ifdef _FULL_VERBOSE_
-     So.message_screen("Counting number of", this->type_of_object);
+     So.message_screen("Counting number of ", this->type_of_object);
 #endif
 
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS" && (i_mass>0 || i_vmax>0) )  //This applies for mocks with mass
     {
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:count_new_nobj)
 #endif
       for(ULONG i=0;i<NLINES;++i)
-    	{
-
+	{
 
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
@@ -920,7 +583,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #else
              real_prec obser=prop[i_setting+i*this->NCOLS]*units_settings;
 #endif
-
 
 #if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
 	      if(obser >= prop_min)
@@ -941,7 +603,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #ifdef _FULL_VERBOSE_
           So.message_screen("Found ",count_new_nobj," objects");
 #endif
-
 
 
 #ifdef _POWER_
@@ -1000,23 +661,15 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 
   ULONG iN=0;
 
-  // **************************************************************************************************************
-    // Now alocate the ID of the grid for each member
-  // This loop has problems with being parallelized.
-
 #ifdef _FULL_VERBOSE_
   cout<<endl;
 #ifndef _POWER_   // This lines are only useful when analysing the catalog with BAM, not to measure the power spectrum
   So.message_screen("Getting grid-ID from tracer coordinates");
 #endif
 #endif
-
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN)
-#endif
   for(ULONG i=0;i<NLINES;++i)  // This loop should not be paralelized, it generates problems.
     {
-      real_prec obser=0;
+      real_prec mass=0;
 
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
@@ -1028,24 +681,24 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 	  if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS") //This if is inside, for we can lack of mass but still will to read coordinates
 
 #ifdef _POWER_
-             obser = (i_mass> 0 || i_vmax>0) ? prop[i_observable+i*this->NCOLS]*units_settings  : 0 ;  // the questio  must be generalized to other props
+             mass= (i_mass> 0 || i_vmax>0) ? prop[i_observable+i*this->NCOLS]*units_settings  : 0 ;  // the questio  must be generalized to other props
 #else
-             obser = prop[i_setting+i*this->NCOLS]*units_settings;
+             mass=prop[i_setting+i*this->NCOLS]*units_settings;
 #endif
 
 
 #if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
-          if(obser>= prop_min)
+	  if(mass>= prop_min)
 #elif defined (_USE_MASS_BINS_PK_)
-            if(obser>= prop_min && obser< prop_max)
+	    if(mass>= prop_min && mass< prop_max)
 #endif
 	      {
-      		real_prec x=prop[i_x+i*NCOLS];
-		      real_prec y=prop[i_y+i*NCOLS];
-		      real_prec z=prop[i_z+i*NCOLS];
-		      this->Halo[iN].coord1=x;
-		      this->Halo[iN].coord2=y;
-		      this->Halo[iN].coord3=z;
+		real_prec x=prop[i_x+i*NCOLS];
+		real_prec y=prop[i_y+i*NCOLS];
+		real_prec z=prop[i_z+i*NCOLS];
+		this->Halo[iN].coord1=x;
+		this->Halo[iN].coord2=y;
+		this->Halo[iN].coord3=z;
 
 #ifdef _USE_REDSHIFT_BINS_
                 if(z< this->params._redshift_max_sample() && z>= this->params._redshift_min_sample())
@@ -1073,26 +726,20 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
     }
   So.DONE();
 
-  if(count_new_nobj!=iN)
-    {
-      So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-      So.message_warning("Line", __LINE__);
-    }
 
- // *********************************************************************
+
 #ifdef _USE_VMAX_TRACERS_
+  iN=0;
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS" && i_vmax>0 && i_vmax<NCOLS) // This if is outside the loop, for we here want vmax and it applies only when this "if" is satisfied
     {
 #ifdef _FULL_VERBOSE_
+      cout<<endl;
       So.message_screen("Allocating Vmax from tracer");
 #endif
-      real_prec mean_m=0;
-      iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN,mean_m)
-#endif
+
       for(ULONG i=0;i<NLINES;++i)
 	{
+
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
           if(prop[i_setting+i*this->NCOLS]>min_cut)
@@ -1106,6 +753,7 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
              real_prec prop_sel =prop[i_setting+i*this->NCOLS]*units_settings;
 #endif
 
+
 #if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
 	      if(prop_sel>= prop_min)
 #elif defined (_USE_MASS_BINS_PK_)
@@ -1114,49 +762,33 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
              #ifdef _USE_REDSHIFT_BINS_
                  if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
 #endif
-                 {
-                   real_prec proper=prop[i_vmax+i*NCOLS]*units_observable;
-                   this->Halo[iN].vmax=proper;
-                   mean_m+=proper;
-                   iN++;
+                     {
+		    this->Halo[iN].vmax=prop[i_vmax+i*NCOLS];
+		    iN++;
 		  }
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
 	    }
 #endif
 #endif
-      }
-
-      So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
         }
-#ifdef _FULL_VERBOSE_
-        mean_m/=static_cast<real_prec>(this->NOBJS);
-#ifdef _USE_LOG_MASS_
-        this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
-#else
-        this->So.message_screen("Mean VMAX of tracer catalogue =", mean_m*this->params._MASS_units(), "km/s");
-#endif
-#endif
-      }
+    }
+
 #ifdef _FULL_VERBOSE_
   else
     So.message_warning("Information of vmax not available in catalog or column not properly set");
 #endif
 
+  So.DONE();
 #endif
 
 
-
 #ifndef _POWER_
-#ifdef _MULTISCALE_
 #ifdef _USE_MULTISCALE_PROPERTY_ASSIGNMENT_
 
   if(type_of_object=="TRACER_REF")
     {
+
       // These numbers areonly to be determined from the abundance of the reference
       this->N_props_0   =0;
       this->N_props_1   =0;
@@ -1166,68 +798,86 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #ifdef _FULL_VERBOSE_
       So.message_screen("Computing numbers for multi-scale mass assgnment");
 #endif
+
       ULONG N0_AUX=0;
       ULONG N1_AUX=0;
       ULONG N2_AUX=0;
       ULONG N3_AUX=0;
       ULONG N4_AUX=0;
-#ifdef _USE_OMP_
+
 #pragma omp parallel for reduction(+:N4_AUX,N3_AUX,N2_AUX,N1_AUX)
-#endif
       for(ULONG i=0;i<NLINES;++i)
-    	{
+	{
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
           if(prop[i_setting+i*this->NCOLS]>min_cut)
             {
 #endif
 #endif
+
            real_prec prop_sel =prop[i_setting+i*this->NCOLS]*units_settings;
-    	  if(prop_sel>= prop_min)
-	       {
+
+	  if(prop_sel>= prop_min)
+	    {
               real_prec obser= prop[i_observable+i*this->NCOLS]*units_observable;
-#ifdef _USE_MULTISCALE_LEVEL_1_
-	      if(obser >= this->params._Prop_threshold_multi_scale_1())
-                N1_AUX++;
-#endif
-#ifdef _USE_MULTISCALE_LEVEL_2_
-#ifdef _USE_MULTISCALE_LEVEL_1_
-	      if(obser >= this->params._Prop_threshold_multi_scale_2() && obser < this->params._Prop_threshold_multi_scale_1())
-#else
-		if(obser >= this->params._Prop_threshold_multi_scale_2())
-#endif
-                N2_AUX++;
-#endif
-#ifdef _USE_MULTISCALE_LEVEL_3_  // ensures level 1 is always used
-#ifdef _USE_MULTISCALE_LEVEL_2_
-	      if(obser >= this->params._Prop_threshold_multi_scale_3() && obser < this->params._Prop_threshold_multi_scale_2())
-#elif !defined (_USE_MULTISCALE_LEVEL_2_) && defined (_USE_MULTISCALE_LEVEL_1_)
-		if(obser >= this->params._Prop_threshold_multi_scale_3() && obser < this->params._Prop_threshold_multi_scale_1())
-#elif !defined (_USE_MULTISCALE_LEVEL_2_) && !defined (_USE_MULTISCALE_LEVEL_1_)
-		  if(obser >= this->params._Prop_threshold_multi_scale_3())
-#endif
-                N3_AUX++;
-#endif
+
 #ifdef _USE_MULTISCALE_LEVEL_4_
-#if defined (_USE_MULTISCALE_LEVEL_3_)
-	      if(obser >= this->params._Prop_threshold_multi_scale_4() && obser < this->params._Prop_threshold_multi_scale_3())
-#elif !defined (_USE_MULTISCALE_LEVEL_3_) && defined (_USE_MULTISCALE_LEVEL_2_)
-		if(obser >= this->params._Prop_threshold_multi_scale_4() && obser < this->params._Prop_threshold_multi_scale_2())
-#elif !defined (_USE_MULTISCALE_LEVEL_3_) && !defined (_USE_MULTISCALE_LEVEL_2_) && defined (_USE_MULTISCALE_LEVEL_1_)
-		  if(obser >= this->params._Prop_threshold_multi_scale_4() && obser < this->params._Prop_threshold_multi_scale_1())
-#elif !defined (_USE_MULTISCALE_LEVEL_3_) && !defined (_USE_MULTISCALE_LEVEL_2_) && !defined (_USE_MULTISCALE_LEVEL_1_)
-		    if(obser >= this->params._Prop_threshold_multi_scale_4())
+	      if(obser >= this->Prop_threshold_multi_scale_4)
+                N4_AUX++;
 #endif
-                 N4_AUX++;
+
+#ifdef _USE_MULTISCALE_LEVEL_3_  // ensures level 1 is always used
+#ifdef _USE_MULTISCALE_LEVEL_4_
+	      if(obser >= this->Prop_threshold_multi_scale_3 && obser < this->Prop_threshold_multi_scale_4)
+#elif !defined (_USE_MULTISCALE_LEVEL_4_)
+		if(obser >= this->Prop_threshold_multi_scale_3)
+#endif
+                   N3_AUX++;
+//		  this->N_props_3++;
+#endif
+
+
+#ifdef _USE_MULTISCALE_LEVEL_2_  // ensures level 1 is always used
+#ifdef _USE_MULTISCALE_LEVEL_3_
+	      if(obser >= this->Prop_threshold_multi_scale_2 && obser < this->Prop_threshold_multi_scale_3)
+#elif !defined (_USE_MULTISCALE_LEVEL_3_) && defined (_USE_MULTISCALE_LEVEL_4_)
+		if(obser >= this->Prop_threshold_multi_scale_2 && obser < this->Prop_threshold_multi_scale_4)
+#elif !defined (_USE_MULTISCALE_LEVEL_3_) && !defined (_USE_MULTISCALE_LEVEL_4_)
+		  if(obser >= this->Prop_threshold_multi_scale_2)
+#endif
+                  //this->N_props_2++;
+                  N2_AUX++;
+#endif
+
+
+#ifdef _USE_MULTISCALE_LEVEL_1_
+#if defined (_USE_MULTISCALE_LEVEL_2_)
+	      if(obser >= this->Prop_threshold_multi_scale_1 && obser < this->Prop_threshold_multi_scale_2)
+#elif !defined (_USE_MULTISCALE_LEVEL_2_) && defined (_USE_MULTISCALE_LEVEL_3_)
+		if(obser >= this->Prop_threshold_multi_scale_1 && obser < this->Prop_threshold_multi_scale_3)
+#elif !defined (_USE_MULTISCALE_LEVEL_2_) && !defined (_USE_MULTISCALE_LEVEL_3_) && defined (_USE_MULTISCALE_LEVEL_4_)
+		  if(obser >= this->Prop_threshold_multi_scale_1 && obser < this->Prop_threshold_multi_scale_4)
+#elif !defined (_USE_MULTISCALE_LEVEL_2_) && !defined (_USE_MULTISCALE_LEVEL_3_) && !defined (_USE_MULTISCALE_LEVEL_4_)
+		    if(obser >= this->Prop_threshold_multi_scale_1)
+#endif
+                      N1_AUX++;
+//		      this->N_props_1++;
 #endif
 	    }
 
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+        }
+#endif
+#endif
+
 	}
-    So.DONE();
-    this->N_props_1=N1_AUX;
-    this->N_props_2=N2_AUX;
-    this->N_props_3=N3_AUX;
-    this->N_props_4=N4_AUX;
+      So.DONE();
+      this->N_props_1   =N1_AUX;
+      this->N_props_2   =N2_AUX;
+      this->N_props_3   =N3_AUX;
+      this->N_props_4   =N4_AUX;
+
 
 
 #ifdef _FULL_VERBOSE_
@@ -1245,61 +895,12 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
        cout<<endl;
 #endif
-  }// closes f(type_of_object=="TRACER_REF")
-
-
-#elif defined _USE_MULTISCALE_PROPERTY_ASSIGNMENT_NEW_
-
-  if(type_of_object=="TRACER_REF")
-    {
-
-#ifdef _FULL_VERBOSE_
-      So.message_screen("Computing numbers for multi-scale mass assgnment");
+    }
 
 #endif
-      vector<ULONG> n_auxtr(this->params._Number_of_MultiLevels(),0);
-      for(ULONG i=0;i<NLINES;++i)
-        {
-         real_prec prop_sel = prop[i_setting+i*this->NCOLS]*units_settings;
-         if(prop_sel>= prop_min)
-          {
-           real_prec obser= prop[i_observable+i*this->NCOLS]*units_observable;
-
-           if(obser>= this->params.get_PropThreshold_MultiLevels(0))
-             n_auxtr[0]++;
-
-           for(int il=1; il<this->params._Number_of_MultiLevels();++il )
-             if(obser>= this->params.get_PropThreshold_MultiLevels(il) &&  obser<this->params.get_PropThreshold_MultiLevels(il-1) )
-               n_auxtr[il]++;
-         }
- 
-      }
-      So.DONE();
-
-      for(int il=0; il<this->params._Number_of_MultiLevels();++il )
-        {
-          ULONG N_AUX=  static_cast<ULONG>(floor(this->params.get_Props_Tolerance_MultiLevels(il)*n_auxtr[il]));
-          this->params.set_Ntracers_MultiLevels(il, N_AUX);
-
-#ifdef _FULL_VERBOSE_
-          So.message_screen("Number of reference tracers in multi-scale level ", il+1, " = ", N_AUX);
 #endif
-      }
-      n_auxtr.clear();n_auxtr.shrink_to_fit();
-#ifdef _FULL_VERBOSE_
-      std::cout<<std::endl;
-#endif
-      }
-
-#endif // end of _USE_MULTISCALE_PROPERTY_ASSIGNMENT_NEW_
-
-#endif // END OF _MULTISCALE_
-
-#endif // END OF ifndef _power_
 
 
-
-  // *********************************************************************************************
   // If information of weights is available, then
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS" &&  i_weight>0 && i_weight<NCOLS)
     {
@@ -1308,9 +909,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 
       iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN)
-#endif
       for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
@@ -1350,12 +948,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
           }
       So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
-
     }
 
   // ********************************************************************************************************************************
@@ -1366,9 +958,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
       So.message_screen("Allocating number density from ", this->type_of_object);
 #endif
       iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN)
-#endif
       for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
@@ -1409,13 +998,7 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 
               }
       So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
-
-      }
+    }
 #ifdef _FULL_VERBOSE_
   else
     So.message_warning("Information of mean_density not available in catalog or column not properly set");
@@ -1427,11 +1010,7 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #ifdef _FULL_VERBOSE_
           So.message_screen("Allocating Rs from tracers");
 #endif
-          real_prec mean_m=0;
-          iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN,mean_m)
-#endif
+      iN=0;
       for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
@@ -1457,34 +1036,19 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
     if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
 #endif
 
-             {
-                real_prec proper=prop[i_rs+i*NCOLS]*units_observable;
-                this->Halo[iN].rs=proper;
-                 mean_m+=proper;
-                 iN++;
-              }
+	      {
+		this->Halo[iN].rs=prop[i_rs+i*NCOLS];
+		iN++;
+	      }
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
             }
 #endif
 #endif
 
-        }
+              }
       So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
-#ifdef _FULL_VERBOSE_
-      mean_m/=static_cast<real_prec>(this->NOBJS);
-#ifdef _USE_LOG_MASS_
-        this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
-#else
-        this->So.message_screen("Mean RS of tracer catalogue =", mean_m*this->params._MASS_units(), "kpc/h");
-#endif
-#endif
-      }
+    }
 #ifdef _FULL_VERBOSE_
   else
     So.message_warning("Information of RS not available in catalog or column not properñy set");
@@ -1497,9 +1061,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
       So.message_screen("Allocating T/|W| Viral from tracers");
 #endif
       iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN)
-#endif
       for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
@@ -1537,12 +1098,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 
         }
       So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
-
     }
 #ifdef _FULL_VERBOSE_
   else
@@ -1556,11 +1111,6 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
       So.message_screen("Allocating Spin from tracers");
 #endif
       iN=0;
-      real_prec mean_m=0;
-
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN,mean_m)
-#endif
       for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
@@ -1585,11 +1135,10 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #ifdef _USE_REDSHIFT_BINS_
     if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
 #endif
+
 	      {
-                real_prec proper=prop[i_spin+i*NCOLS];
-                this->Halo[iN].spin=proper;
+		this->Halo[iN].spin=prop[i_spin+i*NCOLS];
 		iN++;
-                mean_m+=proper;
 	      }
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
@@ -1597,24 +1146,8 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 #endif
 
-       }
+              }
       So.DONE();
-      if(count_new_nobj!=iN)
-       {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
-#ifdef _FULL_VERBOSE_
-         mean_m/=static_cast<real_prec>(this->NOBJS);
-#ifdef _USE_LOG_MASS_
-        this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
-#else
-        this->So.message_screen("Mean spin of tracer catalogue =", mean_m*this->params._MASS_units());
-#endif
-#endif
-
-
-
     }
 #ifdef _FULL_VERBOSE_
   else
@@ -1640,10 +1173,7 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
   if(i_vx>0) //Best to evaluate only one if than NOBS if's
     {
       iN=0;
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN)
-#endif
-     for(ULONG i=0;i<NLINES;++i)
+      for(ULONG i=0;i<NLINES;++i)
         {
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
@@ -1764,15 +1294,17 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #ifdef _USE_MASS_TRACERS_
       real_prec mean_m=0;
       iN=0;
+      vector<real_prec> aux;
+
 
 #ifdef _FULL_VERBOSE_
       So.message_screen("Allocating mass from tracers");
 #endif
-#ifdef _USE_OMP_TEST_CAT_
-#pragma omp parallel for reduction(+:iN,mean_m)
-#endif
+
       for(ULONG i=0;i<NLINES;++i)
         {
+
+
 #ifdef _POWER_
 #ifdef _SET_CAT_WITH_CUT_
           if(prop[i_setting+i*this->NCOLS]*units_settings>min_cut)
@@ -1796,15 +1328,14 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 
             {
-      	      real_prec proper=prop[i_mass+i*this->NCOLS];
+	      real_prec proper=prop[i_mass+i*this->NCOLS];
 #ifdef _USE_LOG_MASS_
-#ifdef _FULL_VERBOSE_
-              mean_m+=log10(proper);
-#endif
-              this->Halo[iN].mass=log10(proper);
+	      mean_m+=log10(proper);
+	      this->Halo[iN].mass=log10(proper);
 #else
               this->Halo[iN].mass=proper;
               mean_m+=proper;
+              aux.push_back(proper);
 #endif
               iN++;
 	    }
@@ -1816,19 +1347,23 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 
       }
 
+#ifdef _FULL_VERBOSE_
       So.DONE();
-      if(count_new_nobj!=iN)
-        {
-          So.message_warning("Counting not consistent in function", __PRETTY_FUNCTION__);
-          So.message_warning("Line", __LINE__);
-        }
+#endif
+      mean_m/=static_cast<real_prec>(this->NOBJS);
 
 #ifdef _FULL_VERBOSE_
-      mean_m/=static_cast<real_prec>(this->NOBJS);
-      if(iN==0)
-         So.message_warning("No mass found in the desidered limits");
+      if(aux.size()>0)
+	{
+	  So.message_screen("Minimum mass in tracer catalog =", get_min<real_prec>(aux), "Ms/h");
+	  So.message_screen("Maximum mass in tracer catalog =", get_max<real_prec>(aux), "Ms/h");
+        }
+      else{
+	So.message_warning("No mass found in the desidered limits");
+      }
 #endif
 
+      aux.clear(); aux.shrink_to_fit();
 
 #ifdef _FULL_VERBOSE_
 #ifdef _USE_LOG_MASS_
@@ -1838,13 +1373,223 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 #endif
     }
-#ifdef _FULL_VERBOSE_
   else
+    {
+#ifdef _FULL_VERBOSE_
+      cout<<endl;
       So.message_screen("No Information on the tracer mass available in", this->type_of_object);
+#endif
+      }
+#endif
+  // ********************************************************************************************************************************
+
+  if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
+#ifdef _USE_VMAX_TRACERS_
+    if(i_vmax>0) //means there is info on the mass
+      {
+	real_prec mean_m=0;
+	iN=0;
+	vector<real_prec> aux;
+	for(ULONG i=0;i<NLINES;++i)
+        {
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+          if(prop[i_setting+i*this->NCOLS]>min_cut)
+            {
 #endif
 #endif
 
-  // *************************************************************************************************
+#ifdef _POWER_
+             real_prec obser=prop[i_observable+i*this->NCOLS]*units_settings;
+#else
+             real_prec obser=prop[i_setting+i*this->NCOLS]*units_settings;
+#endif
+
+
+#if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
+          if( obser>= prop_min)
+#elif defined (_USE_MASS_BINS_PK_)
+            if(obser >= prop_min && obser < prop_max)
+#endif
+#ifdef _USE_REDSHIFT_BINS_
+            if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
+#endif
+
+              {
+                real_prec proper=prop[i_vmax+i*NCOLS]*units_observable;
+                this->Halo[iN].vmax=proper;
+                aux.push_back(proper);
+                mean_m+=proper;
+		iN++;
+	      }
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+            }
+#endif
+#endif
+        }
+	mean_m/=static_cast<real_prec>(this->NOBJS);
+#ifdef _FULL_VERBOSE_
+        So.message_screen("Minimum VMAX in tracer catalog =", get_min<real_prec>(aux), "km/s");
+	So.message_screen("Maximum VMAX in tracer catalog =", get_max<real_prec>(aux), "km/s");
+#endif
+        aux.clear(); aux.shrink_to_fit();
+
+#ifdef _FULL_VERBOSE_
+#ifdef _USE_LOG_MASS_
+	this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
+#else
+	this->So.message_screen("Mean VMAX of tracer catalogue =", mean_m*this->params._MASS_units(), "km/s");
+#endif
+#endif
+
+      }
+    else
+      {
+#ifdef _FULL_VERBOSE_
+       cout<<endl;
+        So.message_screen("No Information on the tracer mass available in catalog, according to input parameters");
+#endif
+        }
+#endif
+  // ********************************************************************************************************************************
+  if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
+#ifdef _USE_RS_TRACERS_
+  if(i_rs>0) //means there is info on the mass
+    {
+	    real_prec mean_m=0;
+	    iN=0;
+	    vector<real_prec> aux;
+	    for(ULONG i=0;i<NLINES;++i)
+        {
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+        if(prop[i_setting+i*this->NCOLS]>min_cut)
+          {
+#endif
+#endif
+
+#ifdef _POWER_
+           real_prec obser=prop[i_observable+i*this->NCOLS]*units_settings;
+#else
+           real_prec obser=prop[i_setting+i*this->NCOLS]*units_settings;
+#endif
+
+#if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
+          if(obser >= prop_min)
+#elif defined (_USE_MASS_BINS_PK_)
+            if(obser>= prop_min && obser < prop_max)
+#endif
+#ifdef _USE_REDSHIFT_BINS_
+             if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
+#endif
+              {
+                real_prec proper=prop[i_rs+i*NCOLS]*units_observable;
+                this->Halo[iN].rs=proper;
+                aux.push_back(proper);
+                mean_m+=proper;
+		            iN++;
+	            }
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+            }
+#endif
+#endif
+    }
+	mean_m/=static_cast<real_prec>(this->NOBJS);
+#ifdef _FULL_VERBOSE_
+        So.message_screen("Minimum RS in tracer catalog =", get_min<real_prec>(aux), "kpc/h");
+	So.message_screen("Maximum RS in tracer catalog =", get_max<real_prec>(aux), "kpc/h");
+#endif
+        aux.clear(); aux.shrink_to_fit();
+
+#ifdef _FULL_VERBOSE_
+#ifdef _USE_LOG_MASS_
+	this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
+#else
+	this->So.message_screen("Mean RS of tracer catalogue =", mean_m*this->params._MASS_units(), "km/s");
+#endif
+#endif
+      }
+    else
+      {
+#ifdef _FULL_VERBOSE_
+         cout<<endl;
+         So.message_screen("No Information on the tracer RS available in catalog, according to input parameters");
+#endif
+      }
+#endif
+  // **********************************************
+  if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
+#ifdef _USE_SPIN_TRACERS_
+    if(i_spin>0) //means there is info on the mass
+      {
+	       real_prec mean_m=0;
+	       iN=0;
+	       vector<real_prec> aux;
+ 	       for(ULONG i=0;i<NLINES;++i)
+         {
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+          if(prop[i_setting+i*this->NCOLS]>min_cut)
+            {
+#endif
+#endif
+
+#ifdef _POWER_
+             real_prec obser=prop[i_observable+i*this->NCOLS]*units_settings;
+#else
+             real_prec obser=prop[i_setting+i*this->NCOLS]*units_settings;
+#endif
+
+#if defined (_USE_MASS_CUTS_PK_) || defined (_USE_ALL_PK_)
+            if(obser >= prop_min)
+#elif defined (_USE_MASS_BINS_PK_)
+              if(obser>= prop_min && obser< prop_max)
+#endif
+#ifdef _USE_REDSHIFT_BINS_
+                if(prop[i_redshift+i*this->NCOLS]< this->params._redshift_max_sample() && prop[i_redshift+i*this->NCOLS]>= this->params._redshift_min_sample())
+#endif
+
+	               {
+                           real_prec proper=prop[i_spin+i*NCOLS]*units_observable;
+                           this->Halo[iN].spin=proper;
+                           aux.push_back(proper);
+                           mean_m+=proper;
+                           iN++;
+	               }
+#ifdef _POWER_
+#ifdef _SET_CAT_WITH_CUT_
+            }
+#endif
+#endif
+      }
+	mean_m/=static_cast<real_prec>(this->NOBJS);
+#ifdef _FULL_VERBOSE_
+        So.message_screen("Minimum SPIN in tracer catalog =", get_min<real_prec>(aux));
+	So.message_screen("Maximum SPIN in tracer catalog =", get_max<real_prec>(aux));
+#endif
+        aux.clear(); aux.shrink_to_fit();
+
+#ifdef _FULL_VERBOSE_
+#ifdef _USE_LOG_MASS_
+	this->So.message_screen("Mean mass of tracer catalogue =", pow(10,mean_m)*this->params._MASS_units(), "km/s");
+#else
+	this->So.message_screen("Mean RS of tracer catalogue =", mean_m*this->params._MASS_units(), "km/s");
+#endif
+#endif
+        }
+    else
+      {
+#ifdef _FULL_VERBOSE_
+            cout<<endl;
+        So.message_screen("No Information on the tracer SPIN available in catalog, according to input parameters");
+#endif
+        }
+#endif
+
+
+
 #ifdef _USE_SAT_FRACTION_
 
   if(i_sf>0)
@@ -1878,38 +1623,33 @@ void Catalog::read_catalog(string input_file, real_prec prop_min, real_prec prop
 #endif
 
 #ifdef _FULL_VERBOSE_
- So.message_screen("Freeing memmory in ", __PRETTY_FUNCTION__);
+ So.message_screen("Freeing memmory prop in ", __PRETTY_FUNCTION__);
 #endif
+
  prop.clear(); prop.shrink_to_fit();
  So.DONE();
 
  this->mean_number_density=static_cast<real_prec>(this->NOBJS)/pow(this->box.Lbox,3);
-
 }
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
-
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
 void Catalog::get_density_field_grid(string prop, string output_file)
 {
   this->So.enter(__PRETTY_FUNCTION__);
 
 #ifdef _FULL_VERBOSE_
-  So.message_screen("Interpolating on a grid using MAS", this->params._iMAS_Y());
+  So.message_screen("Interpolating on a grid using MAS", this->params._masskernel());
 #endif
   vector<real_prec> deltaTR_counts(this->box.NGRID,0);
   MAS_NEW(&box,this->Halo, _COUNTS_, deltaTR_counts);
@@ -1939,20 +1679,14 @@ void Catalog::get_density_field_grid(string prop, string output_file)
       this->File.write_array(output_file, deltaTR);
     }
 }
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
 void Catalog::get_density_field_grid(string prop, vector<real_prec>&out)
 {
@@ -1987,20 +1721,15 @@ void Catalog::get_density_field_grid(string prop, vector<real_prec>&out)
 
 
 }
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+
+
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
 void Catalog::define_property_bins()
 {
@@ -2021,7 +1750,7 @@ void Catalog::define_property_bins()
 #endif
 
 
-  if(this->params._i_mass_g() >0)
+  if(this->params.i_mass_g >0)
     {
 
       this->NMBINS = this->params._NMASSbins_mf() == 1 ? 1 : this->params._NMASSbins_mf();
@@ -2060,7 +1789,7 @@ void Catalog::define_property_bins()
         this->MBmin[i]=pow(10,MMin+i*logdeltaM);
 #else
       for(int i=0;i<this->NMBINS;++i)
-        	this->MBmin.push_back(MMin+i*logdeltaM);
+	this->MBmin.push_back(MMin+i*logdeltaM);
 #endif
 
 
@@ -2124,7 +1853,7 @@ void Catalog::define_property_bins()
 #ifdef _USE_VMAX_AS_OBSERVABLE_
 
 
-  if(this->params._i_vmax_g() >0)
+  if(this->params.i_vmax_g >0)
     {
       this->NMBINS = this->params._NMASSbins_mf() == 1 ? 1 : this->params._NMASSbins_mf();
 #ifdef _FULL_VERBOSE_
@@ -2140,25 +1869,21 @@ void Catalog::define_property_bins()
       this->So.message_screen("Minimum VMAX", pow(10,MMin), "km/s");
       this->So.message_screen("Maximum VMAX", pow(10,MMax), "km/s");
 #endif
-
 #else
-      MMax= this->params._VMAXmin();
-      MMin= this->params._VMAXmin();
+      MMin= pow(10,this->params._VMAXmin());
+      MMin= this->params._VMAXMASSmin();
 #ifdef _FULL_VERBOSE_
-      this->So.message_screen("Minimum VMAX", MMin, "km/s");
-      this->So.message_screen("Maximum VMAX", MMax, "km/s");
+      this->So.message_screen("Minimum Mass", MMin, "Ms/h");
+      this->So.message_screen("Maximum Mass", MMax, "Ms/h");
 #endif
 #endif
-
-
-
 
       this->logdeltaVMAX=(MMax-MMin)/(static_cast<real_prec>(this->params._NMASSbins_mf()));
 
-      this->VMAXBmin.clear();this->VMAXBmin.shrink_to_fit();this->VMAXBmin.resize(this->NMBINS,0);
+      this->VMAXBmin.clear();this->VMAXBmin.shrink_to_fit();
 #ifdef _MASS_LOG_
       for(int i=0;i<this->NMBINS;++i)
-        this->VMAXBmin[i]=pow(10,MMin+i*logdeltaVMAX);
+        this->VMAXBmin.push_back(pow(10,MMin+i*logdeltaVMAX));
 #else
       for(int i=0;i<this->NMBINS;++i)
         this->VMAXBmin.push_back(MMin+i*logdeltaVMAX);
@@ -2175,16 +1900,9 @@ void Catalog::define_property_bins()
 #endif
       for(int i=0;i<this->NMBINS;++i)
         {
-          this->VMAXBmax[i]=pow(10,MMin+(i+1)*logdeltaVMAX);
+          this->VMAXBmax[i]=(pow(10,MMin+(i+1)*logdeltaVMAX));
           this->VMAXBin[i]=(this->VMAXBmin[i]+(i+0.5)*(this->VMAXBmax[i]-this->VMAXBmin[i])/static_cast<double>(this->params._NMASSbins_mf()));
-
       }
-
-/*
-      for(int i=0;i<this->NMBINS;++i)
-        cout<<this->VMAXBmax[i]<<endl;
-      exit(1);
-*/
 
 #elif defined MCUTS
       for(int i=0;i<this->NMBINS;++i)
@@ -2226,6 +1944,7 @@ void Catalog::define_property_bins()
 
 
 
+
 #ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
 
   if(this->params.i_rs_g >0)
@@ -2261,8 +1980,9 @@ void Catalog::define_property_bins()
         this->RSBmin.push_back(pow(10,RSMin+i*this->logdeltaRS));
 #else
       for(int i=0;i<this->NMBINS;++i)
-        this->RSBmin.push_back(MMin+i*logdeltaVMAX);
+        this->VMAXBmin.push_back(MMin+i*logdeltaVMAX);
 #endif
+
 
 
 #ifdef _RS_LOG_
@@ -2306,6 +2026,9 @@ void Catalog::define_property_bins()
       this->RSBmax.resize(NMBINS,100.0);  //
     }
 
+
+
+
 #endif
 
 
@@ -2314,7 +2037,7 @@ void Catalog::define_property_bins()
 #ifdef _USE_SPIN_AS_DERIVED_OBSERVABLE_
 
 
-  if(this->params._i_spin_g() >0)
+  if(this->params.i_spin_g >0)
     {
       this->NMBINS = this->params._NMASSbins_mf() == 1 ? 1 : this->params._NMASSbins_mf();
 #ifdef _FULL_VERBOSE_
@@ -2398,24 +2121,23 @@ void Catalog::define_property_bins()
 
 #endif
 
+
+
+
+
+
 }
 
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 // Estimates of Abundance as a function of halo properties
 
 void Catalog::get_property_function(string file)
@@ -2444,7 +2166,7 @@ void Catalog::get_property_function(string file)
   // Mvir
 
 
-  if(this->params._i_mass_g()>0)
+  if(this->params.i_mass_g>0)
     {
 #ifdef _FULL_VERBOSE_
       So.message_screen("Measuring mass function");
@@ -2456,28 +2178,27 @@ void Catalog::get_property_function(string file)
       vector<int >mf_counts(this->params._NMASSbins_mf(),0);
 
 
-      int im=0;
+      int im;
 
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
-    for(ULONG i=0;i<this->NOBJS;++i)
-    	{
-  	     real_prec property=log10(this->Halo[i].mass)+log10(units_observable_m);
+      for(ULONG i=0;i<this->NOBJS;++i)
+	{
+	  real_prec property=log10(this->Halo[i].mass)+log10(units_observable_m);
 #ifndef accum
-	      if(property >=lm_min && property<=lm_max)
-	       {
+	  if(property >=lm_min && property<=lm_max)
+	    {
 #endif
-   	      im=get_bin(property,lm_min,this->params._NMASSbins_mf(),this->logdeltaM,accumulate);
-#ifdef _USE_OMP_TEST_CAT_
+	      im=get_bin(property,lm_min,this->params._NMASSbins_mf(),this->logdeltaM,accumulate);
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic update
 #endif
-         mf_counts[im]++;
+              mf_counts[im]++;
 #ifndef accum
-	      }
+	    }
 #endif
-	   }
-
+	}
 
 
 
@@ -2499,37 +2220,23 @@ void Catalog::get_property_function(string file)
       So.message_screen("Writing mass function written in file ", file_m);
 #endif
 
-     for(ULONG i=0;i< this->params._NMASSbins_mf();++i)
-	     {
-    	  real_prec mint=(this->MBmax[i]-this->MBmin[i]);
-	      this->mass_function[i]=static_cast<real_prec>(mf_counts[i])/(pow(this->params._Lbox(),3)*mint);
-	     mout<<this->MBmin[i]+(i+0.5)*(this->MBmax[i]-this->MBmin[i])/static_cast<double>(this->params._NMASSbins_mf())<<"\t"<<this->mass_function[i]<<"   "<<mf_counts[i]<<endl;
-	     }
-     mf_counts.clear(); mf_counts.shrink_to_fit();
+      for(ULONG i=0;i< this->params._NMASSbins_mf();++i)
+	{
+	  real_prec mint=(this->MBmax[i]-this->MBmin[i]);
+	  this->mass_function[i]=static_cast<real_prec>(mf_counts[i])/(pow(this->params._Lbox(),3)*mint);
+	  mout<<this->MBmin[i]+(i+0.5)*(this->MBmax[i]-this->MBmin[i])/static_cast<double>(this->params._NMASSbins_mf())<<"\t"<<this->mass_function[i]<<"   "<<mf_counts[i]<<endl;
+	}
+      mf_counts.clear(); mf_counts.shrink_to_fit();
       mout.close();
       So.DONE();
 
-/*
-#ifdef _USE_GNUPLOT_ABUNDANCE_PLOT_
-   vector<pair<real_prec, real_prec> > xy_pts_ref;
-   for(int i=0; i<this->mass_function.size(); ++i) 
-       xy_pts_ref.push_back(std::make_pair(this->MBmin[i]+(i+0.5)*(this->MBmax[i]-this->MBmin[i])/static_cast<double>(this->params._NMASSbins_mf()), log10(this->mass_function[i])));
-     this->gp_abundance<<"set log x \n";
-     this->gp_abundance<<"set border linewidth 2.2\n";
-     this->gp_abundance<<"set xlabel 'Mass [Ms / h]' font 'Times-Roman,12'\n";
-     this->gp_abundance<<"set ylabel 'log n(M) h /Ms (h / Mpc)³]' font 'Times-Roman,12'\n";
-     this->gp_abundance<<"plot"<<this->gp_abundance.file1d(xy_pts_ref) << "w l lw 2 lt 8 title 'Reference'"<<endl;
-#endif
-*/
-
-
       vector<real_prec>mcount(this->params._NMASSbins_mf(),0);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(int i=0; i< this->params._NMASSbins_mf(); ++i)
 	for(int j=i; j< this->params._NMASSbins_mf(); ++j)
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic update
 #endif
           mcount[i]+=this->mass_function[j]*(this->MBmax[j]-this->MBmin[j]);
@@ -2553,7 +2260,7 @@ void Catalog::get_property_function(string file)
 
   // Vmax
 
-  if(this->params._i_vmax_g()>0)
+  if(this->params.i_vmax_g>0)
     {
       int im=0;
 #ifdef _USE_VMAX_AS_OBSERVABLE_
@@ -2565,7 +2272,7 @@ void Catalog::get_property_function(string file)
       real_prec units_observable_v=1;
       this->vmax_function.resize(this->params._NMASSbins_mf());
       vector<int >v_counts(this->params._NMASSbins_mf(),0);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(ULONG i=0;i<this->NOBJS;++i)
@@ -2576,7 +2283,7 @@ void Catalog::get_property_function(string file)
 	    {
 #endif
 	      im=get_bin(property,v_min,this->params._NMASSbins_mf(),this->logdeltaVMAX,accumulate);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic update
 #endif
               v_counts[im]++;
@@ -2585,12 +2292,12 @@ void Catalog::get_property_function(string file)
 #endif
 	}
 
-    int naux=0;
+      int naux=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:naux)
 #endif
       for(ULONG i=0;i< this->params._NMASSbins_mf();++i)
-      	naux+=v_counts[i];
+	naux+=v_counts[i];
 
 #ifdef _FULL_VERBOSE_
       So.message_screen("Number of objects used in mass function n(Vmax) = ", naux);
@@ -2604,20 +2311,20 @@ void Catalog::get_property_function(string file)
       ofstream mout;
       mout.open(filev.c_str());
       for(ULONG i=0;i< this->params._NMASSbins_mf();++i)
-    	{
-	      real_prec mint=(this->VMAXBmax[i]-this->VMAXBmin[i]);
-	      this->vmax_function[i]=static_cast<real_prec>(v_counts[i])/(pow(this->params._Lbox(),3)*mint);
-    	  mout<<this->VMAXBmin[i]+(i+0.5)*(this->VMAXBmax[i]-this->VMAXBmin[i])/static_cast<double>(this->params._NMASSbins_mf())<<"\t"<<this->vmax_function[i]<<"   "<<v_counts[i]<<endl;
-	   }
-     mout.close();
+	{
+	  real_prec mint=(this->VMAXBmax[i]-this->VMAXBmin[i]);
+	  this->vmax_function[i]=static_cast<real_prec>(v_counts[i])/(pow(this->params._Lbox(),3)*mint);
+	  mout<<this->VMAXBmin[i]+(i+0.5)*(this->VMAXBmax[i]-this->VMAXBmin[i])/static_cast<double>(this->params._NMASSbins_mf())<<"\t"<<this->vmax_function[i]<<"   "<<v_counts[i]<<endl;
+	}
+      mout.close();
 
       vector<real_prec>Vcount(this->params._NMASSbins_mf(),0);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(int i=0; i< this->params._NMASSbins_mf(); ++i) // N(>Vmax)
         for(int j=i+1; j< this->params._NMASSbins_mf(); ++j)
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic update
 #endif
             Vcount[i]+=v_counts[j];
@@ -2664,9 +2371,7 @@ void Catalog::get_property_function(string file)
 	  // These lines order the ref catalog in ascending order with respect to vmax and associate to each tracer an index pin-poiting that order
 	  // such that in posterior loops, when the running index over the tracer reaches the number of tracers associated to randoms (in the assignment ala patchy),
 	  // the code will assign the los vmax to the randoms, and the high vmax to the dm particles
-#ifdef _FULL_VERBOSE_
-	  cout<<endl;
-#endif
+	  cout<<""<<endl;
 	  So.message_screen("Sorting values of Vmax in reference catalog:");
 	  gsl_vector *vmax_aux;
 	  vmax_aux=gsl_vector_alloc(this->NOBJS);
@@ -2682,11 +2387,9 @@ void Catalog::get_property_function(string file)
 	  gsl_sort_vector2(vmax_aux,id_gal) ;   // sort the vmax and correspondingly their associated the gal id
 
 	  this->Prop_threshold_rand_dm=gsl_vector_get(vmax_aux, this->Ntracers_ran-1);// NOTE THAT this value won't be used in practice
-#ifdef _FULL_VERBOSE_
 	  cout<<endl;
 	  So.message_screen("Threshold for Vmax assigment to randoms = ", this->Prop_threshold_rand_dm," km/s");
 	  cout<<endl;
-#endif
 
 	  for(ULONG i=0;i<this->NOBJS;++i ) //ORDERED loop in ascending order in vmax: i=0 is the lowest vmax value, i=NOBJS is the highest
 	    {
@@ -2712,7 +2415,7 @@ void Catalog::get_property_function(string file)
 
   // Rs
 
-  if(this->params._i_rs_g()>0)
+  if(this->params.i_rs_g>0)
     {
       int im=0;
 #ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
@@ -2725,7 +2428,7 @@ void Catalog::get_property_function(string file)
       this->rs_function.resize(this->params._NMASSbins_mf());
       vector<int >rs_counts(this->params._NMASSbins_mf(),0);
 
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(ULONG i=0;i<this->NOBJS;++i)
@@ -2736,7 +2439,7 @@ void Catalog::get_property_function(string file)
 	    {
 #endif
 	      im=get_bin(property,rs_min,this->params._NMASSbins_mf(),this->logdeltaRS,accumulate);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic
 #endif
               rs_counts[im]++;
@@ -2774,7 +2477,7 @@ void Catalog::get_property_function(string file)
       rs_counts.clear();rs_counts.shrink_to_fit();
 
       vector<real_prec>RScount(this->params._NMASSbins_mf(),0);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(int i=0; i< this->params._NMASSbins_mf(); ++i)
@@ -2799,7 +2502,7 @@ void Catalog::get_property_function(string file)
 
 
   // SPIN
-  if(this->params._i_spin_g()>0)
+  if(this->params.i_spin_g>0)
     {
       int im=0;
 #ifdef _USE_RS_AS_DERIVED_OBSERVABLE_
@@ -2811,7 +2514,7 @@ void Catalog::get_property_function(string file)
       real_prec units_observable_s=1;
       this->s_function.resize(this->params._NMASSbins_mf());
       vector<int >s_counts(this->params._NMASSbins_mf(),0);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(ULONG i=0;i<this->NOBJS;++i)
@@ -2822,14 +2525,14 @@ void Catalog::get_property_function(string file)
 	    {
 #endif
 	      im=get_bin(property,s_min,this->params._NMASSbins_mf(),this->logdeltaSPIN,accumulate);
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic
 #endif
               s_counts[im]++;
 #ifndef accum
 	    }
 #endif
-          }
+	}
 
       int naux=0;
 #ifdef _USE_OMP_
@@ -2859,12 +2562,12 @@ void Catalog::get_property_function(string file)
 
       vector<real_prec>Scount(this->params._NMASSbins_mf(),0);
 
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp parallel for
 #endif
       for(int i=0; i< this->params._NMASSbins_mf(); ++i)
         for(int j=i; j< this->params._NMASSbins_mf(); ++j)
-#ifdef _USE_OMP_TEST_CAT_
+#ifdef _USE_OMP_TEST_
 #pragma omp atomic
 #endif
             Scount[i]+=this->s_function[j]*(this->SPINBmax[j]-this->SPINBmin[j]);
@@ -2888,22 +2591,15 @@ void Catalog::get_property_function(string file)
 
 }
 
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 void Catalog:: get_distribution_reduced_mass_in_cell(){
   int NTHREADS = _NTHREADS_;
   omp_set_num_threads(NTHREADS);
@@ -2959,23 +2655,20 @@ void Catalog:: get_distribution_reduced_mass_in_cell(){
       So.DONE();
     }
 
+
+
 }
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+//#define _test_ms_
 
 
 // This function computes the minimum separation between pairs in one cell
@@ -3041,7 +2734,7 @@ void Catalog::get_min_separation_in_cell()
 #ifdef _USE_MULTISCALE_LEVEL_1_
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
     {
-      min_prop.push_back(this->params._Prop_threshold_multi_scale_1());
+      min_prop.push_back(this->Prop_threshold_multi_scale_1);
       level.push_back(1);
       n_calc++;
     }
@@ -3050,7 +2743,7 @@ void Catalog::get_min_separation_in_cell()
 #ifdef _USE_MULTISCALE_LEVEL_2_
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
     {
-      min_prop.push_back(this->params._Prop_threshold_multi_scale_2());
+      min_prop.push_back(this->Prop_threshold_multi_scale_2);
       level.push_back(2);
       n_calc++;
     }
@@ -3059,7 +2752,7 @@ void Catalog::get_min_separation_in_cell()
 #ifdef _USE_MULTISCALE_LEVEL_3_
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
     {
-      min_prop.push_back(this->params._Prop_threshold_multi_scale_3());
+      min_prop.push_back(this->Prop_threshold_multi_scale_3);
       level.push_back(3);
       n_calc++;
     }
@@ -3068,7 +2761,7 @@ void Catalog::get_min_separation_in_cell()
 #ifdef _USE_MULTISCALE_LEVEL_4_
   if(this->type_of_object!="TRACER_MOCK_ONLY_COORDS")
     {
-      min_prop.push_back(this->params._Prop_threshold_multi_scale_4());
+      min_prop.push_back(this->Prop_threshold_multi_scale_4);
       level.push_back(4);
       n_calc++;
     }
@@ -3090,7 +2783,7 @@ void Catalog::get_min_separation_in_cell()
 
       // If the tracer has poperties, then ask for them when computing separations. If not, else below
       if("TRACER_MOCK_ONLY_COORDS" != this->type_of_object)
-	     {
+	{
 
 
 #ifdef _test_ms_
@@ -3234,161 +2927,12 @@ void Catalog::get_min_separation_in_cell()
 }
 
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
 
-
-
-// This function computes the minimum separation between pairs in one cell
-// Allocates the result in a class member container min_separation_in_cell[ID]=
-void Catalog::get_sep_distribution(real_prec min_value_prop)
-{
-
-#ifdef _USE_OMP_
-  int NTHREADS = _NTHREADS_;
-  omp_set_num_threads(NTHREADS);
-#endif
-
-#ifdef _FULL_VERBOSE_
-  So.message_screen("Measuring separation distribution");
-  So.message_screen("Current type is ", this->type_of_object);
-  cout<<endl;
-#endif
-  // In order to gt ths miminum distance for each particle,
-  // we nend to allocate for eachcell the coordintas of the particles belonging to it,
-  // as we did when collapsing randoms:
-
-int Nbins_sep=100;
-vector<real_prec>dist_sep(Nbins_sep,0);
-real_prec max_sep=log10(300.);
-real_prec min_sep=log10(0.01);
-real_prec delta_sep = (max_sep-min_sep)/static_cast<real_prec>(Nbins_sep);
-
-
-#ifdef _FULL_VERBOSE_
-  So.message_screen("Cutting sample");
-  cout<<endl;
-#endif
-
-vector<real_prec>x;
-vector<real_prec>y;
-vector<real_prec>z;
- for(ULONG ig=0; ig<this->NOBJS ;++ig) // loop over cells
-  if(this->Halo[ig].vmax>min_value_prop)
-   {
-      x.push_back(this->Halo[ig].coord1);
-      y.push_back(this->Halo[ig].coord2);
-      z.push_back(this->Halo[ig].coord3);
-    }
-
-
- real_prec normal=1;//static_cast<double>(x.size())*(x.size()-1)*0.5;
-
-
-#ifdef _FULL_VERBOSE_
-  So.message_screen("Getting separations");
-  cout<<endl;
-#endif
-
-ULONG i=0,j=0;
-#ifdef _USE_OMP_
-#pragma omp parallel private (i,j)
-  {
-    vector<real_prec>h_par(Nbins_sep,0);
-
-#pragma omp for nowait
-#endif
-   for(i=0; i<x.size() ;++i) // loop over cells
-     for(j=i+1; j < x.size();++j) // loop overtracers in that cell  
-        { 
-          real_prec xa = x[i]-x[j];
-          real_prec ya = y[i]-y[j];
-          real_prec za = z[i]-z[j];
-          real_prec dist= 0.5*log10(xa*xa + ya*ya + za*za);
-          int bin_sep=get_bin(dist, min_sep, Nbins_sep,delta_sep,true);
-#ifdef _USE_OMP_
-           h_par[bin_sep]++;
-#else
-          dist_sep[bin_sep]++;    
-#endif
-
-#ifdef bc
-          xa = x[i]-(x[j]-this->params._Lbox());
-          ya = y[i]-(y[j]-this->params._Lbox());
-          za = z[i]-(z[j]-this->params._Lbox());
-          dist= 0.5*log10(xa*xa + ya*ya + za*za);
-          bin_sep=get_bin(dist, min_sep, Nbins_sep,delta_sep,true);
-#ifdef _USE_OMP_
-           h_par[bin_sep]++;
-#else
-          dist_sep[bin_sep]++;    
-#endif
-
-          xa = x[i]-(x[j]+this->params._Lbox());
-          ya = y[i]-(y[j]+this->params._Lbox());
-          za = z[i]-(z[j]+this->params._Lbox());
-          dist= 0.5*log10(xa*xa + ya*ya + za*za);
-          bin_sep=get_bin(dist, min_sep, Nbins_sep,delta_sep,true);
-#ifdef _USE_OMP_
-           h_par[bin_sep]++;
-#else
-          dist_sep[bin_sep]++;    
-#endif
-#endif
-
-        }
-  
-#ifdef _USE_OMP_
-#pragma omp critical
-    for(int i=0;i<dist_sep.size();++i)
-      dist_sep[i]+=h_par[i];    
-   }
-#endif
-
-
-    ofstream sal;
-    string fileo;
-    fileo=this->Output_directory+"sep_dist_"+this->type_of_object+this->params._Name_survey()+"_Real"+to_string(this->params._realization())+".txt";
-    So.message_screen("Writting distribution of minimum separations within cells");
-    So.message_screen("in file ", fileo);
-    sal.open(fileo.c_str());
-    for(int i=0;i<dist_sep.size()-1;++i) // avoid the last bin which has all info from bins beyond
-       sal<< pow(10,min_sep+(i+0.5)*delta_sep)<<" "<<dist_sep[i]/normal<<endl;
-    sal.close();
-    So.DONE();
-    dist_sep.clear();
-    dist_sep.shrink_to_fit();
- 
-
-}
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 // This function identifies the set of tracers around each tracer within a radius of  SCALE_MAX_N_NEIGHBOURS Mpc/h
 // The output is allocated in a class member container Number_of_tracers with dimension Nobjects
 void Catalog::get_neighbour_tracers(vector<s_nearest_cells>&nearest_cells_to_cell)
@@ -3483,7 +3027,7 @@ void Catalog::get_neighbour_tracers(vector<s_nearest_cells>&nearest_cells_to_cel
 
 #if defined (_USE_NUMBER_OF_NEIGHBOURS_) || defined (_USE_LOCAL_CLUSTERING_)
                   if(dist<Rscale)
-        		    this->Number_of_neighbours[i]++;
+		    this->Number_of_neighbours[i]++;
 #endif
 #ifdef _USE_MIN_DISTANCE_TO_NEIGHBOURS_
                   min_distance_b=min(aux_min_distance_b,dist);
@@ -3548,41 +3092,29 @@ void Catalog::get_neighbour_tracers(vector<s_nearest_cells>&nearest_cells_to_cel
 
 }
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
 
 
-//#define  _get_m_m_prob_
-void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_cells_to_cell)
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+
+void Catalog::get_distribution_min_separations(string data, vector<s_nearest_cells>&nearest_cells_to_cell)
 {
 
 
-    string data=this->type_of_object+"_"+this->params._Name_survey()+"_Real"+to_string(this->params._realization());
   // we need to cunstrunc the tree.For each grid point, we can build a vector containing the 8 or 29 nearest cells
   int NTHREADS = omp_get_max_threads();
   omp_set_num_threads(NTHREADS);
 
-  int max_neigh_per_dim = 2*N_CELLS_BACK_FORTH+1 ; // Number of neighbouring cells pr dimension, including the same itself;
+  int max_neigh_per_dim = 1+2*N_CELLS_BACK_FORTH; // Number of neighbouring cells pr dimension, including the same itself;
 
-  ULONG N_Neigh_cells=pow(max_neigh_per_dim,3)-2; // total number of cells to explore around a cell
- real_prec max_dist=(0.5*max_neigh_per_dim-0.5)*sqrt(3.0)*this->box.Lbox/static_cast<real_prec>(this->box.Nft);
- 
+  int N_Neigh_cells=pow(max_neigh_per_dim,3); // total number of cells to explore around a cell
 #ifdef _FULL_VERBOSE_
   So.message_screen("Measuring distribution of pairs for ", this->type_of_object);
   cout<<endl;
-  So.message_screen("Maximum separation probed =", max_dist,"Mpc /h");
+  So.message_screen("   maximum separation probed =",  max_neigh_per_dim*sqrt(3.0)*this->box.Lbox/static_cast<real_prec>(this->box.Nft),"Mpc /h");
   cout<<endl;
 #endif
   struct s_cell_info{
@@ -3602,7 +3134,7 @@ void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_c
 
   vector<s_cell_info> cell_info_tr(this->box.NGRID);
 
-
+#pragma omp parallel for
   for(ULONG i=0;i<this->NOBJS ;++i) //loop over the "observed obejcts", i.e, with cuts already set
     {
       ULONG ID=this->Halo[i].GridID;
@@ -3613,11 +3145,19 @@ void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_c
     }
   So.DONE();
 
-  int N_bins_dist=50;
-  int N_mass_bins=4;
+  // vector<real_prec>min_separations(this->NOBJS,0);
+  //  vector<bool>marked(this->NOBS,false);
 
+
+  int N_bins_dist=25;
+  int N_mass_bins=200;
+  real_prec max_dist=25.0;
   vector<vector<real_prec>> min_distance_dist(N_bins_dist,vector<real_prec>(N_mass_bins,0));
-  vector<real_prec> distance_dist_m(N_bins_dist*N_mass_bins*N_mass_bins,0);
+
+  //  vector<vector<real_prec>> distance_dist(N_bins_dist,vector<real_prec>(N_mass_bins*N_mass_bins,0));
+
+
+  vector<real_prec> distance_dist(N_bins_dist*N_mass_bins*N_mass_bins,0);
 
   real_prec lm_min=this->params._LOGMASSmin();
   real_prec lm_max=this->params._LOGMASSmax();
@@ -3626,6 +3166,7 @@ void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_c
 
   real_prec aux_min_distance_a;
   real_prec aux_min_distance_b;
+
 
   ULONG pair_counting=0;
 
@@ -3638,42 +3179,60 @@ void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_c
       real_prec y_coord=this->Halo[i].coord2;
       real_prec z_coord=this->Halo[i].coord3;
 
+      real_prec lmass=0;
+#ifdef _USE_VMAX_AS_OBSERVABLE_
+      lmass=log10(this->Halo[i].vmax);
+#elif defined _USE_MASS_AS_OBSERVABLE__
       real_prec lmass=log10(this->Halo[i].mass)+log10(this->params._MASS_units());
+#endif
+
       int im=get_bin(lmass,lm_min,N_mass_bins,this->logdeltaM,true);
+
       ULONG ID=this->Halo[i].GridID;
 
       // Allocate the min_distances to i particle form neighbouring cells
       vector<real_prec> min_distances_v(N_Neigh_cells,0);
 
       for(int j=0;j<N_Neigh_cells; j++) // loop sobre las celdas cercanas incluida la celda donde esta la particula i
-	   {
-	      ULONG ID_NEIGH = nearest_cells_to_cell[ID].close_cell[j];
-    	  real_prec factor_bc_x=nearest_cells_to_cell[ID].bc_x[j]*this->box.Lbox;
-	      real_prec factor_bc_y=nearest_cells_to_cell[ID].bc_y[j]*this->box.Lbox;
-	      real_prec factor_bc_z=nearest_cells_to_cell[ID].bc_z[j]*this->box.Lbox;
-    	  aux_min_distance_b=1e5;
-  	      real_prec min_distance_b=0;
-    	  for(int k=0;k< cell_info_tr[ID_NEIGH].posx_p.size(); ++k) //loop sobre las particulas en las celdas cercanas
-	       {
+	{
+	  ULONG ID_NEIGH = nearest_cells_to_cell[ID].close_cell[j];
+
+	  real_prec factor_bc_x=nearest_cells_to_cell[ID].bc_x[j]*this->box.Lbox;
+	  real_prec factor_bc_y=nearest_cells_to_cell[ID].bc_y[j]*this->box.Lbox;
+	  real_prec factor_bc_z=nearest_cells_to_cell[ID].bc_z[j]*this->box.Lbox;
+
+	  aux_min_distance_b=1e5;
+	  real_prec min_distance_b;
+
+	  for(int k=0;k< cell_info_tr[ID_NEIGH].posx_p.size(); ++k) //loop sobre las particulas en las celdas cercanas
+	    {
+
               pair_counting++;
-    	      ULONG index_gal=cell_info_tr[ID_NEIGH].gal_index[k];
+	      ULONG index_gal=cell_info_tr[ID_NEIGH].gal_index[k];
+
               real_prec lmass_k=log10(this->Halo[index_gal].mass)+log10(this->params._MASS_units());
               int im_k=get_bin(lmass_k,lm_min,N_mass_bins,this->logdeltaM,true);
+
               int index_mass=index_2d(im,im_k,N_mass_bins);
-	          if(index_gal!=i) //this simply avoids to get a 0 in the distance
-		       {
-                  real_prec distx = x_coord - (cell_info_tr[ID_NEIGH].posx_p[k]+factor_bc_x);
-		          real_prec disty = y_coord - (cell_info_tr[ID_NEIGH].posy_p[k]+factor_bc_y);
-		          real_prec distz = z_coord - (cell_info_tr[ID_NEIGH].posz_p[k]+factor_bc_z);
-    		      real_prec dist  = sqrt(pow(distx,2)+pow(disty,2)+pow(distz,2));
-        		  min_distance_b=min(aux_min_distance_b,dist);
-             	  aux_min_distance_b=min_distance_b;
-        		  int da_bin = get_bin(dist,0.,N_bins_dist,max_dist/static_cast<real_prec>(N_bins_dist),false);
+
+	      if(index_gal!=i) //this simply avoids to get a 0 in the distance
+		{
+
+		  real_prec distx = x_coord - (cell_info_tr[ID_NEIGH].posx_p[k]+factor_bc_x);
+		  real_prec disty = y_coord - (cell_info_tr[ID_NEIGH].posy_p[k]+factor_bc_y);
+		  real_prec distz = z_coord - (cell_info_tr[ID_NEIGH].posz_p[k]+factor_bc_z);
+		  real_prec dist  = sqrt(pow(distx,2)+pow(disty,2)+pow(distz,2));
+
+		  min_distance_b=min(aux_min_distance_b,dist);
+		  aux_min_distance_b=min_distance_b;
+
+		  int da_bin = get_bin(dist,0.,N_bins_dist,max_dist/static_cast<real_prec>(N_bins_dist),false);
                   ULONG sindex = index_2d(da_bin,index_mass,N_mass_bins);
                   if(dist<max_dist)
-                    distance_dist_m[sindex]++;
-         		}
+                    distance_dist[sindex]++;
+		}
 	    }// at this point min_distance_b exits as the minimum within *one* neighbour cell
+
 	  min_distances_v[j]=aux_min_distance_b;
 
 	}// at this point min_distance_a exits as the minimum among all neighbour cells
@@ -3681,87 +3240,65 @@ void Catalog::get_distribution_min_separations(vector<s_nearest_cells>&nearest_c
       aux_min_distance_a=1e5;
       real_prec min_distance_a;
       for(int j=0;j<N_Neigh_cells; j++)
-    	{
-	     if(min_distances_v[j]>0)
-	        {
-	           min_distance_a=min(min_distances_v[j],aux_min_distance_a);
-    	      aux_min_distance_a=min_distance_a;
-	       }
-    	}
+	{
+	  if(min_distances_v[j]>0)
+	    {
+	      min_distance_a=min(min_distances_v[j],aux_min_distance_a);
+	      aux_min_distance_a=min_distance_a;
+	    }
+
+	}
 
       int d_bin = get_bin(min_distance_a,0.,N_bins_dist,max_dist/static_cast<real_prec>(N_bins_dist),false);
       if(min_distance_a<max_dist)
         min_distance_dist[d_bin][im]++;
+
+      //if(i==1)cout<<min_distance_a<<endl;
+
     }
   So.DONE();
+
 
   So.message_screen("Total number of pairs", pair_counting);
 
   ofstream sal;
-  
-  string ffa=this->params._Output_directory()+"minimum_separation_distribution_in_mass_bins_"+data+".txt";
-  sal.open(ffa.c_str());
-  So.message_screen("in file ", ffa);
+
+  sal.open("min_dist_"+data+".txt");
   for(int i=0;i<min_distance_dist.size();++i)
     {
       sal<<(i+0.5)*max_dist/static_cast<real_prec>(N_bins_dist)<<" ";
       for(int j=0;j< N_mass_bins; ++j)
-    	sal<<min_distance_dist[i][j]/static_cast<real_prec>(pair_counting)<<" ";
+	sal<<min_distance_dist[i][j]<<" ";
       sal<<endl;
     }
   sal.close();
 
-#ifdef _get_m_m_prob_
+
   So.message_screen("Writting P(r|M,M') ");
   for(int i=0;i<min_distance_dist.size();++i)
     {
-      string ff=this->params._Output_directory()+"separation_distribution_mass_"+data+"_separation_bin"+to_string(i)+".txt";
+      string ff="dist_"+data+"_separation_bin"+to_string(i)+".txt";
       So.message_screen("in file ", ff);
       sal.open(ff.c_str());
       for(int j=0;j< N_mass_bins; ++j)
-    	for(int k=0;k< N_mass_bins; ++k)
+	for(int k=0;k< N_mass_bins; ++k)
           {
             int index=index_2d(j,k,N_mass_bins);
             ULONG sindex = index_2d(i,index,N_mass_bins);
-            sal<<lm_min+(j+0.5)*logdeltaM<<" "<<lm_min+(k+0.5)*logdeltaM<<"  "<<static_cast<real_prec>(distance_dist_m[sindex])/static_cast<real_prec>(pair_counting)<<endl;
-	     }
+            sal<<lm_min+(j+0.5)*logdeltaM<<" "<<lm_min+(k+0.5)*logdeltaM<<"  "<<static_cast<real_prec>(distance_dist[sindex])/static_cast<real_prec>(pair_counting)<<endl;
+	  }
       sal.close();
     }
-#endif
-
-  So.message_screen("Writting P(r) in mass bins ");
-  string ff=this->params._Output_directory()+"separation_distribution_in_mass_bins_"+data+".txt";
-  So.message_screen("in file ", ff);
-  sal.open(ff.c_str());
-  for(int i=0;i<min_distance_dist.size();++i)
-    {
-      sal<<(i+0.5)*max_dist/static_cast<real_prec>(N_bins_dist)<<" ";
-      for(int j=0;j< N_mass_bins; ++j)
-        sal<<static_cast<real_prec>(distance_dist_m[index_2d(i,j,N_mass_bins)])/static_cast<real_prec>(pair_counting)<<" ";
-      sal<<endl;
-    }
-  sal.close();
-
-
-
   So.DONE();
 }
 
 
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
+
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
+// ***********************************************************************************************************  //
 // for each bin in prop, we will allocate the list of masses (M1, M2) in pairs with separatIons d1-2 between d_min and 1.5Mpc
 // WE do this from the reference as well as from the final mock with assigned masses
 // the index im in this->masses_in_cells_min_sep_ref[ih].M1[im] denotes the mass1 of the im-th pair in the theta bin ih separated a distance [dmin, Dmax]
@@ -3805,103 +3342,3 @@ void Catalog::get_masses_of_pairs_in_min_separation_bin_in_theta_bin(real_prec m
 
     So.DONE();
 }
-
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-// ************************************************************************************************************************************************************************** //
-
-
-// This function tries to answer the question:
-// at which value of Vmax do we start seeing cells of a given size occupied with *one* tracer
-// of that vmax value?
-
-struct pdf_prop{
-  vector<real_prec>values;
-  vector<ULONG>counts;
-};
-
-
-void Catalog::get_pdf_vmax(string property)
-{
-
-#ifdef _USE_OMP_
-  int NTHREADS=_NTHREADS_;
-  omp_set_num_threads(NTHREADS);
-#endif
-
-
-  ULONG NGRID=this->params._Nft()*this->params._Nft()*this->params._Nft();
-  vector<pdf_prop> vmax_in_cells(NGRID);
-
-  int Nbins=30; //this->params._NMASSbins_mf();
-  int Nocc=30; //this->params._NMASSbins_mf();
-
-  if("VMAX"==property)
-    {
-
-      So.message_warning("Allcoating properties");
-      for(ULONG i=0; i<this->NOBJS;++i)
-       {
-         ULONG ID=this->Halo[i].GridID;
-         vmax_in_cells[ID].values.push_back(this->Halo[i].vmax);
-       }
-
-       So.DONE();
-      real_prec delta=log10(this->params._VMAXmax()/this->params._VMAXmin())/static_cast<real_prec>(Nbins);
-
-
-      So.message_warning("Getting histograms");
-#ifdef _USE_OMP_
-#pragma omp parallel for 
-#endif
-      for(ULONG i=0; i< NGRID ;++i)
-       {
-         vmax_in_cells[i].counts.resize(Nbins,0);
-         for(ULONG j=0;j<vmax_in_cells[i].values.size();++j)  
-          {
-            real_prec value=log10(vmax_in_cells[i].values[j]);
-            int bin=get_bin(value, log10(this->params._VMAXmin()),Nbins, delta,false);
-#ifdef _USE_OMP_
-#pragma omp atomic
-#endif
-            vmax_in_cells[i].counts[bin]++;
-          }
-        }
-        So.DONE();
-
-
-     vector<real_prec>pdf_c(Nocc*Nbins,0);
-     for(int k=0;k<Nocc;++k)         
-       for(int i=0;i<Nbins;++i)
-         for(ULONG j=0;j<NGRID;++j)  
-           if(k==vmax_in_cells[j].counts[i])
-             pdf_c[index_2d(k,i,Nbins)]++;
-
-     ofstream sa;
-     sa.open(this->params._Output_directory()+"pdf_vmax.txt");
-     for(int i=0;i<Nbins;++i)
-       {
-       sa<<this->params._VMAXmin()*pow(10,(i+0.5)*delta)<<" ";
-       for(int k=1;k<Nocc;++k)         
-          sa<<pdf_c[index_2d(k,i,Nbins)]<<"  ";
-       sa<<endl;
-      }
-     sa.close();
-
-      }
-}
-
-
-
-

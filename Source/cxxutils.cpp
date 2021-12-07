@@ -30,6 +30,7 @@ bool file_present (const string &filename)
   {
   // ifstream dummy(filename.c_str());
   // return dummy;
+    return 0;
   }
 
 void assert_present (const string &filename)

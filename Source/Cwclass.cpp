@@ -18,64 +18,53 @@ int sign(real_prec x)
 
 }
 
+
 //##################################################################################
 //##################################################################################
-void Cwclass::set_params_cwclass(Params par)
+//##################################################################################
+void Cwclass::get_bias_terms(vector<real_prec>&delta)
 {
-  So.message_screen("Loading parameters for CWclass");
-  this->Nft=par._Nft();
-  this->lambdath=par._lambdath();
-  this->lambdath_v=par._lambdath_v();
-  this->n_sknot_massbin=par._n_sknot_massbin();
-  this->n_vknot_massbin=par._n_vknot_massbin();
-  this->Lbox=par._Lbox();
-  this->cwt_used=par._cwt_used();
-  this->cwv_used=par._cwv_used();
-  this->n_cwt=par._n_cwt();
-  this->n_cwv=par._n_cwv();
-  this->NGRID=par._NGRID();
-  this->NTT=static_cast<ULONG>(this->Nft*this->Nft*(this->Nft/2+1));
-  this->params=par;
-  So.DONE();
-}
+#ifdef _FULL_VERBOSE_
+    So.enter(__PRETTY_FUNCTION__);
+#endif
+
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
 
-
-
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-void Cwclass::get_bias_terms(const vector<real_prec>&delta)
-{
-
+#ifdef _FULL_VERBOSE_
   So.message_screen("Computing bias terms");
-  
-  vector<real_prec>phi(this->NGRID,0);
+#endif
+  vector<real_prec>phi(this->params._NGRID(),0);
 
   real_prec max_C1;
   real_prec min_C1;
   
-  
 #ifdef _USE_DELTA2_
   So.message_screen("Computing ð²");
-  this->DELTA2.resize(this->NGRID,0);
+  this->DELTA2.resize(this->params._NGRID(),0);
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<this->NGRID;++i)
+  for(ULONG i=0;i<this->params._NGRID();++i)
     this->DELTA2[i]=delta[i]*delta[i];
   So.DONE();
+
 #ifdef _WRITE_DELTA2_
   File.write_array(this->params._Output_directory()+"DELTA2", DELTA2);
 #endif
+
   So.message_screen("DELTA2-term :");
   max_C1=get_max<real_prec>(DELTA2);
   So.message_screen("Maximum ð² =", max_C1);
   min_C1=get_min<real_prec>(DELTA2);
   So.message_screen("Minimum ð² =", min_C1);
+#ifdef _FULL_VERBOSE_
   cout<<endl;
+#endif
 #endif
 
 
@@ -83,13 +72,14 @@ void Cwclass::get_bias_terms(const vector<real_prec>&delta)
   
 #ifdef _USE_DELTA3_
   So.message_screen("Computing ð³");
-  this->DELTA3.resize(this->NGRID,0);
+  this->DELTA3.resize(this->params._NGRID(),0);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<this->NGRID;++i)
+  for(ULONG i=0;i<this->params._NGRID();++i)
     DELTA3[i]=delta[i]*delta[i]*delta[i];
   So.DONE();
+
 #ifdef _WRITE_DELTA3_
   File.write_array(this->params._Output_directory()+"DELTA3", DELTA3);
 #endif
@@ -98,34 +88,41 @@ void Cwclass::get_bias_terms(const vector<real_prec>&delta)
   So.message_screen("Maximum ð³  =", max_C1);
   min_C1=get_min<real_prec>(DELTA3);
   So.message_screen("Minimum ð³ =", min_C1);
+#ifdef _FULL_VERBOSE_
   cout<<endl;
+#endif
 #endif
   
   
   // Here we do not need the eigenvalues. Hence we do not resize these vectors
+#ifdef _FULL_VERBOSE_
   So.message_screen("Computing gravitational potential");
-  PoissonSolver(this->Lbox, this->Nft,delta,phi);
+#endif
+  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,phi);
   So.DONE();
   
 #ifdef _USE_S2_
   So.message_screen("Computing s²");
-  this->S2.resize(this->NGRID,0);
+  this->S2.resize(this->params._NGRID(),0);
   So.DONE();
 #endif
+
+
+
   
 #ifdef _USE_S3_
   So.message_screen("Computing s³");
-  this->S3.resize(this->NGRID,0);
+  this->S3.resize(this->params._NGRID(),0);
   So.DONE();
 #endif
   
 #ifdef _USE_NABLA2DELTA_
   So.message_screen("Computing NABLA2DELTA term");
-  this->N2D.resize(this->NGRID,0);
+  this->N2D.resize(this->params._NGRID(),0);
 #endif
 
-#if (defined (_USE_NABLA2DELTA_) || defined (_USE_S2_) || defined (_USE_S3_) || defined (_USE_S2DELTA_))
-  EigenValuesTweb_bias(this->Nft,this->Lbox,delta, phi,this->S2, this->S3, this->N2D);
+#if defined (_USE_NABLA2DELTA_) || defined (_USE_S2_) || defined (_USE_S3_) || defined (_USE_S2DELTA_)
+  EigenValuesTweb_bias(this->params._Nft(),this->params._Lbox(),delta, phi,this->S2, this->S3, this->N2D);
   So.DONE();
 #endif
   
@@ -135,54 +132,153 @@ void Cwclass::get_bias_terms(const vector<real_prec>&delta)
   
 #ifdef _USE_S2_
 #ifdef _WRITE_S2_
-  File.write_array(this->params._Output_directory()+"S2", S2);
+    File.write_array(this->params._Output_directory()+"S2_original", this->S2);
 #endif
-  /*  // This will be written in Bam.pp, member function get_new_min_max_limits()
-  So.message_screen("s²-term :");
-  max_C1=get_max<real_prec>(S2);
-  So.message_screen("Maximum s²  =", max_C1);
-  min_C1=get_min<real_prec>(S2);
-  So.message_screen("Minimum s² =", min_C1);
-  cout<<endl;
-  */
-#endif
-  
-#ifdef _USE_S3_
-#ifdef _WRITE_S3_
-  File.write_array(this->params._Output_directory()+"S3", S3);
-#endif
-  /*
-  So.message_screen("s³-term :");
-  max_C1=get_max<real_prec>(S3);
-  So.message_screen("Maximum s³  =", max_C1);
-  min_C1=get_min<real_prec>(S3);
-  So.message_screen("Minimum s³ =", min_C1);
-  cout<<endl;
-  */
-#endif
-  
 
-  
-#ifdef _USE_S2DELTA_
-  this->S2DELTA.resize(this->NGRID,0);
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<this->NGRID;++i)
-    S2DELTA[i]=S2[i]*delta[i];
-#ifdef _WRITE_S2DELTA_
-  File.write_array(this->params._Output_directory()+"S2DELTA", S2DELTA);
+for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+    real_prec x=this->S2[index];;
+#ifdef _USE_EXPONENT_S2_
+    int sign_x=1;
+#ifdef _USE_SIGN_S2_
+    sign_x=sign(x);
 #endif
-  /*
-  So.message_screen("s²ð-term :");
-  max_C1=get_max<real_prec>(S2DELTA);
-  So.message_screen("Maximum s²ð  =", max_C1);
-  min_C1=get_min<real_prec>(S2DELTA);
-  So.message_screen("Minimum s²ð =", min_C1);
-  cout<<endl;
-  */
+    this->S2[index]=sign_x*pow(abs(x), EXPONENT_S2);
+#else
+   this->S2[index]=x;
+#endif
+   }
+
+
+#ifdef _MAP_TO_INTERVAL_S2_
+
+real_prec xmin=get_min(this->S2);
+real_prec xmax=get_max(this->S2);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+for (ULONG index=0;index<this->params._NGRID();++index)
+    this->S2[index]=(NEWMAX_S2-NEWMIN_S2)*(this->S2[index]-xmin)/(xmax-xmin)+NEWMIN_S2;
+#endif
+
+
+
+#ifdef _WRITE_S2_
+if(0==this->step)
+#ifdef _USE_EXPONENT_S2_
+    File.write_array(this->params._Output_directory()+"S2", this->S2);
+#endif
+#endif
 #endif
   
+
+
+
+
+
+#ifdef _USE_S3_
+#ifdef _WRITE_S3_
+    this->File.write_array(this->params._Output_directory()+"S3_original", this->S3);
+#endif
+
+#pragma omp parallel for
+    for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+    real_prec x=this->S3[index];;
+#ifdef _USE_EXPONENT_S3_
+    int sign_x=1;
+#ifdef _USE_SIGN_S3_
+    sign_x=sign(x);
+#endif
+    this->S3[index]=sign_x*pow(abs(x), EXPONENT_S3);
+#else
+   this->S3[index]=x;
+#endif
+   }
+
+
+#ifdef _MAP_TO_INTERVAL_S3_
+    {
+real_prec xmin=get_min(this->S3);
+real_prec xmax=get_max(this->S3);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+for (ULONG index=0;index<this->params._NGRID();++index)
+    this->S3[index]=(NEWMAX_S3-NEWMIN_S3)*(this->S3[index]-xmin)/(xmax-xmin)+NEWMIN_S3;
+
+#endif
+    }
+#ifdef _WRITE_S3_
+if(0==this->step)
+#ifdef _USE_EXPONENT_S3_
+    File.write_array(this->params._Output_directory()+"S3", this->S3);
+#endif
+#endif
+#endif
+
+
+
+// *************************************************************************************
+
+
+
+
+#ifdef _USE_S2DELTA_
+  So.message_screen("Computing S²DELTA");
+  this->S2DELTA.resize(this->params._NGRID(),0);
+
+
+#pragma omp parallel for
+for (ULONG index=0;index<this->params._NGRID();++index)
+     this->S2DELTA[index]=this->S2[index]*delta[index];
+
+#ifdef _WRITE_S2DELTA_
+    File.write_array(this->params._Output_directory()+"S2DELTA_original", this->S2DELTA);
+#endif
+
+#pragma omp parallel for
+    for (ULONG index=0;index<this->params._NGRID();++index)
+     {
+    real_prec x=this->S2DELTA[index];
+#ifdef _USE_EXPONENT_S2DELTA_
+    int sign_x=1;
+#ifdef _USE_SIGN_S2DELTA_
+    sign_x=sign(x);
+#endif
+    this->S2DELTA[index]=sign_x*pow(abs(x), EXPONENT_S2DELTA);
+#else
+   this->S2DELTA[index]=x;
+#endif
+   }
+
+
+#ifdef _MAP_TO_INTERVAL_S2DELTA_
+    {
+    real_prec xmin=get_min(this->S2DELTA);
+    real_prec xmax=get_max(this->S2DELTA);
+#pragma omp parallel for
+    for (ULONG index=0;index<this->params._NGRID();++index)
+        this->S2DELTA[index]=(NEWMAX_S2DELTA-NEWMIN_S2DELTA)*(this->S2DELTA[index]-xmin)/(xmax-xmin)+NEWMIN_S2DELTA;
+    }
+
+#endif
+
+#if defined (_WRITE_S2DELTA_ ) && defined (_USE_EXPONENT_S2DELTA_)
+    if(0==this->step)
+       File.write_array(this->params._Output_directory()+"S2DELTA", this->S2DELTA);
+#endif
+
+
+#endif
+
+
+// *************************************************************************************
+
 
 #ifdef _USE_NABLA2DELTA_
 #ifdef _WRITE_NABLA2DELTA_
@@ -204,87 +300,72 @@ void Cwclass::get_bias_terms(const vector<real_prec>&delta)
 //##################################################################################
 //##################################################################################
 //##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+// This function gnerates the CWC, the Iweb  sor the Pweb eigenvalues
 
-
-void Cwclass::do_CWC(const vector<real_prec>&delta)
+void Cwclass::do_CWC(vector<real_prec>&delta)
 {
+#ifdef _FULL_VERBOSE_
+  So.enter(__PRETTY_FUNCTION__);
+#endif
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
+  vector<real_prec>phi(this->params._NGRID(),0);
 
-  vector<real_prec>phi(this->NGRID,0);
-
-
+#if !defined(_USE_PWEB_)
+#ifdef _FULL_VERBOSE_
   So.message_screen("Computing gravitational potential");
 #ifdef _USE_ZERO_PADDING_POT_
   So.message_screen("using zero-padding");
 #endif
+#endif
+#endif
 
-  PoissonSolver(this->Lbox, this->Nft,delta,phi);
+#if !defined(_USE_PWEB_)
+  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,phi);
+#else
+  phi=delta;
+#endif
   So.DONE();
    
-  this->lambda1.resize(this->NGRID,0);
-  this->lambda2.resize(this->NGRID,0);
-  this->lambda3.resize(this->NGRID,0);
+  this->lambda1.resize(this->params._NGRID(),0);
+  this->lambda2.resize(this->params._NGRID(),0);
+  this->lambda3.resize(this->params._NGRID(),0);
+
+
+
   
-  
-#ifdef _USE_DELTA2_
-    this->DELTA2.resize(this->NGRID,0);
-#ifdef _USE_OMP_
-#pragma omp parallel for
+#ifdef _FULL_VERBOSE_
+#ifdef _USE_PWEB_
+  So.message_screen("Computing Eigenvalues of zeta field");
+#else
+  So.message_screen("Computing Eigenvalues of tidal field");
 #endif
-    for(ULONG i=0;i<this->NGRID;++i)
-      DELTA2[i]=delta[i]*delta[i];
 #endif
-    
-#ifdef _USE_DELTA3_
-    this->DELTA3.resize(this->NGRID,0);
-#ifdef _USE_OMP_
-#pragma omp parallel for
+
+  EigenValuesTweb(this->params._Nft(),this->params._Lbox(),delta, phi,this->lambda1,this->lambda2,this->lambda3);//or Pweb, in case phi is delta
+
+#ifdef _FULL_VERBOSE_
+  So.DONE();
 #endif
-    for(ULONG i=0;i<this->NGRID;++i)
-      DELTA3[i]=delta[i]*delta[i]*delta[i];
-#endif
-    
-    
-    
-    
-    So.message_screen("Computing Eigenvalues of tidal field");
-    // Here we do not compute S2 or N2D. Therefore we do not resize these containers.
-    // #ifdef _USE_S2_
-    //   this->S2.resize(this->NGRID,0);
-    // #endif
-    
-    // #ifdef _USE_S3_
-    //   this->S3.resize(this->NGRID,0);
-    // #endif
-    
-    
-    // #ifdef _USE_NABLA2DELTA_
-    //       this->N2D.resize(this->NGRID,0);
-    // #endif
-    
-    EigenValuesTweb(this->Nft,this->Lbox,delta, phi,this->lambda1,this->lambda2,this->lambda3, this->S2, this->S3, this->N2D);
-    So.DONE();
-    
   phi.clear();
   phi.shrink_to_fit();
+ 
 
 
-#ifdef _USE_S2DELTA_
-    this->S2DELTA.resize(this->NGRID,0);
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-    for(ULONG i=0;i<this->NGRID;++i)
-      S2DELTA[i]=S2[i]*delta[i];
-#endif
 
-
-    real_prec max_C1;
-    real_prec min_C1;
-
-
-  /*
-  max_C1=get_max<real_prec>(lambda1);
+   /*
+   real_prec max_C1;
+   real_prec min_C1;
+   max_C1=get_max<real_prec>(lambda1);
    So.message_screen("Maximum lambda1 =", max_C1);
    max_C1=get_min<real_prec>(lambda1);
    So.message_screen("Minimum lambda1 =", max_C1);
@@ -298,237 +379,615 @@ void Cwclass::do_CWC(const vector<real_prec>&delta)
    So.message_screen("Minimum lambda3 =", max_C1);
 */
 
-
-
-#ifdef _USE_S2_
-  So.message_screen("S2-term :");
-  max_C1=get_max<real_prec>(S2);
-  So.message_screen("Maximum s2  =", max_C1);
-  max_C1=get_min<real_prec>(S2);
-  So.message_screen("Minimum s2 =", max_C1);
-  cout<<endl;
-  if(this->step==0)
-   File.write_array(this->params._Output_directory()+"S2", S2);
-
-#endif
-
-#ifdef _USE_S3_
-  So.message_screen("S3-term :");
-  max_C1=get_max<real_prec>(S3);
-  So.message_screen("Maximum s3  =", max_C1);
-  max_C1=get_min<real_prec>(S3);
-  So.message_screen("Minimum s3 =", max_C1);
-  cout<<endl;
-  if(this->step==0)
-   File.write_array(this->params._Output_directory()+"S3", S3);
-
-#endif
-
-
-#ifdef _USE_NABLA2DELTA_
-  So.message_screen("Nabala² delta:");
-  max_C1=get_max<real_prec>(N2D);
-  So.message_screen("Maximum s2  =", max_C1);
-  max_C1=get_min<real_prec>(N2D);
-  So.message_screen("Minimum s2 =", max_C1);
-  cout<<endl;
-  if(this->step==0)
-    File.write_array(this->params._Output_directory()+"NABLA2DELTA", N2D);
-
-#endif
-
-
-
-
+// ---------------------------------------------------------------------------------
+#if defined _USE_INVARIANT_TIDAL_FIELD_I_  || defined(_USE_INVARIANT_PWEB_I_)
 
 
 #ifdef _USE_INVARIANT_TIDAL_FIELD_I_
-    So.message_screen("Invariant Tidal field I");
-    this->Invariant_TF_I.resize(this->NGRID,0);
+  So.message_screen("Computing Invariant Tidal field I");
+#else 
+ So.message_screen("Computing Invariant Derivative field P1");
+#endif
+
+
+
+ this->Invariant_TF_I.resize(this->params._NGRID(),0);
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Invariant_TF_I[index]=invariant_field_I(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _WRITE_INVARIANT_TIDAL_FIELD_I_
+    File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_I_original", this->Invariant_TF_I);
+#elif defined(_WRITE_INVARIANT_PWEB_I_)
+    File.write_array(this->params._Output_directory()+"INVARIANT_PI_original", this->Invariant_TF_I);
+#endif
+#endif
+
+
+
+#if defined (_USE_INVARIANT_TIDAL_FIELD_I_) || defined (_USE_INVARIANT_PWEB_I_)  // the transformations so far only applies to the tidal field invariants
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
      {
-      real_prec x=invariant_field_I(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
-#ifdef _USE_EXPONENT_INVARIANT_I_
+      real_prec x= this->Invariant_TF_I[index];
+#if defined (_USE_EXPONENT_INVARIANT_I_) || defined(_USE_EXPONENT__INVARIANT_PWEB_I_)
       int sign_x=1;
-#ifdef _USE_SIGN_INVARIANT_I_
+#if defined (_USE_SIGN_INVARIANT_I_) || defined(_USE_SIGN_INVARIANT_PWEB_I_)
       sign_x=sign(x);
 #endif
+#ifdef _USE_INVARIANT_TIDAL_FIELD_I_      
       this->Invariant_TF_I[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_I);
+#elif defined(_USE_INVARIANT_PWEB_I_ )
+      this->Invariant_TF_I[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_I);
+#endif
+
+
 #else
      this->Invariant_TF_I[index]=x;
 #endif
      }
 
 
-#ifdef _MAP_TO_INTERVAL_INV_I_
+#if defined(_MAP_TO_INTERVAL_INV_I_) || defined(_MAP_TO_INTERVAL_INVARIANT_PWEB_I_)
   {
   real_prec xmin=get_min(this->Invariant_TF_I);
   real_prec xmax=get_max(this->Invariant_TF_I);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+#if defined(_MAP_TO_INTERVAL_INV_I_)
       this->Invariant_TF_I[index]=(NEWMAX_INV_I-NEWMIN_INV_I)*(this->Invariant_TF_I[index]-xmin)/(xmax-xmin)+NEWMIN_INV_I;
+#elif defined (_MAP_TO_INTERVAL_INVARIANT_PWEB_I_)
+    this->Invariant_TF_I[index]=(NEWMAX_INVARIANT_PWEB_I-NEWMIN_INVARIANT_PWEB_I)*(this->Invariant_TF_I[index]-xmin)/(xmax-xmin)+NEWMIN_INVARIANT_PWEB_I;
+#endif    
+
 }
 #endif
 
-
+#ifdef _WRITE_INVARIANTS_
   if(0==this->step)
 #ifdef _USE_EXPONENT_INVARIANT_I_
       File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_I", this->Invariant_TF_I);
-#else
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_I_original", this->Invariant_TF_I);
+#elif defined _USE_EXPONENT_INVARIANT_PWEB_I_
+  File.write_array(this->params._Output_directory()+"INVARIANT_PI", this->Invariant_TF_I);
 #endif
 
    if(this->step ==this->params._N_iterations_Kernel())
-#ifdef _USE_EXPONENT_INVARIANT_I_
+#if defined (_USE_EXPONENT_INVARIANT_I_) || defined(_USE_EXPONENT_PWEB_I_)
       File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_I_iteration"+to_string(this->step), this->Invariant_TF_I);
-#else
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_I_original_iteration"+to_string(this->step), this->Invariant_TF_I);
 #endif
 
+#ifdef _FULL_VERBOSE_
   cout<<endl;
 #endif
 
 
+#endif
+#endif
+#endif
+  
 
+  
+  
+
+  
+  // ---------------------------------------------------------------------------------
+#if defined _USE_INVARIANT_TIDAL_FIELD_II_  || defined(_USE_INVARIANT_PWEB_II_)
+
+#ifdef _FULL_VERBOSE_
 #ifdef _USE_INVARIANT_TIDAL_FIELD_II_
-    So.message_screen("Invariant Tidal field II");
-    this->Invariant_TF_II.resize(this->NGRID,0);
+  So.message_screen("Computing Invariant Tidal field II");
+#else
+ So.message_screen("Computing Invariant Derivative field P2");
+#endif
+#endif
+ 
+ this->Invariant_TF_II.resize(this->params._NGRID(),0);
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Invariant_TF_II[index]=invariant_field_II(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_I_original", this->Invariant_TF_II);
+#else
+
+#ifdef _WRITE_INVARIANT_TIDAL_FIELD_II_
+    File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II_original", this->Invariant_TF_II);
+#elif defined(_WRITE_INVARIANT_PWEB_II_)
+    File.write_array(this->params._Output_directory()+"INVARIANT_PII_original", this->Invariant_TF_II);
+#endif
+  
+#endif
+#endif
+
+
+#if defined (_USE_INVARIANT_TIDAL_FIELD_II_ ) || defined (_USE_INVARIANT_PWEB_II_) || defined(_USE_EIGENVALUES_)
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
      {
-      real_prec x=invariant_field_II(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
-#ifdef _USE_EXPONENT_INVARIANT_II_
+      real_prec x=this->Invariant_TF_II[index];
+#if defined (_USE_EXPONENT_INVARIANT_II_) || defined(_USE_EXPONENT_INVARIANT_PWEB_II_)
      int sign_x=1;
-#ifdef _USE_SIGN_INVARIANT_II_
+#if defined (_USE_SIGN_INVARIANT_II_) || defined(_USE_SIGN_INVARIANT_PWEB_II_)
       sign_x=sign(x);
 #endif
+
+#ifdef _USE_INVARIANT_TIDAL_FIELD_II_      
       this->Invariant_TF_II[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_II);
+#elif defined(_USE_INVARIANT_PWEB_II_ )
+      this->Invariant_TF_II[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_II);
+#endif
+
+
 #else
      this->Invariant_TF_II[index]=x;
 #endif
      }
 
-#ifdef _MAP_TO_INTERVAL_INV_II_
+#if defined(_MAP_TO_INTERVAL_INV_II_) || defined(_MAP_TO_INTERVAL_INVARIANT_PWEB_II_)
  {
   real_prec xmin=get_min(this->Invariant_TF_II);
   real_prec xmax=get_max(this->Invariant_TF_II);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+#if defined(_MAP_TO_INTERVAL_INV_II_)
       this->Invariant_TF_II[index]=(NEWMAX_INV_II-NEWMIN_INV_II)*(this->Invariant_TF_II[index]-xmin)/(xmax-xmin)+NEWMIN_INV_II;
+#elif defined (_MAP_TO_INTERVAL_INVARIANT_PWEB_II_)
+    this->Invariant_TF_II[index]=(NEWMAX_INVARIANT_PWEB_II-NEWMIN_INVARIANT_PWEB_II)*(this->Invariant_TF_II[index]-xmin)/(xmax-xmin)+NEWMIN_INVARIANT_PWEB_II;
+#endif
+
   }
 #endif
 
+#ifdef _WRITE_INVARIANTS_
   if(0==this->step)
-#ifdef _USE_EXPONENT_INVARIANT_II_
+#if defined (_USE_EXPONENT_INVARIANT_II_) || defined (_USE_EXPONENT_INVARIANT_PWEB_II_) || defined (_USE_EIGENVALUES_)
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_I", this->Invariant_TF_II);
+#elif defined _USE_EXPONENT_INVARIANT_II_
       File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II", this->Invariant_TF_II);
-#else
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II_original", this->Invariant_TF_II);
+#elif defined _USE_EXPONENT_INVARIANT_PWEB_II_
+      File.write_array(this->params._Output_directory()+"INVARIANT_PII", this->Invariant_TF_II);
+#endif
+
 #endif
 
    if(this->step ==this->params._N_iterations_Kernel())
 #ifdef _USE_EXPONENT_INVARIANT_II_
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II_iteration"+to_string(this->step), this->Invariant_TF_II);
-#else
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II_original_iteration"+to_string(this->step), this->Invariant_TF_II);
+     File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_II_iteration"+to_string(this->step), this->Invariant_TF_II);
+#elif defined ( _USE_EXPONENT_INVARIANT_PWEB_II_)
+   File.write_array(this->params._Output_directory()+"INVARIANT_PWEB_II_iteration"+to_string(this->step), this->Invariant_TF_II);
 #endif
 
+#ifdef _FULL_VERBOSE_
   cout<<endl;
 #endif
 
+#endif
+  So.DONE();
+#endif
+#endif
 
 
 
+#ifdef _HYDROTEST_
+  this->File.read_array_t<PrecType_X>("/home/andres/data/Numerics/IACmocks/ANALYSIS/BAM/Output_Hydro/DensityGas_nohead.37.n128.dat",this->Invariant_TF_II);
+  get_overdens(this->Invariant_TF_II, this->Invariant_TF_II);
+  // if(this->step>0)
+  //   this->Konvolve(Invariant_TF_II, Invariant_TF_II, "DELTA");
+#pragma omp parallel for
+  for(ULONG i = 0;i < this->params._NGRID() ;++i)  //TRANSFORM DELTA TO LOG10(NUM_IN_LOG + DELTA)
+    this->Invariant_TF_II[i] = this->Invariant_TF_II[i]<-1 ?  0 :  log10(NUM_IN_LOG+ static_cast<real_prec>(this->Invariant_TF_II[i]));
+#endif
 
+  
+// ---------------------------------------------------------------------------------
+#if defined _USE_INVARIANT_TIDAL_FIELD_III_  || defined(_USE_INVARIANT_PWEB_III_)
+
+#ifdef _FULL_VERBOSE_
 #ifdef _USE_INVARIANT_TIDAL_FIELD_III_
-  So.message_screen("Invariant Tidal field III");
-  this->Invariant_TF_III.resize(this->NGRID,0);
+  So.message_screen("Computing Invariant Tidal field III");
+#else
+ So.message_screen("Computing Invariant Derivative field P3");
+#endif
+#endif
 
+
+  this->Invariant_TF_III.resize(this->params._NGRID(),0);
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Invariant_TF_III[index]=invariant_field_III(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_II_original", this->Invariant_TF_III);
+#else
+
+#ifdef _WRITE_INVARIANT_TIDAL_FIELD_III_
+    File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III_original", this->Invariant_TF_III);
+#elif defined(_WRITE_INVARIANT_PWEB_III_)
+    File.write_array(this->params._Output_directory()+"INVARIANT_PIII_original", this->Invariant_TF_III);
+#endif
+
+  
+#endif
+#endif
+
+
+#if defined (_USE_INVARIANT_TIDAL_FIELD_II_ )  || defined (_USE_INVARIANT_PWEB_III_) || defined(_USE_EIGENVALUES_) // TRANSOFMRATION ONLY AVAILABLE FOR TIDALFIELD EIGENVALUES
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
    {
-     real_prec x=invariant_field_III(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
-#ifdef _USE_EXPONENT_INVARIANT_III_
+     real_prec x=this->Invariant_TF_III[index];
+#if defined (_USE_EXPONENT_INVARIANT_III_) || defined(_USE_EXPONENT_INVARIANT_PWEB_III_)
      int sign_x=1;
-#ifdef _USE_SIGN_INVARIANT_II_
+#if defined (_USE_SIGN_INVARIANT_III_) || defined(_USE_SIGN_INVARIANT_PWEB_III_)
      sign_x=sign(x);
 #endif
-     this->Invariant_TF_III[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_III);
+
+#ifdef _USE_INVARIANT_TIDAL_FIELD_III_      
+      this->Invariant_TF_III[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_III);
+#elif defined(_USE_INVARIANT_PWEB_III_ )
+      this->Invariant_TF_III[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_III);
+#endif
+
 #else
      this->Invariant_TF_III[index]=x;
 #endif
 
   }
 
-
-#ifdef _MAP_TO_INTERVAL_INV_III_
+#if defined(_MAP_TO_INTERVAL_INV_III_) || defined(_MAP_TO_INTERVAL_INVARIANT_PWEB_III_)
   {
-  real_prec xmin=get_min(this->Invariant_TF_III);
-  real_prec xmax=get_max(this->Invariant_TF_III);
+    real_prec xmin=get_min(this->Invariant_TF_III);
+    real_prec xmax=get_max(this->Invariant_TF_III);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+    for (ULONG index=0;index<this->params._NGRID();++index)
+#if defined(_MAP_TO_INTERVAL_INV_III_)
       this->Invariant_TF_III[index]=(NEWMAX_INV_III-NEWMIN_INV_III)*(this->Invariant_TF_III[index]-xmin)/(xmax-xmin)+NEWMIN_INV_III;
+#elif defined (_MAP_TO_INTERVAL_INVARIANT_PWEB_III_)
+    this->Invariant_TF_III[index]=(NEWMAX_INVARIANT_PWEB_III-NEWMIN_INVARIANT_PWEB_III)*(this->Invariant_TF_III[index]-xmin)/(xmax-xmin)+NEWMIN_INVARIANT_PWEB_III;
+#endif
+  }
+#endif
+
+
+
+
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#if defined (_USE_EXPONENT_INVARIANT_III_) || defined (_USE_EXPONENT_INVARIANT_PWEB_III_) || defined (_USE_EIGENVALUES_)
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_II", this->Invariant_TF_III);
+#elif defined _USE_EXPONENT_INVARIANT_III_
+      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III", this->Invariant_TF_III);
+#elif defined _USE_EXPONENT_INVARIANT_PWEB_III_
+      File.write_array(this->params._Output_directory()+"INVARIANT_PIII", this->Invariant_TF_III);
+#endif
+
+#endif
+#endif
+
+      if(this->step ==this->params._N_iterations_Kernel())
+#ifdef _USE_EXPONENT_INVARIANT_III_
+	File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III_iteration"+to_string(this->step), this->Invariant_TF_III);
+#elif defined ( _USE_EXPONENT_INVARIANT_PWEB_III_)
+      File.write_array(this->params._Output_directory()+"INVARIANT_PIII_iteration"+to_string(this->step), this->Invariant_TF_III);
+#endif
+    So.DONE();
+#endif
+#endif
+    
+    
+#ifdef _HYDROTEST_
+    this->File.read_array_t<PrecType_X>("/home/andres/data/Numerics/IACmocks/ANALYSIS/BAM/Output_Hydro/NumberDensityHI_nohead.37.n128.dat",this->Invariant_TF_III);
+  get_overdens(this->Invariant_TF_III, this->Invariant_TF_III);
+// if(this->step>0)
+  //   this->Konvolve(Invariant_TF_III, Invariant_TF_III, "DELTA");
+#pragma omp parallel for
+  for(ULONG i = 0;i < this->params._NGRID() ;++i) //TRANSFORM DELTA TO LOG10(NUM_IN_LOG + DELTA)
+    this->Invariant_TF_III[i] = this->Invariant_TF_III[i]<-1 ?  0 :  log10(NUM_IN_LOG+ static_cast<real_prec>(this->Invariant_TF_III[i]));
+#endif
+    
+// ---------------------------------------------------------------------------------
+
+
+#ifdef _USE_INVARIANT_TIDAL_FIELD_IV_
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Computing Invariant Tidal field IV");
+#endif
+  this->Invariant_TF_IV.resize(this->params._NGRID(),0);
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Invariant_TF_IV[index]=invariant_field_IV(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_III_original", this->Invariant_TF_IV);
+#else
+      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV_original", this->Invariant_TF_IV);
+#endif
+#endif
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     real_prec x=Invariant_TF_IV[index];
+#ifdef _USE_EXPONENT_INVARIANT_IV_
+     int sign_x=1;
+#ifdef _USE_SIGN_INVARIANT_IV_
+     sign_x=sign(x);
+#endif
+     this->Invariant_TF_IV[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_IV);
+#else
+     this->Invariant_TF_IV[index]=x;
+#endif
+
+  }
+
+
+#ifdef _MAP_TO_INTERVAL_INV_IV_
+  {
+  real_prec xmin=get_min(this->Invariant_TF_IV);
+  real_prec xmax=get_max(this->Invariant_TF_IV);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Invariant_TF_IV[index]=(NEWMAX_INV_IV-NEWMIN_INV_IV)*(this->Invariant_TF_IV[index]-xmin)/(xmax-xmin)+NEWMIN_INV_IV;
 }
 #endif
 
 
+#ifdef _WRITE_INVARIANTS_
   if(0==this->step)
-#ifdef _USE_EXPONENT_INVARIANT_III_
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III", this->Invariant_TF_II);
+#ifdef _USE_EXPONENT_INVARIANT_IV_
+#ifdef _USE_EIGENVALUES_
+      File.write_array(this->params._Output_directory()+"LAMBDA_III", this->Invariant_TF_IV);
 #else
-      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III_original", this->Invariant_TF_III);
+      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV", this->Invariant_TF_IV);
 #endif
 
   if(this->step ==this->params._N_iterations_Kernel())
-#ifdef _USE_EXPONENT_INVARIANT_III_
-     File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III_iteration"+to_string(this->step), this->Invariant_TF_III);
-#else
-     File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_III_original_iteration"+to_string(this->step), this->Invariant_TF_III);
+#ifdef _USE_EXPONENT_INVARIANT_IV_
+     File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV_iteration"+to_string(this->step), this->Invariant_TF_IV);
+#endif
+#endif
 #endif
 
 
-
-
 #endif
 
+  // *********************************************************************************
 
 #ifdef _USE_TIDAL_ANISOTROPY_
-  So.message_screen("Invariant Tidal anisotropy");
-  this->Tidal_Anisotropy.resize(this->NGRID,0);
+  So.message_screen("Computing Tidal Anisotropy");
+  this->Tidal_Anisotropy.resize(this->params._NGRID(),0);
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
-    this->Tidal_Anisotropy[index]=tidal_anisotropy(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
-  max_C1=get_max<real_prec>(INV1);
-  So.message_screen("Maximum Invariant =", max_C1);
-  min_C1=get_min<real_prec>(INV1);
-  So.message_screen("Minimum Invariant =", min_C1);
-  cout<<endl;
-  if(this->step==0)
-   File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY", INV);
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Tidal_Anisotropy[index]=tidal_anisotropy(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+      File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY_original", this->Tidal_Anisotropy);
 #endif
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     real_prec x=this->Tidal_Anisotropy[index];
+#ifdef _USE_EXPONENT_TIDAL_ANISOTROPY_
+     int sign_x=1;
+#ifdef _USE_SIGN_TIDAL_ANISOTROPY_
+     sign_x=sign(x);
+#endif
+     this->Tidal_Anisotropy[index]=sign_x*pow(abs(x), EXPONENT_TIDAL_ANISOTROPY);
+#else
+     this->Tidal_Anisotropy[index]=x;
+#endif
+  }
+
+
+#ifdef _MAP_TO_INTERVAL_TIDAL_ANISOTROPY_
+  {
+  real_prec xmin=get_min(this->Tidal_Anisotropy);
+  real_prec xmax=get_max(this->Tidal_Anisotropy);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Tidal_Anisotropy[index]=(NEWMAX_TIDAL_ANISOTROPY-NEWMIN_TIDAL_ANISOTROPY)*(this->Tidal_Anisotropy[index]-xmin)/(xmax-xmin)+NEWMIN_TIDAL_ANISOTROPY;
+}
+#endif
+
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _USE_EXPONENT_TIDAL_ANISOTROPY_
+      File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY", this->Tidal_Anisotropy);
+#endif
+
+  if(this->step ==this->params._N_iterations_Kernel())
+#ifdef _USE_EXPONENT_USE_TIDAL_ANISOTROPY_
+     File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY_iteration"+to_string(this->step), this->Tidal_Anisotropy);
+#endif
+#endif
+    So.DONE();
+#endif
+
+
+
+
+    // *********************************************************************************
+
+  #ifdef _USE_ELLIPTICITY_
+    So.message_screen("Computing Ellipticity");
+    this->Ellipticity.resize(this->params._NGRID(),0);
+
+  #ifdef _USE_OMP_
+  #pragma omp parallel for
+  #endif
+    for (ULONG index=0;index<this->params._NGRID();++index)
+        this->Ellipticity[index]=ellipticity(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+  #ifdef _WRITE_INVARIANTS_
+    if(0==this->step)
+        File.write_array(this->params._Output_directory()+"ELLIPTICITY_original", this->Ellipticity);
+  #endif
+
+
+  #ifdef _USE_OMP_
+  #pragma omp parallel for
+  #endif
+    for (ULONG index=0;index<this->params._NGRID();++index)
+     {
+       real_prec x=this->Ellipticity[index];
+  #ifdef _USE_EXPONENT_ELLIPTICITY_
+       int sign_x=1;
+  #ifdef _USE_SIGN_ELLIPTICITY_
+       sign_x=sign(x);
+  #endif
+       this->Ellipticity[index]=sign_x*pow(abs(x), EXPONENT_ELLIPTICITY);
+  #else
+       this->Ellipticity[index]=x;
+  #endif
+
+    }
+
+
+  #ifdef _MAP_TO_INTERVAL_ELLIPTICITY_
+    {
+    real_prec xmin=get_min(this->Ellipticity);
+    real_prec xmax=get_max(this->Ellipticity);
+  #ifdef _USE_OMP_
+  #pragma omp parallel for
+  #endif
+    for (ULONG index=0;index<this->params._NGRID();++index)
+        this->Ellipticity[index]=(NEWMAX_ELLIPTICITY-NEWMIN_ELLIPTICITY)*(this->Ellipticity[index]-xmin)/(xmax-xmin)+NEWMIN_ELLIPTICITY;
+  }
+  #endif
+
+  #ifdef _WRITE_INVARIANTS_
+    if(0==this->step)
+  #ifdef _USE_EXPONENT_ELLIPTICITY_
+        File.write_array(this->params._Output_directory()+"ELLIPTICITY", this->Ellipticity);
+  #endif
+
+    if(this->step ==this->params._N_iterations_Kernel())
+  #ifdef _USE_ELLIPTICITY_
+       File.write_array(this->params._Output_directory()+"ELLIPTICITY_iteration"+to_string(this->step), this->Ellipticity);
+  #endif
+  #endif
+      So.DONE();
+  #endif
+
+
+    // ************************************************************************************
+#ifdef _USE_PROLATNESS_
+  So.message_screen("Computing Prolatness");
+  this->Prolatness.resize(this->params._NGRID(),0);
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Prolatness[index]=prolatness(this->lambda1[index],this->lambda2[index],this->lambda3[index]);
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+      File.write_array(this->params._Output_directory()+"PROLATNESS_original", this->Prolatness);
+#endif
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     real_prec x=this->Prolatness[index];
+#ifdef _USE_EXPONENT_PROLATNESS_
+     int sign_x=1;
+#ifdef _USE_SIGN_PROLATNESS_
+     sign_x=sign(x);
+#endif
+     this->Prolatness[index]=sign_x*pow(abs(x), EXPONENT_PROLATNESS);
+#else
+     this->Prolatness[index]=x;
+#endif
+
+  }
+
+
+
+#ifdef _MAP_TO_INTERVAL_PROLATNESS_
+  {
+  real_prec xmin=get_min(this->Prolatness);
+  real_prec xmax=get_max(this->Prolatness);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+      this->Prolatness[index]=(NEWMAX_PROLATNESS-NEWMIN_PROLATNESS)*(this->Prolatness[index]-xmin)/(xmax-xmin)+NEWMIN_PROLATNESS;
+}
+#endif
+
+#ifdef _WRITE_INVARIANTS_
+  if(0==this->step)
+#ifdef _USE_EXPONENT_PROLATNESS_
+      File.write_array(this->params._Output_directory()+"PROLATNESS", this->Prolatness);
+#endif
+
+  if(this->step ==this->params._N_iterations_Kernel())
+#ifdef _USE_PROLATNESS_
+     File.write_array(this->params._Output_directory()+"PROLATNESS_iteration"+to_string(this->step), this->Prolatness);
+#endif
+#endif
+    So.DONE();
+#endif
+
+  // ************************************************************************************
+
+
+
 
 
 
   this->CWClass.clear();
 #if defined (_USE_CWC_) || defined (_USE_MASS_KNOTS_)
-  this->CWClass.resize(this->NGRID,0);
+  this->CWClass.resize(this->params._NGRID(),0);
 #endif
+
 
 
 #ifdef _USE_CWC_
@@ -537,34 +996,35 @@ void Cwclass::do_CWC(const vector<real_prec>&delta)
   ULONG nsheets=0;
   ULONG nvoids=0;
   ULONG nrest=0;
-  
+#ifdef _FULL_VERBOSE_
   So.message_screen("Extracting the Cosmic Web Classification:");
-  So.message_screen("Lambda threshold = ", this->lambdath);
+  So.message_screen("Lambda threshold = ", this->params._lambdath());
+#endif
 
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:nknots,nfilaments,nsheets,nvoids,nrest)
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
     {
-      if (this->lambda1[index]>this->lambdath && this->lambda2[index]>this->lambdath && this->lambda3[index]>this->lambdath)
+      if (this->lambda1[index]>this->params._lambdath() && this->lambda2[index]>this->params._lambdath() && this->lambda3[index]>this->params._lambdath())
 	{
 	  this->CWClass[index]=I_KNOT;
 	  nknots++;
 	}
       
-      else if (this->lambda1[index]<this->lambdath && lambda2[index]<this->lambdath && lambda3[index]<this->lambdath)
+      else if (this->lambda1[index]<this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]<this->params._lambdath())
 	{
 	  this->CWClass[index]=I_VOID;
 	  nvoids++;
 	}
       
-      else if ((lambda1[index]<this->lambdath && lambda2[index]<this->lambdath && lambda3[index]>this->lambdath) || (lambda1[index]<this->lambdath && lambda2[index]>this->lambdath && lambda3[index]<this->lambdath) || (lambda1[index]>this->lambdath && lambda2[index]<lambdath && lambda3[index]<this->lambdath))
+      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>this->params._lambdath()) || (lambda1[index]<this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]<this->params._lambdath()))
 	{
 	  this->CWClass[index]=I_SHEET;
 	  nsheets++;
 	}
       
-      else if ((lambda1[index]<this->lambdath && lambda2[index]>this->lambdath && lambda3[index]>this->lambdath) || (lambda1[index]>this->lambdath && lambda2[index]>this->lambdath && lambda3[index]<this->lambdath) || (lambda1[index]>this->lambdath && lambda2[index]<this->lambdath && lambda3[index]>this->lambdath))
+      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]>this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>this->params._lambdath()))
 	{
 	  this->CWClass[index]=I_FILAMENT;
 	  nfilaments++;
@@ -575,18 +1035,94 @@ void Cwclass::do_CWC(const vector<real_prec>&delta)
   So.DONE();
 
 
-  this->volume_knots=static_cast<real_prec>(nknots)/static_cast<real_prec>(this->NGRID); // Volume in knots / Total volume
-  this->volume_filaments=static_cast<real_prec>(nfilaments)/static_cast<real_prec>(this->NGRID); // Volume in knots / Total volume
-  this->volume_sheets=static_cast<real_prec>(nsheets)/static_cast<real_prec>(this->NGRID); // Volume in knots / Total volume
-  this->volume_voids=static_cast<real_prec>(nvoids)/static_cast<real_prec>(this->NGRID); // Volume in knots / Total volume
+  this->volume_knots=static_cast<real_prec>(nknots)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_filaments=static_cast<real_prec>(nfilaments)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_sheets=static_cast<real_prec>(nsheets)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_voids=static_cast<real_prec>(nvoids)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
 
-//#ifdef _VERBOSE_
-  So.message_screen("Summary of T-web classification, Lambda threshold = ", this->lambdath);
+
+//  File.write_array(this->params._Output_directory()+"CWC",this->CWClass);
+
+/*
+
+  File.write_array(this->params._Output_directory()+"CWC",this->CWClass);
+  vector<real_prec>l1;
+  vector<real_prec>l2;
+  vector<real_prec>l3;
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     if(I_VOID==this->CWClass[index])
+      {
+         l1.push_back(this->Invariant_TF_I[index]);
+         l2.push_back(this->Invariant_TF_II[index]);
+         l3.push_back(this->Invariant_TF_III[index]);
+      }
+  }
+  File.write_array(this->params._Output_directory()+"eigenvalues1_voids",l1);
+  File.write_array(this->params._Output_directory()+"eigenvalues2_voids",l2);
+  File.write_array(this->params._Output_directory()+"eigenvalues3_voids",l3);
+  l1.clear();l1.shrink_to_fit();
+  l2.clear();l2.shrink_to_fit();
+  l3.clear();l3.shrink_to_fit();
+
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     if(I_SHEET==this->CWClass[index])
+      {
+         l1.push_back(this->Invariant_TF_I[index]);
+         l2.push_back(this->Invariant_TF_II[index]);
+         l3.push_back(this->Invariant_TF_III[index]);
+      }
+  }
+  File.write_array(this->params._Output_directory()+"eigenvalues1_sheets",l1);
+  File.write_array(this->params._Output_directory()+"eigenvalues2_sheets",l2);
+  File.write_array(this->params._Output_directory()+"eigenvalues3_sheets",l3);
+  l1.clear();l1.shrink_to_fit();
+  l2.clear();l2.shrink_to_fit();
+  l3.clear();l3.shrink_to_fit();
+
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     if(I_FILAMENT==this->CWClass[index])
+      {
+         l1.push_back(this->Invariant_TF_I[index]);
+         l2.push_back(this->Invariant_TF_II[index]);
+         l3.push_back(this->Invariant_TF_III[index]);
+      }
+  }
+  File.write_array(this->params._Output_directory()+"eigenvalues1_filaments",l1);
+  File.write_array(this->params._Output_directory()+"eigenvalues2_filaments",l2);
+  File.write_array(this->params._Output_directory()+"eigenvalues3_filaments",l3);
+  l1.clear();l1.shrink_to_fit();
+  l2.clear();l2.shrink_to_fit();
+  l3.clear();l3.shrink_to_fit();
+
+  for (ULONG index=0;index<this->params._NGRID();++index)
+   {
+     if(I_KNOT==this->CWClass[index])
+      {
+         l1.push_back(this->Invariant_TF_I[index]);
+         l2.push_back(this->Invariant_TF_II[index]);
+         l3.push_back(this->Invariant_TF_III[index]);
+      }
+  }
+  File.write_array(this->params._Output_directory()+"eigenvalues1_knots",l1);
+  File.write_array(this->params._Output_directory()+"eigenvalues2_knots",l2);
+  File.write_array(this->params._Output_directory()+"eigenvalues3_knots",l3);
+  l1.clear();l1.shrink_to_fit();
+  l2.clear();l2.shrink_to_fit();
+  l3.clear();l3.shrink_to_fit();
+
+  */
+
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Summary of T-web classification, Lambda threshold = ", this->params._lambdath());
   So.message_screen("Knots (%) =", volume_knots*100.0);
   So.message_screen("Filaments (%) =", volume_filaments*100.0);
   So.message_screen("Sheets (%) =", volume_sheets*100.);
   So.message_screen("Voids (%) =", volume_voids*100.0);
-//#endif
+#endif
+
 
 
 #ifdef _VERBOSE_
@@ -597,26 +1133,30 @@ void Cwclass::do_CWC(const vector<real_prec>&delta)
   string file_cwc=this->params._Output_directory()+"CWC"+label_aux+to_string(index)+".txt";
   ofstream fcwc; fcwc.open(file_cwc.c_str());
   So.message_screen("Writing CWC fractions in file", file_cwc);
-  fcwc<<static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->NGRID)<<endl;
+  fcwc<<static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
   fcwc.close();
   So.DONE();
 #endif
 
 
+#ifdef _FULL_VERBOSE_
   if(nrest>0)
-    So.message_screen("Unclassified (%) =",static_cast<real_prec>(nrest)*100./static_cast<real_prec>(this->NGRID));
+    So.message_screen("Unclassified (%) =",static_cast<real_prec>(nrest)*100./static_cast<real_prec>(this->params._NGRID()));
+#endif
 #endif
 
   // If we do not want to use the CWC but still use the infor from the knots, then
 #elif !defined _USE_CWC_
 #ifdef _USE_MASS_KNOTS_
-  So.message_screen("Doing Cosmic Web Classification. Knots Only. Lambda threshold = ", this->lambdath);
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Doing Cosmic Web Classification. Knots Only. Lambda threshold = ", this->params._lambdath());
+#endif
 #pragma omp parallel for
-  for (ULONG index=0;index<this->NGRID;++index)
-    if (lambda1[index]>this->lambdath && lambda2[index]>this->lambdath && lambda3[index]>this->lambdath)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+    if (lambda1[index]>this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]>this->params._lambdath())
       this->CWClass[index]=I_KNOT;
   So.DONE();
 #endif
@@ -634,15 +1174,17 @@ void Cwclass::do_CWC(const vector<real_prec>&delta)
 
 void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_prec>&Vz)
 {
-
+#ifdef _FULL_VERBOSE_
+    So.enter(__PRETTY_FUNCTION__);
     So.message_screen("V-WEB classification requested");
+#endif
 
     // Transform the velocities to v / H(z), putting the units of H(z) with the cvel, such that the shear is dimensionless
 /*
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(int i=0; i<this->NGRID;++i)
+  for(int i=0; i<this->params._NGRID();++i)
     {
        Vx[i]/=cvel;
        Vy[i]/=cvel;
@@ -651,22 +1193,22 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 
 */
 
-  this->lambda1_vs.resize(this->NGRID,0);
-  this->lambda2_vs.resize(this->NGRID,0);
-  this->lambda3_vs.resize(this->NGRID,0);
-  this->Divergence_VelField.resize(this->NGRID,0);
+  this->lambda1_vs.resize(this->params._NGRID(),0);
+  this->lambda2_vs.resize(this->params._NGRID(),0);
+  this->lambda3_vs.resize(this->params._NGRID(),0);
+  this->Divergence_VelField.resize(this->params._NGRID(),0);
   So.message_screen("Computing Divergence and Eigenvalues of the shear of the velocity field");
-  EigenValuesVweb(this->Nft,Lbox,Vx,Vy,Vz,this->Divergence_VelField, this->lambda1_vs,this->lambda2_vs,this->lambda3_vs);
+  EigenValuesVweb(this->params._Nft(),params._Lbox(),Vx,Vy,Vz,this->Divergence_VelField, this->lambda1_vs,this->lambda2_vs,this->lambda3_vs);
   So.DONE();
 
 
 #ifdef _USE_INVARIANT_SHEAR_VFIELD_I_
     So.message_screen("Invariant Shear Vfield I");
-    this->Invariant_VS_I.resize(this->NGRID,0);
+    this->Invariant_VS_I.resize(this->params._NGRID(),0);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
      {
       real_prec x=invariant_field_I(this->lambda1_vs[index],this->lambda2_vs[index],this->lambda3_vs[index]);
       int sign_x=1;
@@ -675,7 +1217,12 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
  #endif
       this->Invariant_VS_I[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_VS_I);
      }
+
+#ifdef _FULL_VERBOSE_
   cout<<endl;
+ #endif
+
+
 #ifdef _MAP_TO_INTERVAL_INV_SHEAR_I_
   {
   real_prec xmin=get_min(this->Invariant_VS_I);
@@ -683,7 +1230,7 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
       this->Invariant_VS_I[index]=(NEWMAX_INV_SHEAR_I-NEWMIN_INV_SHEAR_I)*(this->Invariant_VS_I[index]-xmin)/(xmax-xmin)+NEWMIN_INV_SHEAR_I;
 }
 #endif
@@ -701,11 +1248,11 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 
 #ifdef _USE_INVARIANT_SHEAR_VFIELD_II_
     So.message_screen("Invariant Shear Vfield II");
-    this->Invariant_VS_II.resize(this->NGRID,0);
+    this->Invariant_VS_II.resize(this->params._NGRID(),0);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
      {
       real_prec x=invariant_field_II(this->lambda1_vs[index],this->lambda2_vs[index],this->lambda3_vs[index]);
       int sign_x=1;
@@ -714,7 +1261,11 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
  #endif
       this->Invariant_VS_II[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_VS_II);
      }
+#ifdef _FULL_VERBOSE_
   cout<<endl;
+ #endif
+
+
 #ifdef _MAP_TO_INTERVAL_INV_SHEAR_II_
   {
   real_prec xmin=get_min(this->Invariant_VS_II);
@@ -722,7 +1273,7 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
       this->Invariant_VS_II[index]=(NEWMAX_INV_SHEAR_II-NEWMIN_INV_SHEAR_II)*(this->Invariant_VS_II[index]-xmin)/(xmax-xmin)+NEWMIN_INV_SHEAR_II;
 }
 #endif
@@ -738,11 +1289,11 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 
 #ifdef _USE_INVARIANT_SHEAR_VFIELD_III_
     So.message_screen("Invariant Shear Vfield III");
-    this->Invariant_VS_III.resize(this->NGRID,0);
+    this->Invariant_VS_III.resize(this->params._NGRID(),0);
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
      {
       real_prec x=invariant_field_III(this->lambda1_vs[index],this->lambda2_vs[index],this->lambda3_vs[index]);
       int sign_x=1;
@@ -751,7 +1302,10 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
  #endif
       this->Invariant_VS_III[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_VS_III);
      }
+#ifdef _FULL_VERBOSE_
   cout<<endl;
+ #endif
+
 #ifdef _MAP_TO_INTERVAL_INV_SHEAR_III_
   {
   real_prec xmin=get_min(this->Invariant_VS_III);
@@ -759,7 +1313,7 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
       this->Invariant_VS_III[index]=(NEWMAX_INV_SHEAR_III-NEWMIN_INV_SHEAR_III)*(this->Invariant_VS_III[index]-xmin)/(xmax-xmin)+NEWMIN_INV_SHEAR_III;
 }
 #endif
@@ -777,7 +1331,7 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
 
 #ifdef _USE_CWC_V_
   this->CWClass_V.clear();
-  this->CWClass_V.resize(this->NGRID,0);
+  this->CWClass_V.resize(this->params._NGRID(),0);
 
   ULONG nknots=0;
   ULONG nfilaments=0;
@@ -786,32 +1340,33 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
   ULONG nrest=0;
 
 
+
   So.message_screen("Extracting the Cosmic Web Classification:");
 
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:nknots,nfilaments,nsheets,nvoids,nrest)
 #endif
-  for (ULONG index=0;index<this->NGRID;++index)
+  for (ULONG index=0;index<this->params._NGRID();++index)
     {
-      if (this->lambda1_vs[index]>this->lambdath_v && this->lambda2_vs[index]>this->lambdath_v && this->lambda3_vs[index]>this->lambdath_v)
+      if (this->lambda1_vs[index]>this->params._lambdath()_v && this->lambda2_vs[index]>this->params._lambdath()_v && this->lambda3_vs[index]>this->params._lambdath()_v)
         {
           this->CWClass_V[index]=I_KNOT;
           nknots++;
         }
 
-      else if (this->lambda1_vs[index]<this->lambdath_v && lambda2_vs[index]<this->lambdath_v && lambda3_vs[index]<this->lambdath_v)
+      else if (this->lambda1_vs[index]<this->params._lambdath()_v && lambda2_vs[index]<this->params._lambdath()_v && lambda3_vs[index]<this->params._lambdath()_v)
         {
           this->CWClass_V[index]=I_VOID;
           nvoids++;
         }
 
-      else if ((lambda1_vs[index]<this->lambdath_v && lambda2_vs[index]<this->lambdath_v && lambda3_vs[index]>this->lambdath_v) || (lambda1_vs[index]<this->lambdath_v && lambda2_vs[index]>this->lambdath_v && lambda3_vs[index]<this->lambdath_v) || (lambda1_vs[index]>this->lambdath_v && lambda2_vs[index]<lambdath_v && lambda3_vs[index]<this->lambdath_v))
+      else if ((lambda1_vs[index]<this->params._lambdath()_v && lambda2_vs[index]<this->params._lambdath()_v && lambda3_vs[index]>this->params._lambdath()_v) || (lambda1_vs[index]<this->params._lambdath()_v && lambda2_vs[index]>this->params._lambdath()_v && lambda3_vs[index]<this->params._lambdath()_v) || (lambda1_vs[index]>this->params._lambdath()_v && lambda2_vs[index]<this->params._lambdath()_v && lambda3_vs[index]<this->params._lambdath()_v))
         {
           this->CWClass_V[index]=I_SHEET;
           nsheets++;
         }
 
-      else if ((lambda1_vs[index]<this->lambdath_v && lambda2_vs[index]>this->lambdath_v && lambda3_vs[index]>this->lambdath_v) || (lambda1_vs[index]>this->lambdath_v && lambda2_vs[index]>this->lambdath_v && lambda3_vs[index]<this->lambdath_v) || (lambda1_vs[index]>this->lambdath_v && lambda2_vs[index]<this->lambdath_v && lambda3_vs[index]>this->lambdath_v))
+      else if ((lambda1_vs[index]<this->params._lambdath()_v && lambda2_vs[index]>this->params._lambdath()_v && lambda3_vs[index]>this->params._lambdath()_v) || (lambda1_vs[index]>this->params._lambdath()_v && lambda2_vs[index]>this->params._lambdath()_v && lambda3_vs[index]<this->params._lambdath()_v) || (lambda1_vs[index]>this->params._lambdath()_v && lambda2_vs[index]<this->params._lambdath()_v && lambda3_vs[index]>this->params._lambdath()_v))
         {
           this->CWClass_V[index]=I_FILAMENT;
           nfilaments++;
@@ -821,11 +1376,11 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
     }
   So.DONE();
 #ifdef _VERBOSE_
-  So.message_screen("Summary of V-web classification, Lambda threshold = ", this->lambdath_v);
-  So.message_screen("V_Knots (%) =",static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->NGRID));
-  So.message_screen("V_Filaments (%) =",static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->NGRID));
-  So.message_screen("V_Sheets (%) =",static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->NGRID));
-  So.message_screen("V_Voids (%) =",static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->NGRID));
+  So.message_screen("Summary of V-web classification, Lambda threshold = ", this->params._lambdath()_v);
+  So.message_screen("V_Knots (%) =",static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->params._NGRID()));
+  So.message_screen("V_Filaments (%) =",static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->params._NGRID()));
+  So.message_screen("V_Sheets (%) =",static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->params._NGRID()));
+  So.message_screen("V_Voids (%) =",static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->params._NGRID()));
 #endif
 
 
@@ -836,24 +1391,24 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
   string file_cwc=this->params._Output_directory()+"CWC_V"+label_aux+to_string(index)+".txt";
   ofstream fcwc; fcwc.open(file_cwc.c_str());
   So.message_screen("Writing CWC-V fractions in file", file_cwc);
-  fcwc<<static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->NGRID)<<endl;
-  fcwc<<static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->NGRID)<<endl;
+  fcwc<<static_cast<real_prec>(nknots)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nfilaments)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nsheets)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
+  fcwc<<static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
   fcwc.close();
   So.DONE();
 #endif
 
   if(nrest>0)
-    So.message_screen("Unclassified (%) =",static_cast<real_prec>(nrest)*100./static_cast<real_prec>(this->NGRID));
+    So.message_screen("Unclassified (%) =",static_cast<real_prec>(nrest)*100./static_cast<real_prec>(this->params._NGRID()));
 
   // If we do not want to use the CWC but still use the infor from the knots, then
 #elif !defined _USE_CWC_
 #ifdef _USE_MASS_KNOTS_
-  So.message_screen("Doing Cosmic Web Classification. Knots Only. Lambda threshold = ", this->lambdath);
+  So.message_screen("Doing Cosmic Web Classification. Knots Only. Lambda threshold = ", this->params._lambdath());
 #pragma omp parallel for
-  for (ULONG index=0;index<this->NGRID;++index)
-    if (lambda1_vs[index]>this->lambdath && lambda2_vs[index]>this->lambdath && lambda3_vs[index]>this->lambdath)
+  for (ULONG index=0;index<this->params._NGRID();++index)
+    if (lambda1_vs[index]>this->params._lambdath() && lambda2_vs[index]>this->params._lambdath() && lambda3_vs[index]>this->params._lambdath())
       this->CWClass_V[index]=I_KNOT;
   So.DONE();
 #endif
@@ -878,12 +1433,17 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   /*
     Routine taken from HADRON
   */
+#ifdef _USE_OMP_
+   int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
 
     // If we are in _GET_REALIZATIONS_, the limits here must be fixed, since different realizations might have different min and max,
-    
+#ifdef _FULL_VERBOSE_
   cout<<endl;
   So.message_screen("Getting FoF from Knots");
   So.message_screen("mean number density =", Nmean);
+#endif
 
   vector<real_prec>rho(in.size(),0);
 
@@ -893,7 +1453,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-      for(ULONG i=0;i<this->NGRID;++i)
+      for(ULONG i=0;i<this->params._NGRID();++i)
         rho[i]= Nmean*(num_1+in[i]);
     }
   else
@@ -901,8 +1461,10 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   
 
     ULONG aux=0;
+#ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:aux)
-    for(ULONG i=0;i<this->NGRID;++i)
+#endif
+    for(ULONG i=0;i<this->params._NGRID();++i)
       if(this->CWClass[i]==I_KNOT)
 	aux++;
 
@@ -910,7 +1472,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   // This array will be finally used to allocate the bin in wehich a mass knot is found.
   this->SKNOT_M_info.clear();
   this->SKNOT_M_info.shrink_to_fit();
-  this->SKNOT_M_info.resize(this->NGRID, -1);
+  this->SKNOT_M_info.resize(this->params._NGRID(), -1);
   
   // This vector contains the number of grids that belongs to a SKNOT. One expects
   // KNOT_MAX_SIZE superknots
@@ -921,7 +1483,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   real_prec MKrange_max = -1e38;  // Maximum  and Min of Mass of DM in knots. Mass here is number of DM particles in the super knot
   real_prec MKrange_min = +1e38; // These two variables are updated when knot masses are computed
 
-  for(ULONG i=0;i < this->NGRID; ++i)
+  for(ULONG i=0;i < this->params._NGRID(); ++i)
     {
       if(this->CWClass[i]==I_KNOT && rho[i]>0)  // If cell is classified as knot, proceed. This must be the classification of the REFERENCE density  field. The >0 indicates that there might be some cells classified as knots but empty
 	{
@@ -933,7 +1495,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 	      
               for(int j=0;j<n;++j)  // j runs over the neighbour cells of the current one, up to n, when n is increased inside the "if" when a neighbour knot is found
 		{
-		  if( (k= knot[j]-1)>=0 && k < this->NGRID)
+		  if( (k= knot[j]-1)>=0 && k < this->params._NGRID())
                     if( (this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
 		      {
 			knot[n] = k;   
@@ -943,7 +1505,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
 		      }
 		  
-		  if( (k = knot[j] + 1) >= 0 && k < this->NGRID)
+		  if( (k = knot[j] + 1) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k] == -1)
 		      {
 			knot[n] = k;
@@ -953,7 +1515,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
 		      }
 		  
-		  if( (k = knot[j] - this->Nft) >= 0 && k < this->NGRID)
+		  if( (k = knot[j] - this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k] == -1)
 		      {
 			knot[n] = k;
@@ -963,7 +1525,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
 		      }
 		  
-		  if( (k = knot[j] + this->Nft) >= 0 && k < this->NGRID)
+		  if( (k = knot[j] + this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if((this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k] == -1)
 		      {
 			knot[n] = k;
@@ -973,7 +1535,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
 		      }
 		  
-		  if( (k = knot[j] - this->Nft*this->Nft) >= 0 && k < this->NGRID)
+		  if( (k = knot[j] - this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k] == -1)
 		      {
 			knot[n] = k;
@@ -983,7 +1545,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
 		      }
 		  
-		  if( (k = knot[j] + this->Nft*this->Nft) >= 0 && k < this->NGRID)
+		  if( (k = knot[j] + this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if((this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k] == -1)
 		      {
 			knot[n] = k;
@@ -1027,28 +1589,34 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
  number_log=1.0;
 #endif
 
-
+#ifdef _FULL_VERBOSE_
  So.message_screen("Min and Max from FoF: ");
  So.message_screen("log Minimum Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_min+number_log));
  So.message_screen("log Maximim Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_max+number_log));
+#endif
 
     // *** TYhis region is commnted if we want the current limits to be used in each step of the iteration
 #ifndef _MODIFY_LIMITS_
   MKrange_max = MKMAX;
   MKrange_min = MKMIN;
+#ifdef FULL_VERBOSE
   So.message_screen("log Used minimum Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_min+number_log));
   So.message_screen("log Used maximim Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_max+number_log));
   So.message_screen("");
 #endif
+#endif
 
 
-  real_prec deltaMK= static_cast<real_prec>((log10(MKrange_max+number_log)-log10(MKrange_min+number_log))/static_cast<real_prec>(this->n_sknot_massbin));
-  for(ULONG i = 0; i < this->NGRID; i++)
+  real_prec deltaMK= static_cast<real_prec>((log10(MKrange_max+number_log)-log10(MKrange_min+number_log))/static_cast<real_prec>(this->params._n_sknot_massbin()));
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i = 0; i < this->params._NGRID(); i++)
     if(this->SKNOT_M_info[i] == -1) // If this cell was not used, exit
       this->SKNOT_M_info[i] = 0;
     else
      // Get the bin in Knot mass. At this point SKNOT_M_info[i] encodes the mass of the Super knot where this cell is included
-     this->SKNOT_M_info[i] = get_bin(log10(SKNOT_M_info[i]+number_log),log10(MKrange_min+number_log), this->n_sknot_massbin, deltaMK,true);
+     this->SKNOT_M_info[i] = get_bin(log10(SKNOT_M_info[i]+number_log),log10(MKrange_min+number_log), this->params._n_sknot_massbin(), deltaMK,true);
 
 
   So.DONE();
@@ -1074,10 +1642,15 @@ void Cwclass::get_SigmaVel_collapsing_regions(const vector<real_prec>&in, vector
   */
 
     // If we are in _GET_REALIZATIONS_, the limits here must be fixed, since different realizations might have different min and max,
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;  // omp_get_max_threads();
+    omp_set_num_threads(NTHREADS);
+#endif
 
+#ifdef _FULL_VERBOSE_
   cout<<endl;
   So.message_screen("Getting FoF from V-Knots");
-
+#endif
 
   real_prec Hubble_function=this->s_cosmo_info.Hubble_parameter;
   real_prec cvel=Hubble_function/(cgs_km/cgs_Mpc);
@@ -1087,10 +1660,19 @@ void Cwclass::get_SigmaVel_collapsing_regions(const vector<real_prec>&in, vector
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-for(int i=0; i<this->NGRID;++i)
+for(int i=0; i<this->params._NGRID();++i)
   {
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
      Vx[i]/=cvel;
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
      Vy[i]/=cvel;
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
      Vz[i]/=cvel;
   }
 
@@ -1101,23 +1683,25 @@ for(int i=0; i<this->NGRID;++i)
 
 
   //Now compute teh velocity dispersion
+#ifdef _FULL_VERBOSE_
   So.message_screen("Computing Velocity dispersion");
-  this->Dispersion_VelField.resize(this->NGRID,0);
+#endif
+  this->Dispersion_VelField.resize(this->params._NGRID(),0);
   real_prec mean_vel_x=0;
   real_prec mean_vel_y=0;
   real_prec mean_vel_z=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:mean_vel_x,mean_vel_y,mean_vel_z)
 #endif
-  for(int i=0; i<this->NGRID;++i)
+  for(int i=0; i<this->params._NGRID();++i)
     {
       mean_vel_x+=Vx[i];
       mean_vel_y+=Vy[i];
       mean_vel_z+=Vz[i];
     }
-  mean_vel_x/=static_cast<double>(this->NGRID);
-  mean_vel_y/=static_cast<double>(this->NGRID);
-  mean_vel_z/=static_cast<double>(this->NGRID);
+  mean_vel_x/=static_cast<double>(this->params._NGRID());
+  mean_vel_y/=static_cast<double>(this->params._NGRID());
+  mean_vel_z/=static_cast<double>(this->params._NGRID());
   mean_vel_x=sqrt(pow(mean_vel_x,2)+pow(mean_vel_y,2)+pow(mean_vel_z,2));
   So.message_screen("Mean DM velocity = ", mean_vel_x, "Mpc/h");
 
@@ -1126,7 +1710,7 @@ for(int i=0; i<this->NGRID;++i)
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-      for(ULONG i=0;i<this->NGRID;++i)
+      for(ULONG i=0;i<this->params._NGRID();++i)
         rho[i]= Nmean*(num_1+in[i]);
     }
   else
@@ -1135,14 +1719,14 @@ for(int i=0; i<this->NGRID;++i)
 
     ULONG aux=0;
 #pragma omp parallel for reduction(+:aux)
-    for(ULONG i=0;i<this->NGRID;++i)
+    for(ULONG i=0;i<this->params._NGRID();++i)
       if(this->CWClass_V[i]==I_KNOT)
         aux++;
 
   // Initialize to -1 to then identify whether it is used or not
 
   this->VDISP_KNOT_info.clear();
-  this->VDISP_KNOT_info.resize(this->NGRID, -1);
+  this->VDISP_KNOT_info.resize(this->params._NGRID(), -1);
 
   // This vector contains the number of grids that belongs to a SKNOT. One expects
   // KNOT_MAX_SIZE superknots
@@ -1153,7 +1737,7 @@ for(int i=0; i<this->NGRID;++i)
   real_prec VKrange_max = -1e38;  // Maximum  and Min of Mass of DM in knots. Mass here is number of DM particles in the super knot
   real_prec VKrange_min = +1e38; // These two variables are updated when knot masses are computed
 
-  for(ULONG i=0;i < this->NGRID; ++i)
+  for(ULONG i=0;i < this->params._NGRID(); ++i)
     {
       if(this->CWClass_V[i]==I_KNOT && rho[i]>0)  // If cell is classified as knot, proceed. This must be the classification of the REFERENCE density  field. The >0 indicates that there might be some cells classified as knots but empty
         {
@@ -1165,7 +1749,7 @@ for(int i=0; i<this->NGRID;++i)
 
               for(int j=0;j<n;++j)  // j runs over the neighbour cells of the current one, up to n, when n is increased inside if a neirbour knot is found
                 {
-                  if( (k= knot[j]-1)>=0 && k < this->NGRID)
+                  if( (k= knot[j]-1)>=0 && k < this->params._NGRID())
                     if( (this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k]== -1)   // If density is greater than zero and cell not yet used
                       {
                         knot[n] = k;
@@ -1175,7 +1759,7 @@ for(int i=0; i<this->NGRID;++i)
                           So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
                       }
 
-                  if( (k = knot[j] + 1) >= 0 && k < this->NGRID)
+                  if( (k = knot[j] + 1) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k] == -1)
                       {
                         knot[n] = k;
@@ -1185,7 +1769,7 @@ for(int i=0; i<this->NGRID;++i)
                           So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
                       }
 
-                  if( (k = knot[j] - this->Nft) >= 0 && k < this->NGRID)
+                  if( (k = knot[j] - this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k] == -1)
                       {
                         knot[n] = k;
@@ -1195,7 +1779,7 @@ for(int i=0; i<this->NGRID;++i)
                           So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
                       }
 
-                  if( (k = knot[j] + this->Nft) >= 0 && k < this->NGRID)
+                  if( (k = knot[j] + this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if((this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k] == -1)
                       {
                         knot[n] = k;
@@ -1205,7 +1789,7 @@ for(int i=0; i<this->NGRID;++i)
                           So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
                       }
 
-                  if( (k = knot[j] - this->Nft*this->Nft) >= 0 && k < this->NGRID)
+                  if( (k = knot[j] - this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if( (this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k] == -1)
                       {
                         knot[n] = k;
@@ -1215,7 +1799,7 @@ for(int i=0; i<this->NGRID;++i)
                           So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
                       }
 
-                  if( (k = knot[j] + this->Nft*this->Nft) >= 0 && k < this->NGRID)
+                  if( (k = knot[j] + this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID())
                     if((this->CWClass_V[k]==I_KNOT && rho[k]>0) && this->VDISP_KNOT_info[k] == -1)
                       {
                         knot[n] = k;
@@ -1256,11 +1840,11 @@ for(int i=0; i<this->NGRID;++i)
  number_log=1.0;
 #endif
 
-
+#ifdef _FULL_VERBOSE_
  So.message_screen("Min and Max of Kinetic from FoF regions: ");
   So.message_screen("Minimum log(1+Kinetic) =",  log10(VKrange_min+number_log));
   So.message_screen("Maximim log(1+Kinetic) =",  log10(VKrange_max+number_log));
-
+#endif
     // *** TYhis region is commnted if we want the current limits to be used in each step of the iteration
 #ifndef _MODIFY_LIMITS_
   VKrange_max = VKMAX;
@@ -1271,8 +1855,8 @@ for(int i=0; i<this->NGRID;++i)
 #endif
 
 
-  real_prec deltaMK= static_cast<real_prec>((log10(VKrange_max+number_log)-log10(VKrange_min+number_log))/static_cast<real_prec>(this->n_vknot_massbin));
-  for(ULONG i = 0; i < this->NGRID; i++)
+  real_prec deltaMK= static_cast<real_prec>((log10(VKrange_max+number_log)-log10(VKrange_min+number_log))/static_cast<real_prec>(this->params._n_vknot_massbin()));
+  for(ULONG i = 0; i < this->params._NGRID(); i++)
     {
       if(this->CWClass_V[i]==I_KNOT && rho[i]>0)
         {
@@ -1285,7 +1869,7 @@ for(int i=0; i<this->NGRID;++i)
           if(log10(VDISP_KNOT_info[i]+number_log)<=log10(VKrange_max+number_log) && log10(VDISP_KNOT_info[i]+number_log)>=log10(VKrange_min+number_log) )
             {
               int j = static_cast<int>(floor((log10(VDISP_KNOT_info[i]+number_log)-log10(VKrange_min+number_log))/deltaMK));
-              if(j == this->n_sknot_massbin) j--;
+              if(j == this->params._n_sknot_massbin()) j--;
               // Assign the bin to the sknot_m_info to be used in the P(x,y,...)
               this->VDISP_KNOT_info[i] = j;
             }
@@ -1487,3 +2071,94 @@ int Cwclass::get_Vclassification(int ig)
 
 
 
+void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type)
+{
+
+  So.message_screen("Using Konvolve in Cwclass");
+#ifdef _USE_OMP_
+  int NTHREADS=_NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
+
+#ifdef DOUBLE_PREC
+  complex_prec *data_out= (complex_prec *)fftw_malloc(2*this->params._NGRID_h()*sizeof(real_prec));
+#else
+  complex_prec *data_out= (complex_prec *)fftwf_malloc(2*this->params._NGRID_h()*sizeof(real_prec));
+#endif
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<this->params._NGRID_h();++i){
+    data_out[i][REAL]=0;
+    data_out[i][IMAG]=0;
+  }
+
+  do_fftw_r2c(this->params._Nft(),in, data_out);
+
+
+
+  double paux=0;
+#ifdef _USE_OMP_
+#pragma omp parallel for reduction(+:paux)
+#endif
+  for(ULONG i=0;i<this->params._NGRID();i++)
+   paux+=static_cast<double>(in[i]);
+/*
+   if(true==isinf(paux)){
+       So.message_warning("Not defined value found in container at function ",__PRETTY_FUNCTION__);
+       So.message_warning("Code exits here");
+       exit(0);
+}
+*/
+#ifdef _EXTRAPOLATE_VOLUME_
+  real_prec correction_factor = 1.0;
+#else
+  real_prec correction_factor = 1.00;
+#endif
+
+  double we=0;
+#ifdef _USE_OMP_
+#pragma omp parallel for reduction(+:we)
+#endif
+  for(ULONG ind=0;ind< this->params._NGRID_h() ;++ind)
+    {
+      real_prec cor = this->Kernel[ind]*correction_factor;
+      we+=cor;
+
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+      data_out[ind][REAL]*=cor;
+
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+      data_out[ind][IMAG]*=cor;
+    }
+
+  do_fftw_c2r(this->params._Nft(), data_out, out);
+
+  // Here I have to correct for the normalization of the kernel
+  // for the function  do_fftw_c2r returns the transform normalized by the this->params._NGRID(), so I divide by this->params._NGRID() and by multiply by 2 we
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<this->params._NGRID();i++)
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+    out[i]/=(static_cast<double>(this->params._NGRID())/static_cast<double>(2.0*we));
+  So.DONE();
+  
+#ifdef DOUBLE_PREC
+  fftw_free(data_out);
+#else
+  fftwf_free(data_out);
+#endif
+
+}

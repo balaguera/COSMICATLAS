@@ -34,7 +34,7 @@ real_prec maf(string mas, real_prec x){
 // ************************************************************************************
 // ************************************************************************************
 // ************************************************************************************
-void MCMC_FUNCTIONS::read_parameters(string parameters_file, string code){
+void McmcFunctions::read_parameters(string parameters_file, string code){
   ifstream fin_parameters (parameters_file.c_str());
   if (!fin_parameters)
    cerr <<"Error in opening the parameters file "<<parameters_file<<"!"<<endl; exit(1);
@@ -221,7 +221,7 @@ void MCMC_FUNCTIONS::read_parameters(string parameters_file, string code){
  // if(code!="run" || code!="analyze")cout<<RED<<"PLEASE PROVIDE A VALID OPTION, run or analize"<<RESET<<endl;
 
   if(code=="run"){
-  cout<<RED<<"WARNING: creation of output file commented in mcmc_functions.cpp"<<RESET<<endl;
+  cout<<RED<<"WARNING: creation of output file commented in McmcFunctions.cpp"<<RESET<<endl;
 
   if(this->analytic_marginalization_wrt_amplitude)this->file_oo = "acc_par_"+this->experiment+"_"+this->observable+"_"+this->model+"_"+this->sampling+"_amp_marg_chain"+to_string(this->chain)+".txt";
   else this->file_oo = "acc_par_"+this->experiment+"_"+this->observable+"_"+this->model+"_"+this->sampling+"_chain"+to_string(this->chain)+".txt";
@@ -243,7 +243,7 @@ void MCMC_FUNCTIONS::read_parameters(string parameters_file, string code){
 // ************************************************************************************
 // ************************************************************************************
 // ************************************************************************************
-void MCMC_FUNCTIONS::set_mcmc_read_vectors(){
+void McmcFunctions::set_mcmc_read_vectors(){
 
   cout<<BLUE<<"Defining space for accepted models"<<RESET<<endl;
   this->acc_parameters_all.resize(n_parameters);
@@ -270,7 +270,7 @@ void MCMC_FUNCTIONS::set_mcmc_read_vectors(){
 // ************************************************************************************
 // ************************************************************************************
 // ************************************************************************************
-void MCMC_FUNCTIONS::get_cova_pars(int acc){
+void McmcFunctions::get_cova_pars(int acc){
   // Compute the covariance of the parameters
   // at the step acc of the markov chain
   int nacc=(acc==1? acc:acc-1);
@@ -286,7 +286,7 @@ void MCMC_FUNCTIONS::get_cova_pars(int acc){
 // ************************************************************************************
 //#define _USE_HMS_
 // ************************************************************************************
-void MCMC_FUNCTIONS::set_mcmc_vectors(){
+void McmcFunctions::set_mcmc_vectors(){
 
   acc_parameters.resize(this->n_parameters);
   for(int i=0;i<acc_parameters.size();i++)
@@ -322,7 +322,7 @@ void MCMC_FUNCTIONS::set_mcmc_vectors(){
 //Compute the kinetic energy in the Hamiltonian sampling
 // Input 0 if the mass matrix is diagonal
 // 1 if not
-real_prec MCMC_FUNCTIONS::kinetic(int in){
+real_prec McmcFunctions::kinetic(int in){
 
   real_prec ans=0;
   if(in==0){ // For diagonal mass matrix
@@ -338,7 +338,7 @@ real_prec MCMC_FUNCTIONS::kinetic(int in){
 // ************************************************************************************
 // ************************************************************************************
 // Trastearlo a FB
-void MCMC_FUNCTIONS::get_model_FB(vector<vector<real_prec> >&Step,vector<vector<real_prec> >&R,vector<vector<real_prec> >&V,vector<real_prec>&Cmodel){
+void McmcFunctions::get_model_FB(vector<vector<real_prec> >&Step,vector<vector<real_prec> >&R,vector<vector<real_prec> >&V,vector<real_prec>&Cmodel){
 
   int nmodes=R[0].size();
   int nmodes_n=Cmodel.size();
@@ -359,7 +359,7 @@ void MCMC_FUNCTIONS::get_model_FB(vector<vector<real_prec> >&Step,vector<vector<
 // ************************************************************************************
 // ************************************************************************************
 
-void MCMC_FUNCTIONS::get_cova_FB_delta(vector<matrices>&VM, int l, vector<vector<real_prec> >&iCov){
+void McmcFunctions::get_cova_FB_delta(vector<matrices>&VM, int l, vector<vector<real_prec> >&iCov){
 
   int nmodes=VM[l].R[0].size();
   int nmodes_n=VM[l].R.size();
@@ -384,7 +384,7 @@ void MCMC_FUNCTIONS::get_cova_FB_delta(vector<matrices>&VM, int l, vector<vector
 // ************************************************************************************
 // ************************************************************************************
 // ************************************************************************************
-void MCMC_FUNCTIONS::get_gradU(vector<real_prec>&Cmodel,vector<real_prec>&Cmeas,  vector<vector<real_prec> >&Step, vector<vector<real_prec> >&R,vector<vector<real_prec>>&V,vector<vector<real_prec> >&icov){
+void McmcFunctions::get_gradU(vector<real_prec>&Cmodel,vector<real_prec>&Cmeas,  vector<vector<real_prec> >&Step, vector<vector<real_prec> >&R,vector<vector<real_prec>>&V,vector<vector<real_prec> >&icov){
   // Get the gradient of the potential and also the model for this step.
   // The model is rerturned and then will be assigned as member of the FB class
   int nn=Cmodel.size();
@@ -419,7 +419,7 @@ void MCMC_FUNCTIONS::get_gradU(vector<real_prec>&Cmodel,vector<real_prec>&Cmeas,
 // ************************************************************************************
 // ************************************************************************************
 
-void MCMC_FUNCTIONS::get_gradU_full(int lmin, int lmax, vector<matrices> VM,vector<real_prec>&Cmodel,vector<real_prec>&gradU_full){
+void McmcFunctions::get_gradU_full(int lmin, int lmax, vector<matrices> VM,vector<real_prec>&Cmodel,vector<real_prec>&gradU_full){
   // Get the gradient of the potential and also the model for this step.
   // The model is rerturned and then will be assigned as member of the FB class
 
@@ -484,7 +484,7 @@ void MCMC_FUNCTIONS::get_gradU_full(int lmin, int lmax, vector<matrices> VM,vect
 // ************************************************************************************
 // ************************************************************************************
 
-void MCMC_FUNCTIONS::jump(){
+void McmcFunctions::jump(){
   
   So.message_screen("Jumping to a new position in parameter space");
   for(int ip=0;ip<this->parameters.size();ip++){
@@ -510,7 +510,7 @@ void MCMC_FUNCTIONS::jump(){
 // ************************************************************************************
 // ************************************************************************************
 
-void MCMC_FUNCTIONS::get_mean(vector<real_prec>  &weight,int slab,vector<vector<real_prec> > &AA){
+void McmcFunctions::get_mean(vector<real_prec>  &weight,int slab,vector<vector<real_prec> > &AA){
   
   // ******************************************************************************************************
   // Computes the mean parameter in a Markov-Chain using the weights computed
@@ -562,7 +562,7 @@ void MCMC_FUNCTIONS::get_mean(vector<real_prec>  &weight,int slab,vector<vector<
 /************************************************************************************************************************************************************************/
 /************************************************************************************************************************************************************************/
 
-void MCMC_FUNCTIONS::gelman_rubbin_diag(int n,vector<int> &mark, vector<int> &acca ,vector<vector<vector<real_prec> > > &acc_parameters){
+void McmcFunctions::gelman_rubbin_diag(int n,vector<int> &mark, vector<int> &acca ,vector<vector<vector<real_prec> > > &acc_parameters){
   
   // ******************************************************************************************************
   // Gelman Rubbin diagnostics to check convergence of differnet Markov chains :                      
@@ -621,7 +621,7 @@ void MCMC_FUNCTIONS::gelman_rubbin_diag(int n,vector<int> &mark, vector<int> &ac
 // *******************************************************************************************************
 // *******************************************************************************************************
 
-void MCMC_FUNCTIONS::chi_squared(vector<real_prec> &data, vector<real_prec> &model,vector< vector <real_prec> > &inv_cova, real_prec &chis_one){
+void McmcFunctions::chi_squared(vector<real_prec> &data, vector<real_prec> &model,vector< vector <real_prec> > &inv_cova, real_prec &chis_one){
 
   // Compute chi square given the data, the model and the inverse
   //  of the covariance matrix of dimension nXn
@@ -636,7 +636,7 @@ void MCMC_FUNCTIONS::chi_squared(vector<real_prec> &data, vector<real_prec> &mod
 // *******************************************************************************************************
 // *******************************************************************************************************
 
-void MCMC_FUNCTIONS::chi_squared(const vector<real_prec> &data, const vector<real_prec> &model,vector<real_prec> &sigma, real_prec &chis_one){
+void McmcFunctions::chi_squared(const vector<real_prec> &data, const vector<real_prec> &model,vector<real_prec> &sigma, real_prec &chis_one){
   /*
     Compute chi square given the data, the model and the inverse
     of the covariance matrix of dimension nXn
@@ -656,7 +656,7 @@ void MCMC_FUNCTIONS::chi_squared(const vector<real_prec> &data, const vector<rea
 
 // *******************************************************************************************************
 
-void MCMC_FUNCTIONS::chi_squared_poisson(vector<real_prec> &data, vector<real_prec> &model, real_prec &chis_one){
+void McmcFunctions::chi_squared_poisson(vector<real_prec> &data, vector<real_prec> &model, real_prec &chis_one){
   /*
     Compute chi square given the data, the model and the inverse
     of the covariance matrix of dimension nXn
@@ -671,7 +671,7 @@ void MCMC_FUNCTIONS::chi_squared_poisson(vector<real_prec> &data, vector<real_pr
 
 // *******************************************************************************************************
 // *******************************************************************************************************
-void MCMC_FUNCTIONS::get_loglikelihood_Poisson(vector<vector<real_prec>> &data, vector<vector<real_prec>> &model, real_prec &log_likelihood){
+void McmcFunctions::get_loglikelihood_Poisson(vector<vector<real_prec>> &data, vector<vector<real_prec>> &model, real_prec &log_likelihood){
   /*
     Compute chi square given the data, the model and the inverse
     of the covariance matrix of dimension nXn
@@ -689,7 +689,7 @@ void MCMC_FUNCTIONS::get_loglikelihood_Poisson(vector<vector<real_prec>> &data, 
 
 // *******************************************************************************************************
 // *******************************************************************************************************
-void MCMC_FUNCTIONS::chi_squared(vector<real_prec> &data, vector<real_prec> &model,vector<real_prec> &sigma, vector<real_prec>&xvar, real_prec xmin, real_prec xmax, real_prec &chis_one){
+void McmcFunctions::chi_squared(vector<real_prec> &data, vector<real_prec> &model,vector<real_prec> &sigma, vector<real_prec>&xvar, real_prec xmin, real_prec xmax, real_prec &chis_one){
 
   //  Compute chi square given the data, the model and the inverse
  // of the covariance matrix of dimension nXn
@@ -705,7 +705,7 @@ void MCMC_FUNCTIONS::chi_squared(vector<real_prec> &data, vector<real_prec> &mod
 
 // ***********************************************************************************************
 // ***********************************************************************************************
-void MCMC_FUNCTIONS::chi_squared_marginalized_amplitude(vector<real_prec> &data, vector<real_prec> &model,vector< vector<real_prec> > &inv_cova, real_prec &chis_one){
+void McmcFunctions::chi_squared_marginalized_amplitude(vector<real_prec> &data, vector<real_prec> &model,vector< vector<real_prec> > &inv_cova, real_prec &chis_one){
   /*
     Chi square eith analytic marginalization over an amplitud of the model
   */
@@ -728,7 +728,7 @@ void MCMC_FUNCTIONS::chi_squared_marginalized_amplitude(vector<real_prec> &data,
 // ***********************************************************************************************
 // ***********************************************************************************************
 
-void MCMC_FUNCTIONS::chi_squared_marginalized_amplitude(vector<real_prec> &data, vector<real_prec> &model, vector<real_prec> &sigma,  vector<real_prec>&xvar, real_prec xmin, real_prec xmax, real_prec &chis_one){
+void McmcFunctions::chi_squared_marginalized_amplitude(vector<real_prec> &data, vector<real_prec> &model, vector<real_prec> &sigma,  vector<real_prec>&xvar, real_prec xmin, real_prec xmax, real_prec &chis_one){
   /*
     Chi square eith analytic marginalization over an amplitud of the model
   */
@@ -749,7 +749,7 @@ void MCMC_FUNCTIONS::chi_squared_marginalized_amplitude(vector<real_prec> &data,
 // ***********************************************************************************************
 // ***********************************************************************************************
 
-void MCMC_FUNCTIONS::likelihood_full(int lmin, int lmax, vector<matrices>&VM,real_prec &like){
+void McmcFunctions::likelihood_full(int lmin, int lmax, vector<matrices>&VM,real_prec &like){
   /*
     Compute chi square given the data, the model and the inverse
     of the covariance matrix of dimension nXn
@@ -770,7 +770,7 @@ void MCMC_FUNCTIONS::likelihood_full(int lmin, int lmax, vector<matrices>&VM,rea
 // *******************************************************************************************************
 
 // Metropolis-Hasting algorithm:
-void MCMC_FUNCTIONS::MHalgorithm(real_prec &curr_loglike, real_prec &prop_loglike, int &acc, int &weight_here){
+void McmcFunctions::MHalgorithm(real_prec &curr_loglike, real_prec &prop_loglike, int &acc, int &weight_here){
   real_prec MH;
 
   for(int kl=0;kl<parameters.size();kl++)
@@ -785,10 +785,10 @@ void MCMC_FUNCTIONS::MHalgorithm(real_prec &curr_loglike, real_prec &prop_loglik
      if(fixed_parameters[kl]==1)
       if(parameters[kl]< parameters_min[kl])
        {
-        So.message_screen("Warning: parameter ",kl," is taking values below the allowed range.");
-        So.message_screen("Proposal set to zero in MHalgorithm");
-        cout<<endl;
-      }
+         So.message_screen("Warning: parameter ",kl," is taking values below the allowed range.");
+         So.message_screen("Proposal set to zero in MHalgorithm");
+         cout<<endl;
+       }
 
 
     // Get the ra tio between new_posterior/old_posterior: this assumes the same priors
@@ -835,7 +835,7 @@ return;
 
 // *******************************************************************************************************
 // *******************************************************************************************************
-void MCMC_FUNCTIONS::write_accepted_models(int j, int acc, int weight_here, string screen){
+void McmcFunctions::write_accepted_models(int j, int acc, int weight_here, string screen){
 
   int macc=acc-this->weight[acc];
   int wacc=acc-1;
@@ -871,7 +871,7 @@ void MCMC_FUNCTIONS::write_accepted_models(int j, int acc, int weight_here, stri
 // ************************************************************************************************
 // ************************************************************************************************
 
-void  MCMC_FUNCTIONS::auto_correlation_mcmc(vector<int> &fixed_par,vector< vector<real_prec> > &acc_param, vector< vector<real_prec> > &auto_corr){
+void  McmcFunctions::auto_correlation_mcmc(vector<int> &fixed_par,vector< vector<real_prec> > &acc_param, vector< vector<real_prec> > &auto_corr){
 /*
   Computs the auto correlation of the different parameters along the chain
   As input, needs the number of parameters np, the number of accepted models
@@ -918,7 +918,7 @@ void  MCMC_FUNCTIONS::auto_correlation_mcmc(vector<int> &fixed_par,vector< vecto
 // ************************************************************************************************
 
 
-void MCMC_FUNCTIONS::entropy_mcmc(vector<vector<real_prec> > &pdf, vector<real_prec> &entro){
+void McmcFunctions::entropy_mcmc(vector<vector<real_prec> > &pdf, vector<real_prec> &entro){
   // ********************************************************************
   //  Entropy of a MCMC chain for each parameter. Check the definition!
   // ********************************************************************
@@ -941,7 +941,7 @@ void MCMC_FUNCTIONS::entropy_mcmc(vector<vector<real_prec> > &pdf, vector<real_p
 // ************************************************************************************************
 
 
-void MCMC_FUNCTIONS::posterior1d(string fname_mean, string fname_pdf, vector<real_prec>  &weight, vector<vector<real_prec> > &acc_par,int perc){
+void McmcFunctions::posterior1d(string fname_mean, string fname_pdf, vector<real_prec>  &weight, vector<vector<real_prec> > &acc_par,int perc){
   
   /*
     -------
@@ -1217,7 +1217,7 @@ void MCMC_FUNCTIONS::posterior1d(string fname_mean, string fname_pdf, vector<rea
 // ********************************************************************************************
 
 //NOTE: MAYBE WE CAN PUT HERE THE 1D DISTRIBUTION AND LET THE FUNCTION ABOVE ONLY FOR THE percentiles
-void MCMC_FUNCTIONS::posterior2d(string tdpost, string CR,vector<real_prec>  &weight, vector<vector<real_prec> > &acc_par){
+void McmcFunctions::posterior2d(string tdpost, string CR,vector<real_prec>  &weight, vector<vector<real_prec> > &acc_par){
   /*
     BEING
     D= DATA
@@ -1450,7 +1450,7 @@ void MCMC_FUNCTIONS::posterior2d(string tdpost, string CR,vector<real_prec>  &we
 
 // This does the same as pòsterior2d,  taking the 2d historgram as input.
 // The histogram is expected to be normalized to its maximum
-void MCMC_FUNCTIONS::get_contour_levels(string CR,vector<vector<real_prec> > &poster){
+void McmcFunctions::get_contour_levels(string CR,vector<vector<real_prec> > &poster){
   /*
     BEING
     D= DATA
@@ -1641,7 +1641,7 @@ void MCMC_FUNCTIONS::get_contour_levels(string CR,vector<vector<real_prec> > &po
 // ********************************************************************************************
 
 //NOTE: MAYBE WE CAN PUT HERE THE 1D DISTRIBUTION AND LET THE FUNCTION ABOVE ONLY FOR THE percentiles
-void MCMC_FUNCTIONS::posterior2d_combined_experiments(string fname_mean, string fname_pdf, string tdpost, string CR, experiments experiments){
+void McmcFunctions::posterior2d_combined_experiments(string fname_mean, string fname_pdf, string tdpost, string CR, experiments experiments){
   /*
     BEING
     D= DATA
@@ -2085,7 +2085,7 @@ void MCMC_FUNCTIONS::posterior2d_combined_experiments(string fname_mean, string 
 
 /************************************************************************************************************************************************************************/
 
-void MCMC_FUNCTIONS::mass_asg2d(string MAS,real_prec x,real_prec y,real_prec deltax,real_prec deltay,real_prec wpart,vector< vector<real_prec> >&data){
+void McmcFunctions::mass_asg2d(string MAS,real_prec x,real_prec y,real_prec deltax,real_prec deltay,real_prec wpart,vector< vector<real_prec> >&data){
   /*Determining the number of cell*/
   int N=this->nbin_2D;
 
@@ -2165,7 +2165,7 @@ void MCMC_FUNCTIONS::mass_asg2d(string MAS,real_prec x,real_prec y,real_prec del
 
 
 
-void MCMC_FUNCTIONS::set_distance_priors(int I, int J){
+void McmcFunctions::set_distance_priors(int I, int J){
 
 
   if(I==1 && (J==1 || J==2 || J==3 || J==4))this->n_priors=1;
@@ -2392,7 +2392,7 @@ void MCMC_FUNCTIONS::set_distance_priors(int I, int J){
 // ************************************************************************** 
 // ************************************************************************* *
 
-real_prec MCMC_FUNCTIONS::chi_squared_distance_priors(){
+real_prec McmcFunctions::chi_squared_distance_priors(){
   real_prec ans=0;
 
 
@@ -2412,7 +2412,7 @@ real_prec MCMC_FUNCTIONS::chi_squared_distance_priors(){
 
 // ************************************************************************* *
 
-void MCMC_FUNCTIONS::distance_priors_cmb_model(int I, int J, s_CosmologicalParameters *scp){
+void McmcFunctions::distance_priors_cmb_model(int I, int J, s_CosmologicalParameters *scp){
   Cosmology CF;
   this->priors_model.resize(this->n_priors,0);
   /*Distance priors from Komatsu et al. 2010 (CMB)*/

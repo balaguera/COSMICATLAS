@@ -59,9 +59,9 @@ real_prec Cosmology::critical_density(real_prec z, void *p){
 // ***************************************************************************
 
 real_prec Cosmology::density_contrast_top_hat(real_prec z, void *p){
-  // density contrast to be used in the fitting formulae of Tinker
-  // so chech there whether this is relative to mean or background density
-  return  (18*pow(M_PI,2)+82.0*omega_matter(z,p)-39.0*pow(omega_matter(z,p),2))/omega_matter(z,p); 
+        // Density contrast from Bryan and Normanm 98, assuming that the redhsift observed is the same as the redshift of collapse
+    real_prec x=omega_matter(z,p)-1.;
+    return  (18.0*pow(M_PI,2)+82.0*x-39.0*pow(x,2))/omega_matter(z,p);
 }
 
 
@@ -116,7 +116,6 @@ real_prec Cosmology::transverse_comoving_distance(real_prec redshift, void *p)
 // ***************************************************************************
 real_prec Cosmology::inter_transverse_comoving_distance(real_prec redshift, void *p)
 {
-  //  Cosmology cf;
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
   real_prec fac=s_cp->Hubble*sqrt(fabs(s_cp->Om_k));
   real_prec ans;
@@ -139,20 +138,18 @@ real_prec Cosmology::inter_transverse_comoving_distance(real_prec redshift, void
 
 real_prec Cosmology::derivative_transverse_comoving_distance(real_prec redshift, void *p)
 {
-  Cosmology cf;
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
-
   real_prec fac=s_cp->Hubble*sqrt(fabs(s_cp->Om_k));
   real_prec cd=gsl_inter_new(s_cp->zv, s_cp->rv, redshift);
   real_prec ans;
   if(s_cp->Om_k<0){
-    ans= (Constants::speed_light/Hubble_function(redshift,p))*cos(fac*cd/Constants::speed_light)/fac;
+    ans= (Constants::speed_light/this->Hubble_function(redshift,p))*cos(fac*cd/Constants::speed_light)/fac;
   }
   if(s_cp->Om_k==0){
-    ans= Constants::speed_light/Hubble_function(redshift, p);
+    ans= Constants::speed_light/this->Hubble_function(redshift, p);
   }
   if(s_cp->Om_k>0){
-    ans= (Constants::speed_light/Hubble_function(redshift,p))*cosh(fac*cd/Constants::speed_light)/fac;
+    ans= (Constants::speed_light/this->Hubble_function(redshift,p))*cosh(fac*cd/Constants::speed_light)/fac;
   }
   return ans;
 }
@@ -202,10 +199,8 @@ real_prec Cosmology::inter_luminosity_distance(real_prec redshift, void *p)
 real_prec Cosmology::mean_matter_density(real_prec redshift, void *p)
 /*Mean background density as a function of redshift in units (Ms/h)/(Mpc/h)^(-3) */
 {
-  Cosmology cf;
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
-  real_prec PI=acos(-1.0);
-  return (3.*s_cp->Hubble*s_cp->Hubble/(8.*PI*Gravitational_constant))*s_cp->Om_matter*pow(1+redshift,3)*(Mpc_to_km/Solar_mass);  
+  return (3.*s_cp->Hubble*s_cp->Hubble/(8.*M_PI*Gravitational_constant))*s_cp->Om_matter*pow(1+redshift,3)*(Mpc_to_km/Solar_mass);
 }
 
 // ***************************************************************************
@@ -240,18 +235,24 @@ real_prec Cosmology::growth_factor(real_prec redshift, void *p){
 // **************************************************************************
 
 real_prec Cosmology::growth_index(real_prec redshift, void *p){
-  Cosmology cf;
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
-  real_prec om=s_cp->Om_matter*pow(1+redshift,3)/sqrt(s_cp->Om_matter*pow(1+redshift,3)+s_cp->Om_vac*pow(1+redshift,3*(1.+s_cp->w_eos)));
-  return pow(om, (real_prec)0.55);
+  real_prec om=this->omega_matter(redshift,p);
+  return pow(om, 5./9.);
+}
+
+// ***************************************************************************
+// ***************************************************************************
+real_prec Cosmology::growth_index2(real_prec redshift, void *p){
+  struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
+  real_prec om=this->omega_matter(redshift,p);
+  return 2.*pow(om, 6./11.);
 }
 
 // ***************************************************************************
 // ***************************************************************************
 
 real_prec Cosmology::halo_dynamical_time(real_prec redshift, void *p){
-  Cosmology cf;
-  return (0.1/cf.Hubble_function(redshift, p))*(Mpc_to_km/years_to_sec);
+  return (0.1/this->Hubble_function(redshift, p))*(Mpc_to_km/years_to_sec);
 }
 
 // ***************************************************************************
@@ -262,17 +263,23 @@ real_prec Cosmology::omega_matter(real_prec redshift, void *p){
   return s_cp->Om_matter*pow(1+redshift,3)*pow(Hubble_function(redshift, p)/s_cp->Hubble,-2);
 }
 
+// ***************************************************************************
+// ***************************************************************************
 real_prec Cosmology::omega_radiation(real_prec redshift, void *p){
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
   return s_cp->Om_radiation*pow(1+redshift,4)*pow(Hubble_function(redshift, p)/s_cp->Hubble,-2);
 }
 
+// ***************************************************************************
+// ***************************************************************************
 
 real_prec Cosmology::omega_curvature(real_prec redshift, void *p){
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
   return s_cp->Om_k*pow(1+redshift,2)*pow(Hubble_function(redshift, p)/s_cp->Hubble,-2);
 }
 
+// ***************************************************************************
+// ***************************************************************************
 real_prec Cosmology::omega_dark_energy(real_prec redshift, void *p){
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
   return s_cp->Om_vac*pow(1+redshift,1+s_cp->w_eos)*pow(Hubble_function(redshift, p)/s_cp->Hubble,-2);
@@ -287,7 +294,8 @@ real_prec Cosmology:: Distance_Modulus(real_prec redshift, void *p){
   // ***************************
   return 25.+5.0*log10(luminosity_distance(redshift, p));
 }
-
+// ***************************************************************************
+// ***************************************************************************
 
 real_prec Cosmology:: inter_Distance_Modulus(real_prec redshift, void *p){
   // ***************************
@@ -405,12 +413,10 @@ real_prec Cosmology::zmax_old(void *p){
   do{
     i++;
     if(z<0)std::cerr<<"Negative reds    hift present"<<endl;
-    real_prec tcd = gsl_inter_new(s_cp->zv, s_cp->trv, z);
-    real_prec F  = s_cp->Mabs-s_cp->mlim+25.0+5.0*log10(tcd*(1+z))+this->e_correction(z,p)+this->K_correction(z,p) ;
-    real_prec dF=  (5.0/log(10.0))*( 1./(1.+z) + derivative_transverse_comoving_distance(z,p)/tcd)+ this->dK_correction_dz(z,p)  +  this->de_correction_dz(z,p);
+    real_prec tcd = gsl_inter_new(s_cp->zv, s_cp->trv, z);   //Trnasverse D<(z)
+    real_prec F  = s_cp->Mabs-s_cp->mlim+25.0+5.0*log10(tcd*(1+z))+this->e_correction(z,p)+this->K_correction(z,p) ; //Function F(z)
+    real_prec dF=  (5.0/log(10.0))*( 1./(1.+z) + derivative_transverse_comoving_distance(z,p)/tcd)+ this->dK_correction_dz(z,p)  +  this->de_correction_dz(z,p);  // Derivative dF/dz
     z -= F/dF;
-    //z=fabs(z);
-    cout<<s_cp->Mabs<<"  "<<z<<"  "<<F<<"  "<<dF<<endl;
     zmm.push_back(z);
 
   }while(fabs((zmm[zmm.size()-1]-zmm[zmm.size()-2])/zmm[zmm.size()-2])>ERROR_LIMIT_NR);

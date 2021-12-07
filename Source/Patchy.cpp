@@ -22,13 +22,14 @@ inline void check_malloc(void *p, int line) {
     exit(EXIT_FAILURE);
   }
 }
-
 //##################################################################################
 //##################################################################################
 
 void PATCHY::set_params_patchy(Params params)
 {
+#ifdef _FULL_VERBOSE_
   So.message_screen("Loading parameters for PATCHY");
+#endif
   planepar=true;
   this->inputmode=params._inputmode();
   this->dataFileName=params._dataFileName();
@@ -40,7 +41,9 @@ void PATCHY::set_params_patchy(Params params)
   this->ic_WN_file=params._ic_WN_file();
   this->ic_WN_dir=params._ic_WN_dir();
   this->ic_file=params._ic_file();
+  this->ic_input_type=params._ic_input_type();
   this->use_ic_file=params._use_ic_file();
+  this->Initial_Redshift_ic_power_file=params._Initial_Redshift_ic_power_file();
   this->runsim=params._runsim();
   this->runv=params._runv();
   this->lognden=params._lognden();
@@ -82,6 +85,7 @@ void PATCHY::set_params_patchy(Params params)
   this->seed=params._seed();
   this->seed_ref=params._seed_ref();
   this->masskernel=params._masskernel();
+  this->masskernel_vel =params._masskernel_vel();
   this->slength=params._slength();
   this->slengthv=params._slengthv();
   this->vslength=params._vslength();
@@ -90,11 +94,11 @@ void PATCHY::set_params_patchy(Params params)
   this->d1=params._d1();
   this->d2=params._d2();
   this->d3=params._d3();
-  this->Redshift_initial=params._Redshift_initial();
+  this->Initial_Redshift_DELTA=params._Initial_Redshift_DELTA();
   this->fnameIC=this->dir+this->ic_WN_dir+this->ic_WN_file;///string("deltaIC")+straddrefgen;
-  
+
   this->Normalize_initial_redshift=params._Normalize_initial_redshift();
-  
+
   // Assign values to the cosmological parameter stucture
   this->s_cosmo_pars.cosmological_redshift=params._redshift();
   this->s_cosmo_pars.Hubble=params._Hubble();
@@ -118,13 +122,17 @@ void PATCHY::set_params_patchy(Params params)
 
 
   this->NGRID=static_cast<ULONG>(this->N1*this->N2*this->N3);
-    
+
   this->params=params;
-  
+
+  this->growth_ini=1.0;
+  if(this->Initial_Redshift_ic_power_file >0)
+     this->growth_ini = this->Cosmo.growth_factor(this->Initial_Redshift_ic_power_file, (void *)&this->s_cosmo_pars)/this->Cosmo.growth_factor(0.0,(void *)&this->s_cosmo_pars);
+
   So.DONE();
 
-  
-}    
+
+}
 
 
 
@@ -135,9 +143,9 @@ void PATCHY::set_params_patchy(Params params)
 
 void PATCHY::set_fnames()
 {
-
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Definig file names for PATCHY");
-  
+#endif
   real_prec kth=  this->slength;
 
 
@@ -145,132 +153,141 @@ void PATCHY::set_fnames()
 
 
   int bmax=100;
-  
+
   string buffz;
+  string buffz_bam;
 
-  char buffzc[bmax];  
+  char buffzc[bmax];
 
-  sprintf(buffzc,"z%.3f",redshift);     
+  sprintf(buffzc,"z%.3f",redshift);
   buffz=static_cast<string>(buffzc);
+  buffz_bam=this->params._Name_survey();
 
-  char buffvolc[bmax];  
+  char buffvolc[bmax];
 
-  sprintf(buffvolc,"V%.1f",L1);     
+  sprintf(buffvolc,"V%.1f",L1);
   string buffvol=static_cast<string>(buffvolc);
 
-  char buffgc[bmax];  	    
-  sprintf(buffgc,"G%d",static_cast<int>(N1));     
+  char buffgc[bmax];
+  sprintf(buffgc,"G%d",static_cast<int>(N1));
   string buffg=static_cast<string>(buffgc);
-  
-  char buffs[bmax];  	      
-  //sprintf(buffs,"",static_cast<int>(seed));     
-  //if (inputmode==0)
-  sprintf(buffs,"S%d",static_cast<int>(seed));     
 
-  char buffsref[bmax];  	      
-   if (seed_ref>0)    
-    sprintf(buffsref,"S%d",static_cast<int>(seed_ref));         
-  else    
+  char buffs[bmax];
+  //sprintf(buffs,"",static_cast<int>(seed));
+  //if (inputmode==0)
+  sprintf(buffs,"S%d",static_cast<int>(seed));
+
+  char buffsref[bmax];
+   if (seed_ref>0)
+    sprintf(buffsref,"S%d",static_cast<int>(seed_ref));
+  else
     sprintf(buffsref,"S%d",static_cast<int>(seed));
-        
+
 
   string buffsl;
-  //char buffslc[bmax];  	    
+  //char buffslc[bmax];
   string buffslc=to_string(static_cast<int>(kth));
-  //  sprintf(buffslc,"",static_cast<int>(kth));     
+  //  sprintf(buffslc,"",static_cast<int>(kth));
   if (sfmodel==3) // for ALPT
     {
-      char buffsl0[bmax];  
+      char buffsl0[bmax];
       int slnum;
       buffslc=to_string(static_cast<int>(kth));
-      //sprintf(buffslc,"r%d",static_cast<int>(kth));     
+      //sprintf(buffslc,"r%d",static_cast<int>(kth));
       slnum=static_cast<int>(kth*static_cast<real_prec>(10.));
       slnum-=static_cast<int>(kth)*static_cast<int>(10);
       sprintf(buffsl0,"_%d",slnum);
       buffsl=static_cast<string>(buffslc)+static_cast<string>(buffsl0);
-    }  
+    }
 
   string bufftf=string("");
-  
+
   string buffmk;
   switch (masskernel)
-    {	      
-    case 0:      
+    {
+    case 0:
       {
-	buffmk=string("NGP");
+        buffmk=string("NGP");
       }
       break;
     case 1:
       {
-	buffmk=string("CIC");
+        buffmk=string("CIC");
       }
       break;
     case 2:
       {
-	buffmk=string("TSC");
+        buffmk=string("TSC");
       }
       break;
     }
 
-  string buffsf;
   switch (sfmodel)
-    {	      
-    case 1:      
+    {
+    case 1:
       {
-	buffsf=string("ZELD");
+        this->buffsf=string("ZELD");
       }
       break;
     case 2:
       {
-	buffsf=string("2LPT");
+        this->buffsf=string("2LPT");
       }
       break;
     case 3:
       {
-	buffsf=string("ALPT");
-	char buffalptc[bmax];  
-	sprintf(buffalptc,"rS%.1f",kth);     
-	string buffalpt=static_cast<string>(buffalptc);
-	buffsf+=buffalpt;
+        this->buffsf=string("ALPT");
+        char buffalptc[bmax];
+        sprintf(buffalptc,"rS%.1f",kth);
+        string buffalpt=static_cast<string>(buffalptc);
+        buffsf+=buffalpt;
       }
       break;
     case 4:
       {
-	buffsf=string("fastPM");
+        this->buffsf=string("fastPM");
       }
       break;
     case 5:
       {
-	buffsf=string("fastPM");
+        this->buffsf=string("fastPM");
       }
       break;
     case 6:
       {
-	buffsf=string("fastPM");
+        this->buffsf=string("fastPM");
       }
       break;
     }
 
-#ifdef TET
-  buffsf+=string("TET");
+#ifdef _USE_TET_
+  this->buffsf+=string("TET");
 #endif
-  
+
   this->stradd=buffsf+buffmk+buffz+bufftf+buffg+buffvol+buffs;
+
+  this->stradd_bam=buffs;
+
 
   string straddref=buffsf+buffmk+buffz+bufftf+buffg+buffvol+buffsref;
   string straddrefgen=buffg+buffvol+buffsref;
-  
-  
+
+
   this->fname3DPOWER=this->Output_directory+string("3DpowerIC")+buffvol;
   this->fnameTHETA=this->Output_directory+string("theta")+straddref;
+
+#ifdef _MOVE_DM_TO_REDSHIFT_SPACE_
+  this->fnameDM=this->Output_directory+string("densDM_rss")+straddref;
+  this->fnameDMNGP=this->Output_directory+string("densDMNGP_rss")+straddref;
+#else
   this->fnameDM=this->Output_directory+string("densDM")+straddref;
   this->fnameDMNGP=this->Output_directory+string("densDMNGP")+straddref;
+#endif
 
-  
 #ifdef SAVECOMP
   this->fnameIC=this->dir+this->ic_WN_file;///string("deltaIC")+straddrefgen;
 
-  
+
   if(false==this->use_ic_file)
     this->fnameICDELTA=this->dir+this->ic_WN_file+"ICField";///string("deltaIC")+straddrefgen;
   else
@@ -286,10 +303,16 @@ void PATCHY::set_fnames()
   this->fnamePSITERMEUL=this->Output_directory+string("psitermeul")+straddref;
   this->fname2LPTTERM=this->Output_directory+string("twolptterm")+straddrefgen;
   this->fname2LPTTERMEUL=this->Output_directory+string("twolpttermeul")+straddref;
-  
+
   this->fnamePOSX=this->Output_directory+string("posx")+straddref;
   this->fnamePOSY=this->Output_directory+string("posy")+straddref;
   this->fnamePOSZ=this->Output_directory+string("posz")+straddref;
+
+
+  this->fnamePOSX_RS=this->Output_directory+string("posx_rss")+straddref;
+  this->fnamePOSY_RS=this->Output_directory+string("posy_rss")+straddref;
+  this->fnamePOSZ_RS=this->Output_directory+string("posz_rss")+straddref;
+
 
 
 
@@ -300,14 +323,14 @@ void PATCHY::set_fnames()
   this->fnameVX=this->Output_directory+string("vx")+straddref;
   this->fnameVY=this->Output_directory+string("vy")+straddref;
   this->fnameVZ=this->Output_directory+string("vz")+straddref;
-  
+
 #else
   string fnameIC=string("auxdeltaIC");
-  
+
   this->fnamePOSX=string("auxposx");
   this->fnamePOSY=string("auxposy");
   this->fnamePOSZ=string("auxposz");
-  
+
   this->fnameVX=string("auxvx");
   this->fnameVY=string("auxvy");
   this->fnameVZ=string("auxvz");
@@ -316,7 +339,7 @@ void PATCHY::set_fnames()
 
   this->So.DONE();
 
-  
+
 }
 
 
@@ -328,25 +351,72 @@ void PATCHY::set_fnames()
 // =================================================================================================
 // =================================================================================================
 // =================================================================================================
+
+#ifdef _DISPLACEMENTS_
+#ifdef _USE_OMP_
+void PATCHY::get_displacement(gsl_rng ** gBaseRand, vector<real_prec>&DELTA_IC, int it)
+#else
+void PATCHY::get_displacement(gsl_rng * gBaseRand, vector<real_prec>&DELTA_IC, int it)
+#endif
+{
+    So.enter(__PRETTY_FUNCTION__);
+#ifdef _USE_OMP_
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+  real_prec kth=  this->slength;
+  int ftype=1;// Smoothing kernel. 1 Is forGaussian
+  kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,kth,ftype,this->Output_directory);
+
+  if(it==0)
+   if(true==this->Normalize_initial_redshift)
+    normalize_df_z_ini(DELTA_IC,DELTA_IC,"delta");
+
+  if(it==0)
+    File.write_array(this->fnameICDELTA, DELTA_IC); // Lag2Eul reads thois file
+
+  this->Lag2Eul_comp(1.0,kth,ftype,true,DISP_COORD);
+}
+
+#endif
 // =================================================================================================
 // =================================================================================================
 // =================================================================================================
 // =================================================================================================
-#ifdef OMPPARRAN
+// =================================================================================================
+// =================================================================================================
+
+
+#ifndef _DISPLACEMENTS_
+#ifdef _USE_OMP_
 void PATCHY::get_dm_field(gsl_rng ** gBaseRand)
 #else
 void PATCHY::get_dm_field(gsl_rng * gBaseRand)
 #endif
 {
 
+    So.enter(__PRETTY_FUNCTION__);
+#ifdef _USE_OMP_
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
   cout<<endl;
+#ifdef _FULL_VERBOSE_
   cout<<CYAN<<"-----------------------------------------------------------------------"<<RESET<<endl;
   this->So.message_screen("OBTAINING DARK MATTER DENSITY FIELD with PATCHY");
   cout<<endl;
+  this->So.message_screen("Cosmological Redshift z =", params._redshift());
+  this->So.message_screen("Growth factor D(z) =", this->s_cosmo_info.growth_factor);
+  this->So.message_screen("Growth factor D2(z) =", this->s_cosmo_info.D2);
+  cout<<endl;
+#endif
+
 
   real_prec kth=  this->slength;
   real_prec kthv= this->slengthv;
-  
+
   int ftype=1;// Smoothing kernel. 1 Is forGaussian
   ULONG N=this->NGRID;
 
@@ -355,181 +425,243 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
   real_prec min3=this->zllc;
 
   int facL=1;//attention!!
-  
-  ULONG NL1=this->N1*static_cast<ULONG>(facL);
-  ULONG NL2=this->N2*static_cast<ULONG>(facL);
-  ULONG NL3=this->N3*static_cast<ULONG>(facL);	  
 
-  
-  ULONG NLL=static_cast<ULONG>(NL1)*static_cast<ULONG>(NL2)*static_cast<ULONG>(NL3);
+  ULONG NL1p=this->N1*static_cast<ULONG>(facL);
+  ULONG NL2=this->N2*static_cast<ULONG>(facL);
+  ULONG NL3=this->N3*static_cast<ULONG>(facL);
+
+
+  ULONG NLL=static_cast<ULONG>(NL1p)*static_cast<ULONG>(NL2)*static_cast<ULONG>(NL3);
 
   vector<real_prec> dummy(N,0);
 
-  
+
 
   if (true==this->runsim)
-    if(false==this->use_ic_file)  
+    if(false==this->use_ic_file)
       if (true==this->readPS)
-	{
-	  cout<<endl;
+        {
+          cout<<endl;
 #ifdef _VERIFY_FILES_
-	  if(false==this->File.exists(this->fname3DPOWER))
-	    {
-#endif      
-	      cout<<endl;
-	      this->So.message_screen("Reading Initial P(k) from table and interpolating on Fourier grid");
-	      
-	      this->read_tabulated_power();
-#ifdef _VERIFY_FILES_
-	    }
+          if(false==this->File.exists(this->fname3DPOWER))
+            {
 #endif
-	  
-	}
+              cout<<endl;
+              this->So.message_screen("Reading Initial P(k) from table and interpolating on Fourier grid");
+
+              this->read_tabulated_power();
+#ifdef _VERIFY_FILES_
+            }
+#endif
+
+        }
       else
-	{    
-	  // if (inStream.is_open() == false )
-	  {      
-	    cout<<endl;
-	    this->So.message_screen("Computing P(k) from fitting formulae");
-	    // PowerSpectrum Power;
+        {
+          // if (inStream.is_open() == false )
+          {
+            cout<<endl;
+            this->So.message_screen("Computing P(k) from fitting formulae");
+            // PowerSpectrum Power;
             // real_prec Pa=Power.Linear_Matter_Power_Spectrum(&this->s_cosmo_pars, 0.1);
-	    
-	    // ATTENTION, to be placed in the right class, commented by ABA
-	    //initialize_pow_spec(s_patchy_pars,fnamePOWER); 
-	  }
-	}
-  
+
+            // ATTENTION, to be placed in the right class, commented by ABA
+            //initialize_pow_spec(s_patchy_pars,fnamePOWER);
+          }
+        }
+
 
   string fnamePOSXORD=this->Output_directory+string("aux1");//+stradd;
   string fnamePOSYORD=this->Output_directory+string("aux2");//+stradd;
   string fnamePOSZORD=this->Output_directory+string("aux3");//+stradd;
-    
+
   if (true==this->runv)
     kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,kthv,ftype,this->Output_directory);
-  
+
   // (1) start running simulation
   if (true==this->runsim)
     {
-          
-      
-      kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,kth,ftype,this->Output_directory); 
+
+
+      kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,kth,ftype,this->Output_directory);
 
       if(false==this->use_ic_file)
-	{
-	  
-	  // if (vsmoo>0.)
-	  // 	kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,vsmoo,ftype);
-	  
-	  switch (this->inputmode)
-	    {
-	    case 0:   // 0 for White Noise generated here
-	      {
+        {
+
+          // if (vsmoo>0.)
+          // 	kernelcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,vsmoo,ftype);
+
+          switch (this->inputmode)
+            {
+            case 0:   // 0 for White Noise generated here
+              {
                 //	    vector<real_prec>dummy2(N,0);
-		
-#ifndef SAVECOMP	
-		this->So.message_screen("Generate initial gaussian field");
-		
-		// Read input power spectrum
-		
+
+#ifndef SAVECOMP
+                this->So.message_screen("Generate initial gaussian field");
+
+                // Read input power spectrum
+
                 vector<real_prec>dummy2(N,0);
-		
-		this->File.read_array(this->fnamePOWER3D+".dat",dummy2);
-		
+
+                this->File.read_array(this->fnamePOWER3D+".dat",dummy2);
+
 #ifdef OMPPARRAN
 #ifdef OMPPARRANGAR
-		create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
+                create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
 #else
-		create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand[0]);
+                create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand[0]);
 #endif
 #else
-		create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
+                create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
 #endif
-		
-		this->So.Done();
+
+                this->So.Done();
 #else
-		bifstream inStream2(this->fnameIC.data(),file_is_natural);
-		
-		
-		if (inStream2.is_open()==true)
-		  {
-		    cout<< this->fnameIC<<endl;
-		    this->File.read_array(this->fnameIC,dummy);  //read white noise if the fnameIC file does not exists (perhaps created in the case above with def SAVECOMP)
-		  }
-		  else
-		  {
-		    this->So.message_screen("Generate initial gaussian field");
-		    vector<real_prec> dummy2(N);
-		    this->File.read_array(this->fname3DPOWER+".dat",dummy2);
-		    
+                bifstream inStream2(this->fnameIC.data(),file_is_natural);
+
+
+                if (inStream2.is_open()==true)
+                  {
+                    this->File.read_array(this->fnameIC,dummy);  //read white noise if the fnameIC file does not exists (perhaps created in the case above with def SAVECOMP)
+                  }
+                  else
+                  {
+                    this->So.message_screen("Generate initial gaussian field");
+                    vector<real_prec> dummy2(N);
+                    this->File.read_array(this->fname3DPOWER+".dat",dummy2);
+
 #ifdef OMPPARRAN
 #ifdef OMPPARRANGAR
-		    create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
+                    create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
 #else
                     create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand[0]);
                     //create_GARFIELD_FIXED_AMP(N1,N2,N3,dummy,dummy2,gBaseRand[0]);
 
                     real_prec meanWN, sigma2D;
                     meanWN=get_mean(dummy);
+#ifdef _FULL_VERBOSE_
                     this->So.message_screen("Mean WN =",meanWN);
+#endif
+
                     sigma2D=get_var(meanWN, dummy);
+#ifdef _FULL_VERBOSE_
                     this->So.message_screen("Sigma² WN =",sigma2D);
+#endif
 
 
 #endif
 #else
-		    create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
+                    create_GARFIELDR(N1,N2,N3,dummy,dummy2,gBaseRand);
 #endif
-		    this->File.write_array(this->fnameICDELTA,dummy);
-		    this->So.DONE();
+                    this->File.write_array(this->fnameICDELTA,dummy);
+                    this->So.DONE();
 
+#ifdef _FULL_VERBOSE_
                     So.message_screen("Measuring power spectrum of IC");
-                    this->params.SN_correction=false; //specified here for it is overriden below
-                    this->params.mass_assignment_scheme="NGP";
-                    this->params.MAS_correction=false;
-                    this->params.input_type="delta";
-		    
-                    this->params.Name_survey="IC_GRF";
+#endif
+                    this->params.set_SN_correction(false);
+                    this->params.set_mass_assignment_scheme("CIC");
+                    if(true==this->params._ic_alias_corrected())
+                          this->params.set_MAS_correction(false);
+                    else
+                        this->params.set_MAS_correction(true);
+                    this->params.set_input_type("delta");
+
+                    this->params.set_Name_survey("IC_GRF");
                     PowerSpectrumF cPSF(this->params);
                     cPSF.compute_power_spectrum_grid(dummy);
                     this->So.DONE();
                     cPSF.write_power_and_modes();
+
+#ifdef _USE_GNUPLOT_
+
+                     int Nk=600;
+                     vector<real_prec>xbaux(Nk, 0);
+                     vector<real_prec>pdf(Nk, 0);
+                     real_prec max=get_max<real_prec>(dummy);
+                     real_prec min=get_min<real_prec>(dummy);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+                    for(int i=0;i<Nk; ++i)
+                      xbaux[i]=min+static_cast<real_prec>(i+0.5)*(max-min)/static_cast<real_prec>(Nk);
+                    string filex=this->params._Output_directory()+"pdf_IC"+to_string(this->params._seed())+".txt";
+                    calc_pdf("lin", dummy.size(),Nk,max,min,dummy,pdf);
+                    this->File.write_to_file(filex, xbaux,pdf);
+                    vector<pair<real_prec, real_prec> > xy_pts_ref;
+                    for(int i=0; i<Nk;++i) 
+                      xy_pts_ref.push_back(std::make_pair(xbaux[i], pdf[i])); 
+                    xbaux.clear(); xbaux.shrink_to_fit();
+                    pdf.clear(); pdf.shrink_to_fit();
+                    this->gp_pdf<<"set border linewidth 1.5\n";
+                    this->gp_pdf << "set log y\n";
+                    this->gp_pdf << "set title 'LOS"<< this->params._seed()<<"'\n";
+                    this->gp_pdf << "set xlabel 'delta '\n";
+                    this->gp_pdf << "set ylabel 'P(delta)'\n";
+                    this->gp_pdf << "set size square\n";
+                    this->gp_pdf << "plot" << gp_pdf.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'PDF IC'"<<endl;
+
+                    xy_pts_ref.clear();
+                    xy_pts_ref.shrink_to_fit();
+
+
+
+                    for(int i=0; i<cPSF._kvector_data_size(); ++i) 
+                      xy_pts_ref.push_back(std::make_pair(cPSF._kvector_data(i), cPSF._pk0(i))); 
+                    this->gp_power<<"set size 1.0,0.5\n";
+                    this->gp_power<<"set origin 0.,0.5\n";
+                    this->gp_power << "set log\n";
+                    this->gp_power << "set xlabel 'k [h / Mpc]'\n";
+                    this->gp_power<< "set ylabel 'P(k) [(Mpc / h)³]'\n";
+                    this->gp_power << "set size square\n";
+                    this->gp_power << "plot" << gp_power.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'IC'"<<endl;
+                    xy_pts_ref.clear();
+                    xy_pts_ref.shrink_to_fit();
+#endif
+
+
 
 
 
 
                     }
 #endif
-	      }
-	      break;
-	    case 1:   // White Noise taken from some input file
-	      {
-		
-		
+              }
+              break;
+            case 1:   // White Noise taken from some input file
+              {
+
+
 #define WHITE_NOISE dummy
-		So.message_screen("White Noise:");
-		this->File.read_array(this->fnameIC,WHITE_NOISE);
-		
-		//This is becauase IC are done in Fortran
-		
-		//#ifdef _EXCHANGE_XZ_WHITE_NOISE_ //Not neede
-		//   	    So.message_screen("Exchanging x<->z in WN");
-		//exchange_xz(this->N1, dummy, dummy);
-		// #endif
-		
-		
-		
+#ifdef _FULL_VERBOSE_
+                So.message_screen("White Noise:");
+#endif
+                this->File.read_array(this->fnameIC,WHITE_NOISE);
+
+                //This is becauase IC are done in Fortran
+
+                //#ifdef _EXCHANGE_XZ_WHITE_NOISE_ //Not neede
+                //   	    So.message_screen("Exchanging x<->z in WN");
+                //exchange_xz(this->N1, dummy, dummy);
+                // #endif
+
+
+
                 real_prec meanWN=get_mean(WHITE_NOISE);
                 real_prec sigma2D=get_var(meanWN,WHITE_NOISE);
-                this->So.message_screen("Mean  WN =",meanWN);
+                  this->So.message_screen("Mean  WN =",meanWN);
                 this->So.message_screen("Sigma² WN =",sigma2D);
-		
-#pragma omp parallel for 
-		for(ULONG i=0;i<N;i++)            
-                  WHITE_NOISE[i]/=sqrt(sigma2D);
 
-		
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+                for(ULONG i=0;i<N;i++)
+//                  WHITE_NOISE[i]/=sqrt(sigma2D);
+                WHITE_NOISE[i]/=sqrt(1.0); // asi para la IC de minerva, aun no sé porque
+
+
                 So.message_screen("Generating Initial DM field with input Power Spectrum");
-		
+
 #define DELTA_IC dummy  // dummy change names from WHITE_NOISE TO DELTA_IC
 
                 create_GARFIELDR_from_WHITENOISE(this->fname3DPOWER+".dat",N1,N2,N3,DELTA_IC);
@@ -537,53 +669,145 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
 
 
 #ifdef _VERIFY_FILES_
-		if(false==this->File.exists(this->fnameICDELTA))
+                if(false==this->File.exists(this->fnameICDELTA))
 #endif
                 this->File.write_array(this->fnameICDELTA,DELTA_IC);
-		
+
                 sigma2D=get_var(DELTA_IC);
+#ifdef _FULL_VERBOSE_
                 this->So.message_screen("Sigma² IC with P(k) =",sigma2D);
+                this->So.message_screen("Measuring power spectrum of IC: This must be in agreement with the input power spectrum");
+#endif
+                this->params.set_SN_correction(false);
+                this->params.set_mass_assignment_scheme("CIC");
+                if(true==this->params._ic_alias_corrected())
+                      this->params.set_MAS_correction(false);
+                else
+                    this->params.set_MAS_correction(true);
+                this->params.set_input_type("delta_grid");
+                this->params.set_Name_survey("IC");
+                PowerSpectrumF cPSF(this->params);
+                cPSF.compute_power_spectrum_grid(DELTA_IC);
+                this->So.DONE();
+                cPSF.write_power_and_modes();
 
 
-                So.message_screen("Measuring power spectrum of IC: must be the input!!!!");
-		this->params.SN_correction=false; //specified here for it is overriden below
-		this->params.mass_assignment_scheme="NGP";
-                this->params.MAS_correction=true;
-                this->params.input_type="delta_grid";
-		this->params.Name_survey="IC";                                  
-		PowerSpectrumF cPSF(this->params);
-		cPSF.compute_power_spectrum_grid(DELTA_IC);
-		this->So.DONE();
-		cPSF.write_power_and_modes();
-	      }
-	      break;
-	    }
-	}
+#ifdef _USE_GNUPLOT_
+                int Nk=600;
+                vector<real_prec>xbaux(Nk, 0);
+                vector<real_prec>pdf(Nk, 0);
+                real_prec max=get_max<real_prec>(dummy);
+                real_prec min=get_min<real_prec>(dummy);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+                for(int i=0;i<Nk; ++i)
+                  xbaux[i]=min+static_cast<real_prec>(i+0.5)*(max-min)/static_cast<real_prec>(Nk);
+                string filex=this->params._Output_directory()+"pdf_IC"+to_string(this->params._seed())+".txt";
+                calc_pdf("lin", dummy.size(),Nk,max,min,dummy,pdf);
+                this->File.write_to_file(filex, xbaux,pdf);
+                vector<pair<real_prec, real_prec> > xy_pts_ref;
+                for(int i=0; i<Nk;++i) 
+                  xy_pts_ref.push_back(std::make_pair(xbaux[i], pdf[i])); 
+                xbaux.clear(); xbaux.shrink_to_fit();
+                pdf.clear(); pdf.shrink_to_fit();
+                    pdf.clear(); pdf.shrink_to_fit();
+                this->gp_pdf<<"set border linewidth 1.5\n";
+                this->gp_pdf << "set title 'LOS"<< this->params._seed()<<"'\n";
 
-      else if(true==this->use_ic_file)
-	{
+                this->gp_pdf << "set log y\n";
+                this->gp_pdf << "set xlabel 'delta '\n";
+                this->gp_pdf << "set ylabel 'P(delta)'\n";
+                this->gp_pdf << "set size square\n";
+                this->gp_pdf << "plot" << gp_pdf.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'PDF IC'"<<endl;
+                xy_pts_ref.clear();
+                xy_pts_ref.shrink_to_fit();
+
+                for(int i=0; i<cPSF._kvector_data_size(); ++i) 
+                   xy_pts_ref.push_back(std::make_pair(cPSF._kvector_data(i), cPSF._pk0(i))); 
+                this->gp_power << "set log\n";
+                this->gp_power << "set xlabel 'k [h / Mpc]'\n";
+                this->gp_power << "set ylabel 'P(k) [(Mpc / h)³]'\n";
+                this->gp_power << "set size square\n";
+                this->gp_power << "plot" << gp_power.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'IC'"<<endl;
+                xy_pts_ref.clear();
+                xy_pts_ref.shrink_to_fit();
+#endif
+
+
+
+              }
+              break;
+            }
+        }
+
+      else //if(true==this->use_ic_file)
+        {
 #undef DELTA_IC
 #define DELTA_IC dummy
-	  So.message_screen("Reading initial DM field with P(k)");
-	  this->File.read_array(this->ic_file,DELTA_IC);
 
-	  //We read a densifity field with the P(k) initial, we need to transform it to delta in order to pass it to the Grav Solver
-	  get_overdens(DELTA_IC, DELTA_IC);
+#ifdef _FULL_VERBOSE_
+          So.message_screen("Reading initial DM field with P(k)");
+#endif
+          this->File.read_array(this->ic_file,DELTA_IC);
+          this->params.set_SN_correction(false);
+          this->params.set_input_type("delta_grid");
+          this->params.set_mass_assignment_scheme("CIC");
+          if(true==this->params._ic_alias_corrected())
+                this->params.set_MAS_correction(false);
+          else
+              this->params.set_MAS_correction(true);
+          this->params.set_Name_survey("IC_original");
+
+          // This is meant to measure the power of the original input field
+          PowerSpectrumF aPSF(this->params);
+          aPSF.compute_power_spectrum_grid(DELTA_IC);
+          this->So.DONE();
+          aPSF.write_power_and_modes();
+
+#ifdef _USE_GNUPLOT_
+          vector<pair<real_prec, real_prec> > xy_pts_a;
+          for(int i=0; i<aPSF._kvector_data_size(); ++i) 
+           xy_pts_a.push_back(std::make_pair(aPSF._kvector_data(i), aPSF._pk0(i))); 
+          this->gp_power<<"set border linewidth 1.5\n";
+          this->gp_power << "set log\n";
+          this->gp_power << "set xlabel 'k [h / Mpc]'\n";
+          this->gp_power << "set ylabel 'P(k) [(Mpc / h)³]'\n";
+          this->gp_power << "set size square\n";
+          this->gp_power << "set title 'LOS"<< this->params._seed()<<"'\n";
+          this->gp_power << "plot" << gp_power.file1d(xy_pts_a) << "w l lw 2 lt 8 title 'IC original'"<<endl;
+          xy_pts_a.clear();
+          xy_pts_a.shrink_to_fit();
+#endif
 
 
-	  if(true==this->Normalize_initial_redshift)
-            normalize_df_z_ini(DELTA_IC,DELTA_IC,"delta",gBaseRand[0]);
-          real_prec meanWN, sigma2D;
 
-	  
+          //We read a densifity field with the P(k) initial, we need to transform it to delta in order to pass it to the Grav Solver
+        if(DENSITY==this->ic_input_type)
+            get_overdens(DELTA_IC, DELTA_IC);
+
+
+          if(true==this->Normalize_initial_redshift)
+              normalize_df_z_ini(DELTA_IC,DELTA_IC,"delta");
+
+          real_prec meanWN=0; 
+          real_prec sigma2D=0;
+
           meanWN=get_mean(DELTA_IC);
+#ifdef _FULL_VERBOSE_
           this->So.message_screen("Statistics of the original IC");
-          this->So.message_screen("Mean WN =",meanWN);
+          this->So.message_screen("Mean delta_IC =",meanWN);
+#endif
           sigma2D=get_var(meanWN, DELTA_IC);
-          this->So.message_screen("Sigma² WN =",sigma2D);
-  
-  	  
+#ifdef _FULL_VERBOSE_
+          this->So.message_screen("Sigma² IC =",sigma2D);
+#endif
+
+
+
+
 /*
+
           this->So.message_screen("Scaling the Fixed-amplitude IC to the variance of a GRF");
           // Aca genero un random gaus field con el mismo Pth(a z=0) y calculo si sigma
            // y corrijo el field DELTA_IC
@@ -601,16 +825,14 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
           this->So.message_screen("Sigma² WN GRF =",sigma2D_GRF);
 
 
-          */
 
-	  
-	  // So.message_screen("Forcing the IC to have unit variance. Wrong IC. This however helps to get right P for traces");
-	  // So.message_screen("although the P(k) of the IC won't agree with the theoretical one.");
-	  So.message_screen("Test demaning variance unity from IC, in line",__LINE__);
-	  So.message_screen("from patchy.cpp");
 
-	  for(ULONG i=0;i<DELTA_IC.size();++i)
-	    DELTA_IC[i]/=sqrt(sigma2D);
+          // So.message_screen("Forcing the IC to have unit variance. Wrong IC. This however helps to get right P for traces");
+          // So.message_screen("although the P(k) of the IC won't agree with the theoretical one.");
+      	  So.message_screen("Test demaning variance unity from IC, in line",__LINE__);
+          So.message_screen("from patchy.cpp");
+          for(ULONG i=0;i<DELTA_IC.size();++i)
+            DELTA_IC[i]/=sqrt(sigma2D);
 
 
           this->So.message_screen("Statistics of the scaled-GRF");
@@ -619,38 +841,91 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
           sigma2D=get_var(meanWN, DELTA_IC);
           this->So.message_screen("NEW Sigma² WN =",sigma2D);
           So.DONE();
+*/
 
 
-	  // Here we write the alrady normalized to z=0 Initial DF and hereafter we will read it
-	  this->File.write_array(this->fnameICDELTA,DELTA_IC);
-	  // This line will let us read the file written in the line above whenever we need the initial delta field below
-	  this->use_ic_file=false;
+          // Here we write the alrady normalized to z=0 Initial DF and hereafter we will read it
+          this->File.write_array(this->fnameICDELTA,DELTA_IC);
+          // This line will let us read the file written in the line above whenever we need the initial delta field below
+          this->use_ic_file=false;
 
-	  So.message_screen("Measuring power spectrum of IC read in file");
-	  this->params.SN_correction=false; //specified here for it is overriden below
-	  this->params.input_type="delta";
-          this->params.mass_assignment_scheme="NGP";
-          this->params.MAS_correction=false;
-          this->params.Name_survey="IC";
-	  PowerSpectrumF cPSF(this->params);
-	  cPSF.compute_power_spectrum_grid(DELTA_IC);
-	  this->So.DONE();
-	  cPSF.write_power_and_modes();
+#ifdef _FULL_VERBOSE_
+          So.message_screen("Measuring power spectrum of IC read in FILE",  this->fnameICDELTA);
+#endif
+          this->params.set_Name_survey("IC");
+          PowerSpectrumF cPSF(this->params);
+          cPSF.compute_power_spectrum_grid(DELTA_IC);
+          this->So.DONE();
+          cPSF.write_power_and_modes();
 
-	}
-      
+
+
+#ifdef _USE_GNUPLOT_
+
+
+          vector<pair<real_prec, real_prec> > xy_pts_ref;
+
+#ifdef _USE_GNUPLOT_PDF_
+          int Nk=300;
+          vector<pair<real_prec, real_prec> > xy_pts_g;
+          vector<real_prec>xbaux(Nk, 0);
+          vector<real_prec>pdf(Nk, 0);
+          real_prec max=get_max<real_prec>(DELTA_IC);
+          real_prec min=get_min<real_prec>(DELTA_IC);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+          for(int i=0;i<Nk; ++i)
+            xbaux[i]=min+static_cast<real_prec>(i+0.5)*(max-min)/static_cast<real_prec>(Nk);
+          string filex=this->params._Output_directory()+"pdf_IC"+to_string(this->params._seed())+".txt";
+          calc_pdf("lin", dummy.size(),Nk,max,min,DELTA_IC,pdf);
+          this->File.write_to_file(filex, xbaux,pdf);
+          for(int i=0; i<Nk;++i) 
+            xy_pts_ref.push_back(std::make_pair(xbaux[i], pdf[i])); 
+          pdf.clear(); pdf.shrink_to_fit();
+
+          for(int i=0; i<Nk;++i) 
+            xy_pts_g.push_back(std::make_pair(xbaux[i], exp(-0.5*xbaux[i]*xbaux[i]/sigma2D)/sqrt(2.*M_PI*sigma2D))); 
+          xbaux.clear(); xbaux.shrink_to_fit();
+          this->gp_pdf << "set log y\n";
+          this->gp_pdf << "set xlabel 'delta '\n";
+          this->gp_pdf << "set ylabel 'P(delta)'\n";
+          this->gp_pdf << "set size square\n";
+          this->gp_pdf << "set title 'LOS"<< this->params._seed()<<"'\n";
+          this->gp_pdf << "plot" << gp_pdf.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'PDF IC'"<<endl;
+          this->gp_pdf << "replot" << gp_pdf.file1d(xy_pts_g) << "w l lw 2 lt 2 title 'N(0,1)'"<<endl;
+          xy_pts_ref.clear();
+          xy_pts_ref.shrink_to_fit();
+          xy_pts_g.clear();
+          xy_pts_g.shrink_to_fit();
+#endif
+
+
+
+         for(int i=0; i<cPSF._kvector_data_size(); ++i) 
+            xy_pts_ref.push_back(std::make_pair(cPSF._kvector_data(i), cPSF._pk0(i))); 
+          this->gp_power << "replot" << gp_power.file1d(xy_pts_ref) << "w l lw 2 lt 1 title 'IC'"<<endl;
+          this->gp_power << "replot '/home/andres/data/Numerics/SLICS/ICs/CAMB_Z0.042_high_k_linear_WMAP9.txt' w l lw 2 lt 3 title 'CAMB'"<<endl;
+          xy_pts_ref.clear();
+          xy_pts_ref.shrink_to_fit();
+#endif
+
+        }
+
       real_prec biasLAG=static_cast<real_prec>(1.);
-      
+#ifdef _FULL_VERBOSE_
       So.message_screen("Computing Displacement Field");
+#endif
+
 #ifdef SAVEIC
       vector<real_prec>posx(NLL,0),posy(NLL,0),posz(NLL,0);
       vector<real_prec>posicx(NLL,0),posicy(NLL,0),posicz(NLL,0);
       vector<real_prec>dummy2(N,0);
-      
+
       // ATTENTION TO BE PLACED IN THE RIGHT CLASS, commented by ABA
-      // THIS FUNCTION IS NOT ORIGINALLY DEFINED 
+      // THIS FUNCTION IS NOT ORIGINALLY DEFINED
       //this->Lag2Eulic(fnameIC,stradd,fnamePOSX,fnamePOSY,fnamePOSZ,dummy,dummy2,posx,posy,posz,posicx,posicy,posicz,biasLAG,kth,facL,reggrid,gBaseRand,sfmodel,transf);
-      
+
 #ifdef PARTRAN
       So.message_screen("Writting initial Positions");
       this->File.write_array(fnamePOSX,posx);
@@ -660,26 +935,47 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
       this->File.write_array(fnameDMNGP,dummy2);
 #endif //endif PARTRAN
 
-      
+
 #endif  //endif SAVEIC
-      
+
 #ifndef SAVEIC
 
 #define POSX dummy
-      this->Lag2Eul_comp(biasLAG,kth,ftype,true,POSX,1);  
-      // ABA: velocities are written inside, but we can do as with the positions 
-      this->File.write_array(fnamePOSX,POSX);
-      
+      this->Lag2Eul_comp(biasLAG,kth,ftype,true,POSX,1);
+      // ABA: velocities are written inside, but we can do as with the positions
+      this->File.write_array(this->fnamePOSX,POSX);
+
 #define POSY dummy
       this->Lag2Eul_compB(kth,ftype,true,POSY,2);
-      this->File.write_array(fnamePOSY, POSY);
-      
+      this->File.write_array(this->fnamePOSY, POSY);
+
 #define POSZ dummy
-      this->Lag2Eul_compB(kth,ftype,true,POSY,3);
-#ifdef PARTRAN
+      this->Lag2Eul_compB(kth,ftype,true,POSZ,3);
       this->File.write_array(this->fnamePOSZ, POSZ);
+
+
+
+      // Compute the components of the dm tracer velocities. The differet components are writtn inside this function:
+      this->Lag2Eul_vel(biasLAG,kth,ftype,true);
+
+
+#ifdef _MOVE_DM_TO_REDSHIFT_SPACE_
+      // This will modify POSX, POSY OR POSZ
+      // ACCORDING TO LOS (line of sight)
+     this->DM_to_RSS(LOS);
+     // THis has to be done snice below the Z coordinate is read from memory
+     if(3==LOS)
+       this->File.read_array(this->fnamePOSZ_RS+".dat",POSZ);
+
+
 #endif
-      
+
+
+
+      vector<real_prec>dens_field_cic(this->NGRID,0);// container for the interpoation of the dhnumber count used in the construction of the velocity field
+
+// Here goes the function shfintig dm particles to redshift space
+
       {
         vector<real_prec>dummy2(N,0);
         vector<real_prec>dummy3(N,0);
@@ -693,152 +989,239 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
 
 #define DENS_FIELD dummy2
 
-	// read to avoid keeping it in memmory. Z-compònent is the only one kept in memmory
-	this->File.read_array(this->fnamePOSX+".dat",POSX);
-	this->File.read_array(this->fnamePOSY+".dat",POSY);
-	
-#ifdef PARTRAN 
+        // read to avoid keeping it in memmory. Z-compònent is the only one kept in memmory
+#ifdef _MOVE_DM_TO_REDSHIFT_SPACE_
+        if(1==LOS)
+          {
+          this->File.read_array(this->fnamePOSX_RS+".dat",POSX);
+          this->File.read_array(this->fnamePOSY+".dat",POSY);
+        }
+        else if(2==LOS){
+          this->File.read_array(this->fnamePOSX+".dat",POSX);
+          this->File.read_array(this->fnamePOSY_RS+".dat",POSY);
+        }
+#else
+        this->File.read_array(this->fnamePOSX+".dat",POSX);
+        this->File.read_array(this->fnamePOSY+".dat",POSY);
+#endif
+
+
+#ifdef PARTRAN
         getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,DENS_FIELD,false);
         this->File.write_array(this->fnameDMNGP, DENS_FIELD);
+        {
+          this->params.set_input_type("density_grid");
+          this->params.set_MAS_correction(true);
+          this->params.set_Name_survey("DM");
+          PowerSpectrumF cPSF(this->params);
+          cPSF.compute_power_spectrum_grid(DENS_FIELD);
+          this->So.DONE();
+          cPSF.write_power_and_modes();
+
+#ifdef _USE_GNUPLOT_
+          vector<pair<real_prec, real_prec> > xy_pts_new;
+          for(int i=0; i<cPSF._kvector_data_size(); ++i) 
+            xy_pts_new.push_back(std::make_pair(cPSF._kvector_data(i), cPSF._pk0(i))); 
+          this->gp_power << "set title 'LOS"<< this->params._seed()<<"'\n";
+          this->gp_power << "replot" << gp_power.file1d(xy_pts_new) << "w l lw 2 lt 4 title 'DM'"<<endl;
+          xy_pts_new.clear();
+          xy_pts_new.shrink_to_fit();
 #endif
-	
-#ifdef TET
-	So.message_screen("Going TET density field");
-	// Here I have explicitely exchanged x<->y when using TET.
-	getDensity_TETCIC_comp(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,NLL,DENS_FIELD,false);
-	
+        }
+
+
+#endif
+
+#ifdef _GET_DENSITY_FIELDS_
+#ifdef _USE_TET_
+#ifdef _FULL_VERBOSE_
+        So.message_screen("Going TET density field");
+#endif
+        // Here I have explicitely exchanged x<->y when using TET.
+        getDensity_TETCIC_comp(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,NLL,DENS_FIELD,false);
+
 #else
 
-	switch (this->masskernel)
-	  {	      
-	  case 0:      
-	    getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,DENS_FIELD,false);
-	    break;
-	  case 1:
-	    getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,POSZ,DENS_FIELD,false);
-	    break;
-	  case 2:      
-	    getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,DENS_FIELD,false);
-	    break;
-	  }
+        switch (this->masskernel)
+          {
+          case 0:
+            getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,DENS_FIELD,false);
+            break;
+          case 1:
+            getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,POSZ,DENS_FIELD,false);
+            break;
+          case 2:
+            getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,POSZ,DENS_FIELD,false);
+            break;
+          }
 #endif
+
+        getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,POSZ,dens_field_cic,false);
+
         this->File.write_array(this->fnameDM, DENS_FIELD);  //write DMDF to binary file
-	
+        {
+          this->params.set_input_type("density_grid");
+          this->params.set_MAS_correction(true);
+          this->params.set_Name_survey("DM_"+this->buffsf);
+          PowerSpectrumF cPSF(this->params);
+          cPSF.compute_power_spectrum_grid(DENS_FIELD);
+          this->So.DONE();
+          cPSF.write_power_and_modes();
+
+#ifdef _USE_GNUPLOT_
+          vector<pair<real_prec, real_prec> > xy_pts_new;
+          string filex=this->params._Output_directory()+"pdf_DM"+this->buffsf+"_IC"+to_string(this->params._seed())+".txt";
+          int Nk=300;
+          vector<real_prec>xbaux(Nk, 0);
+          vector<real_prec>pdf(Nk, 0);
+          real_prec max=get_max<real_prec>(DENS_FIELD);
+          real_prec min=get_min<real_prec>(DENS_FIELD);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+          for(int i=0;i<Nk; ++i)
+            xbaux[i]=min+static_cast<real_prec>(i+0.5)*(max-min)/static_cast<real_prec>(Nk);
+
+          vector<pair<real_prec, real_prec> > xy_pts_g;
+          calc_pdf("lin", dummy.size(),Nk,max,min,DENS_FIELD,pdf);
+          this->File.write_to_file(filex, xbaux,pdf);
+          for(int i=0; i<Nk;++i) 
+            xy_pts_new.push_back(std::make_pair(xbaux[i], pdf[i])); 
+          pdf.clear(); pdf.shrink_to_fit();
+          this->gp_pdf << "replot" << gp_pdf.file1d(xy_pts_new) << "w l lw 2 lt 5 title 'DM-TET'"<<endl;
+          xy_pts_new.clear();
+          xy_pts_new.shrink_to_fit();
+
+
+          for(int i=0; i<cPSF._kvector_data_size(); ++i) 
+            xy_pts_new.push_back(std::make_pair(cPSF._kvector_data(i), cPSF._pk0(i))); 
+          this->gp_power << "replot" << gp_power.file1d(xy_pts_new) << "w l lw 2 lt 5 title 'DM-TET'"<<endl;
+          xy_pts_new.clear();
+          xy_pts_new.shrink_to_fit();
+#endif
+        }
+
+
+#endif
+
+
+
+
+
+
 
 
 #ifdef _GET_VELOCITIES_
-	// Now the velocities:
+        // Now the velocities:
         vector<real_prec>dummy5(N,0);
         vector<real_prec>dummy6(N,0);
-	
-	// x:
-	
+
+        // x:
+
 #define VXp dummy5
 #define VX  dummy6
-	
-	
-	this->File.read_array(this->fnameVXpart+".dat",VXp);
 
-	switch (this->masskernel)
-	  {	      
-	  case 0:      
-	    getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VXp,VX,true);
-	    break;
-	  case 1:
-	    getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VXp,VX,true);
-	    break;
-	  case 2:      
-	    getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VXp,VX,true);
-	    break;
-	  }
-	
+
+        this->File.read_array(this->fnameVXpart+".dat",VXp);
+
+        switch (this->masskernel_vel)
+          {
+          case 0:
+            getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VXp,VX,true);
+            break;
+          case 1:
+            getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VXp,VX,true);
+            break;
+          case 2:
+            getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VXp,VX,true);
+            break;
+          }
+
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  if(DENS_FIELD[i]>0.)
-            VX[i]/=static_cast<real_prec>(DENS_FIELD[i]);
-	  else
-            VX[i]=0;  // Technically one would need to assign thevelocity of the nearest particle, for the V field is not zero even if there are no particles.
+        for(ULONG i=0;i<N;i++)
+          if(dens_field_cic[i]>0.)
+            VX[i]/=static_cast<real_prec>(dens_field_cic[i]);
+          else
+            VX[i]=0;  // Technically one would need to assign thevelocity of the nearest particle, for the V field can be different of zero even if there are no particles.
         this->File.write_array(this->fnameVX, VX);  //write DMDF to binary file
-		
-	//y:
+
+        //y:
 #define VYp dummy5
 #define VY  dummy6
-	
-	this->File.read_array(this->fnameVYpart+".dat",VYp);
 
-	switch (this->masskernel)
-	  {	      
-	  case 0:      
-	    getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VYp,VY,true);
-	    break;
-	  case 1:
-	    getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VYp,VY,true);
-	    break;
-	  case 2:      
-	    getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VYp,VY,true);
-	    break;
-	  }
-	
+        this->File.read_array(this->fnameVYpart+".dat",VYp);
+
+        switch (this->masskernel_vel)
+          {
+          case 0:
+            getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VYp,VY,true);
+            break;
+          case 1:
+            getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VYp,VY,true);
+            break;
+          case 2:
+            getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VYp,VY,true);
+            break;
+          }
+
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  if(DENS_FIELD[i]>0.)
-	    VY[i]/=DENS_FIELD[i];
-	  else
-	    VY[i]=0;
+        for(ULONG i=0;i<N;i++)
+          if(dens_field_cic[i]>0.)
+            VY[i]/=static_cast<real_prec>(dens_field_cic[i]);
+          else
+            VY[i]=0;
         this->File.write_array(this->fnameVY, VY);  //write DMDF to binary file
 
 
 
-	// z:
+        // z:
 #define VZp dummy5
 #define VZ  dummy6
-	
-	this->File.read_array(this->fnameVZpart+".dat",VZp);
 
-	switch (this->masskernel)
-	  {	      
-	  case 0:      
-	    getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VZp,VZ,true);
-	    break;
-	  case 1:
-	    getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VZp,VZ,true);
-	    break;
-	  case 2:      
-	    getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VZp,VZ,true);
-	    break;
-	  }
+        this->File.read_array(this->fnameVZpart+".dat",VZp);
+
+        switch (this->masskernel_vel)
+          {
+          case 0:
+            getDensity_NGP(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VZp,VZ,true);
+            break;
+          case 1:
+            getDensity_CIC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSY,POSX,POSZ,VZp,VZ,true);
+            break;
+          case 2:
+            getDensity_TSC(N1,N2,N3,L1,L2,L3,d1,d2,d3,min1,min2,min3,POSX,POSY,POSZ,VZp,VZ,true);
+            break;
+          }
 
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  if(DENS_FIELD[i]>0.)
-	    VZ[i]/=DENS_FIELD[i];
-	  else
-	    VZ[i]=0;
+        for(ULONG i=0;i<N;i++)
+          if(dens_field_cic[i]>0.)
+            VZ[i]/=static_cast<real_prec>(dens_field_cic[i]);
+          else
+            VZ[i]=0;
         this->File.write_array(this->fnameVZ, VZ);  //write DMDF to binary file
 
 #endif
 
-	
-#undef DENS_FIELD	
-	
+
+#undef DENS_FIELD
+
       }
 #endif
-      
+
       // #ifdef DMONLY
       //       exit(0);
       // #endif
-      
+
     }
   // end running simulation (1)// Here it is produced a DM density field, that goes into BAM
   // The positions of the DM field have to be saved/printed in an output file that has to be read
   // by bam when assigning position withion cells.
 
-
-
-
-
-  
 }
+
+
+#endif // end of ifndef displacements. I have to do it because some functions change arguments if displacements is used 
 
 
 //##################################################################################
@@ -853,10 +1236,18 @@ void PATCHY::get_dm_field(gsl_rng * gBaseRand)
 
 void PATCHY::displace_part_comp(vector<real_prec>&posi,vector<real_prec>&psii,bool periodic,int comp)
 {
-  
-  this->So.message_screen("Displacing particles from Lagrangian to Eulerian");
+
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+
+  this->So.enter(__PRETTY_FUNCTION__);
+
+#ifdef _FULL_VERBOSE_
+  this->So.message_screen("Moving particles from Lagrangian space to Eulerian space ");
+#endif
+
   real_prec posii;
-  
+
   ULONG nout=0;
   ULONG jobj=0;
   ULONG N=this->NGRID;
@@ -864,61 +1255,64 @@ void PATCHY::displace_part_comp(vector<real_prec>&posi,vector<real_prec>&psii,bo
   ULONG i,j,k;
   real_prec posxi,posyi,poszi,psi,inew,rx,ry,rz;
   bool bout;
-  
 
+#ifdef _USE_OMP_
 #pragma omp parallel for default(none) private(i,j,k,jobj,rx,ry,rz,posxi,posyi,poszi,posii,psi,inew,bout)  shared (periodic,comp,posi,psii)  reduction(+:nout)
+#endif
   for (i=0;i<this->N1;i++)
     for (j=0;j<this->N2;j++)
       for (k=0;k<this->N3;k++)
-	{     
+        {
           jobj = index_3d(i,j,k,this->N2,this->N3);
 
           posxi=this->d1*(static_cast<real_prec>(i)+0.5);
           posyi=this->d2*(static_cast<real_prec>(j)+0.5);
           poszi=this->d3*(static_cast<real_prec>(k)+0.5);
-	  
-	  switch (comp)
-	    {
-	    case 1: 
-	      posii=posxi;
-	      break;
-	    case 2:
-	      posii=posyi;
-	      break;
-	    case 3:
-	      posii=poszi;
-	      break;
-	    }	  	  
-	  
+
+          switch (comp)
+            {
+            case 1:
+              posii=posxi;
+              break;
+            case 2:
+              posii=posyi;
+              break;
+            case 3:
+              posii=poszi;
+              break;
+            }
+
           psi=this->linInterp(posxi,posyi,poszi,psii);
-	  
-	  
+
+
           posi[jobj]=posii+psi;
-	  
-	  if (periodic==true)
-	    {	 
-	      inew=posi[jobj];
-	      
-	      if (inew<0.)
-		inew+=this->L1;
-	      if (inew>=this->L1)
-		inew-=this->L1;
-	      
-	      posi[jobj]=inew;
-	    }
-	  bout=false;
-	  if (posi[jobj]<0 || posi[jobj]>=this->L1)
-	    {
-	      nout++;
-	      bout=true;		      
-	    }
-	  //	  jobj++;      
-	}
-  
+
+          if (periodic==true)
+            {
+              inew=posi[jobj];
+
+              if (inew<0.)
+                inew+=this->L1;
+              if (inew>=this->L1)
+                inew-=this->L1;
+
+              posi[jobj]=inew;
+            }
+          bout=false;
+          if (posi[jobj]<0 || posi[jobj]>=this->L1)
+            {
+              nout++;
+              bout=true;
+            }
+          //	  jobj++;
+        }
+
   this->So.DONE();
+#ifdef _FULL_VERBOSE_
   if(nout>0)
     this->So.message_screen("Number of objects outside boundaries =",nout);
-  
+#endif
+
 }
 
 
@@ -928,140 +1322,168 @@ void PATCHY::displace_part_comp(vector<real_prec>&posi,vector<real_prec>&psii,bo
 // ===========================================================================================================================================
 // ===========================================================================================================================================
 
+#ifndef _DISPLACEMENTS_ // When studying the displacement field, we do not need to move particles. We only want the displacement
 void PATCHY::Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool periodic,vector<real_prec> &out,int comp)
+#else
+void PATCHY::Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool periodic,int comp)
+#endif
+
 {
 
+#ifdef _USE_OMP_
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+ So.enter(__PRETTY_FUNCTION__);
+
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Going Lagrangian to Eulerian, ", comp);
+#endif
   real_prec D1=this->s_cosmo_info.growth_factor;
   real_prec D2=this->s_cosmo_info.D2;
+  real_prec f1=this->s_cosmo_info.growth_index;
+  real_prec f2=this->s_cosmo_info.growth_index2;
   real_prec Dcurl=static_cast<real_prec>(-1./7.)*D1*D1*D1;
   real_prec D3a=static_cast<real_prec>(-1./3.)*D1*D1*D1;
   real_prec D3b=static_cast<real_prec>(10./21.)*D1*D1*D1;
   real_prec cvel=num_1/(cgs_km/cgs_Mpc);
   real_prec rsmolC=this->d1;//static_cast<real_prec>(1.0);//kth
-  
+
+
   kernelcomp(this->L1, this->L2,this->L3,this->d1,this->d2,this->d3,this->N1,this->N2,this->N3,rsmolC,ftype,this->Output_directory);
-  
+
   string fname;
-  
+
   bool zeld=false;
   bool twolpt=false;
   bool alpt=false;
 
   switch (this->sfmodel)
     {
-    case 1: 
+    case 1:
       zeld=true;
+#ifdef _FULL_VERBOSE_
       So.message_screen("Using Zel'dovich");
+#endif
       break;
-    case 2: 
+    case 2:
       twolpt=true;
+#ifdef _FULL_VERBOSE_
       So.message_screen("Using 2LPT");
+#endif
       break;
-    case 3: 
+    case 3:
       alpt=true;
+#ifdef _FULL_VERBOSE_
       So.message_screen("Using ALPT");
+#endif
       break;
     }
 
   ULONG N=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3);
+  ULONG Nhalf=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3/2+1);
 
   vector<real_prec>dummy2(N,0);
   vector<real_prec>dummy(N,0);
-  
+
   // Here we read the initial overdenisty field. I add *dat, otherwise it will read the white noise (perhaps we can change names to avoid this confusion)
 
 #define DELTA_IC dummy
 #define POTENTIAL dummy
-  
-  this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC); 
-  
+
+
   if (true==zeld)
     {
+      this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);// Get IC
+#ifdef _USE_OMP_
 #pragma omp parallel for
-      for(ULONG i=0;i<N;i++)
-	DELTA_IC[i]*=D1;	
+#endif
+      for(ULONG i=0;i<N;i++)               // get g(z) * delta 
+        DELTA_IC[i]*=D1;
+
+#define dPSI_TOT dummy   // when the sf ifs are close, the code expects a dPSI_TOT. BUt since this 
+
     }
-  
+
   if (true==twolpt || true==alpt)
     {
+
+      this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
+
       // delta(1)-> Phi(1), needed to obtaine delta(2)
-      PoissonSolver(this->L1,this->N1,DELTA_IC,POTENTIAL);
-      
+      PoissonSolver(this->L1,this->N1,DELTA_IC,POTENTIAL);// here dummy is overwritten, now is POTENTIAL
+
 #ifdef PTCURL
       fname=string("auxs1");
       this->File.write_array(fname,POTENTIAL);
 #endif
-      
+
       // Phi(1)  -> delta(2)
-      
+
 #define DELTA_TWO dummy2
+
+#ifndef _DISPLACEMENTS_
       ifstream inStream;
       string ffnn=this->fname2LPTTERM+".dat";
       inStream.open(ffnn.data());
-      
       if (false==inStream.is_open())
-	{
-	  calc_twolptterm(N1,N2,N3,L1,L2,L3,POTENTIAL,DELTA_TWO);
-	  this->File.write_array(this->fname2LPTTERM,DELTA_TWO);
-	}
+        {
+#endif
+          calc_twolptterm(N1,N2,N3,L1,L2,L3,POTENTIAL,DELTA_TWO);
+#ifndef _DISPLACEMENTS_
+          this->File.write_array(this->fname2LPTTERM,DELTA_TWO);
+        }
       else
-	{
-	  fname=this->fname2LPTTERM+".dat";
-	  this->File.read_array(fname,DELTA_TWO);
-	}
-      
-      
-      // if(false==this->use_ic_file)
-	this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
-      // else
-      // 	{
-      // 	  this->File.read_array(this->ic_file,DELTA_IC);
-      // 	  get_overdens(DELTA_IC, DELTA_IC);
-      // 	  if(true==this->Normalize_initial_redshift)
-      // 	    normalize_df_z_ini(DELTA_IC, DELTA_IC,"delta");
-      // 	}
-      
+        {
+          fname=this->fname2LPTTERM+".dat";
+          this->File.read_array(fname,DELTA_TWO);
+        }
+#endif
+
+     this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
 
 #define PSI_LPT dummy
-      
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
       for(ULONG i=0;i<N;i++)
-	PSI_LPT[i]=D1*DELTA_IC[i]-D2*DELTA_TWO[i];	//attention!!!
-      
+        PSI_LPT[i]=D1*DELTA_IC[i]-D2*DELTA_TWO[i];	//attention!!!
+
+
 #ifdef PTCURL
       fname=string("auxs2");
-      
+
       this->File.read_array(fname,PSI_LPT);
-      
+
 #define POT_PSI_LPT dummy
       PoissonSolver(this->L1,this->N1,PSI_LPT,POT_PHI_LPT);
 
 
       vector<real_prec> dummy3(N,0);
 #define CURL1 dummy3
-     
+
       fname=string("auxs1");
       this->File.read_array(fname,POT_PHI_LPT);
 
-      
+
       calc_curlcomp(N1,N2,N3,L1,L2,L3,POT_PHI_LPT,DELTA_TWO,CURL1,1);
       fname=string("curl1");
       this->File.write_array(fname,CURL1);
-      
+
 #define CURL2 dummy3
       calc_curlcomp(N1,N2,N3,L1,L2,L3,POT_PHI_LPT,DELTA_TWO,CURL2,2);
       fname=string("curl2");
       this->File.write_array(fname,CURL2);
-      
+
 #define CURL3 dummy3
       calc_curlcomp(N1,N2,N3,L1,L2,L3,POT_PHI_LPT,DELTA_TWO,CURL3,3);
       fname=string("curl3");
       this->File.write_array(fname,CURL3);
 
-      
+
       fname=string("auxs2");
-      this->File.read_array(fname,dummy);    
+      this->File.read_array(fname,dummy);
 
       /**/
 #ifdef LPT3B
@@ -1070,69 +1492,70 @@ void PATCHY::Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool period
 
 #define MU2 dummy3
       calc_mu2term(N1,N2,N3,L1,L2,L3,dummy,DELTA_TWO,MU2);
-      
-      fname=string("auxs2");
-      this->File.read_array(fname,dummy);    
-      
-#pragma omp parallel for
-      for(ULONG i=0;i<N;i++)
-	dummy[i]-=D3b*MU2[i];
 
       fname=string("auxs2");
-      this->File.write_array(fname,dummy);
-#endif
-
-#ifdef LPT3A
-     fname=string("auxs1");
-     
-     this->File.read_array(fname,dummy);    
-     
-     calc_Det(N1,N2,N3,L1,L2,L3,dummy,dummy3);
-     
-     fname=string("auxs2");
-     this->File.read_array(fname,dummy);    
-     
-#pragma omp parallel for
-     for(ULONG i=0;i<N;i++)
-       dummy[i]-=D3a*dummy3[i];	      
-#endif
-     /**/
-          
-#endif
-    }
-  
-  if (true==alpt)
-    {
-#ifdef MUSCLE2LPT
-      vector<real_prec> dummy3(N,0);
-      
-      int Nsmol=3;
-      real_prec drsmol=static_cast<real_prec>(8.);
-      real_prec rsmin=this->d1;
-      
-      for(int i=0;i<Nsmol;i++)	  
-	{
-	  real_prec rsmol=static_cast<real_prec>(i)*drsmol+rsmin;
-	  kernelcomp(this->L1,this->L2,this->L3,this->d1,this->d2,this->d3,this->N1,this->N2,this->N3,rsmol,1,this->Output_directory);
-	  convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy,dummy3,ftype,rsmol,this->Output_directory);       
-	  //convolve(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy,dummy3,rsmol,false,1); commented by FSK
+      this->File.read_array(fname,dummy);
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-	  for(ULONG i=0;i<N;i++)	  
-	    {
-	      real_prec psilin=dummy3[i];
-	      
-	      if (static_cast<real_prec>(1.+2./3.*psilin) < 0.) 
-		dummy[i]=3.;	    
-	    }
-	}
+      for(ULONG i=0;i<N;i++)
+        dummy[i]-=D3b*MU2[i];
+      fname=string("auxs2");
+      this->File.write_array(fname,dummy);
+#endif // end LPT2B
+
+#ifdef LPT3A
+     fname=string("auxs1");
+     this->File.read_array(fname,dummy);
+     calc_Det(N1,N2,N3,L1,L2,L3,dummy,dummy3);
+     fname=string("auxs2");
+     this->File.read_array(fname,dummy);
+#ifdef _USE_OMP_
+#pragma omp parallel for
 #endif
-      
-      //K o div Psi^2LPT
-      convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy,dummy,ftype,kth,this->Output_directory); 
-      
+     for(ULONG i=0;i<N;i++)
+       dummy[i]-=D3a*dummy3[i];
+#endif // end LPT3A
+    /**/
+#endif // end LPT3B
+
+//#define dPSI_TOT dummy   // this was alrady defined in if(true==zeld), ao that the compilor already saw this #def
+
+    }
+
+  if (true==alpt)
+    {
+#ifdef MUSCLE2LPT
+      vector<real_prec> dummy3(N,0);
+
+      int Nsmol=3;
+      real_prec drsmol=static_cast<real_prec>(8.);
+      real_prec rsmin=this->d1;
+
+      for(int i=0;i<Nsmol;i++)
+        {
+          real_prec rsmol=static_cast<real_prec>(i)*drsmol+rsmin;
+          kernelcomp(this->L1,this->L2,this->L3,this->d1,this->d2,this->d3,this->N1,this->N2,this->N3,rsmol,1,this->Output_directory);
+          convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy,dummy3,ftype,rsmol,this->Output_directory);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+          for(ULONG i=0;i<N;i++)
+            {
+              real_prec psilin=dummy3[i];
+
+              if (static_cast<real_prec>(1.+2./3.*psilin) < 0.)
+                dummy[i]=3.;
+            }
+        }
+#endif
+
+      //Convolution of Kernel K with divergence of (Psi^2LPT)
+      convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy,dummy,ftype,kth,this->Output_directory);
+
+
+
 #undef DELTA_IC
 #define DELTA_IC dummy2
       //      if(false==this->use_ic_file)
@@ -1144,125 +1567,367 @@ void PATCHY::Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool period
       // 	  if(true==this->Normalize_initial_redshift)
       // 	    normalize_df_z_ini(DELTA_IC, DELTA_IC,"delta");
       // 	}
-      
-      /* Psi^tot=K o Psi^2LPT + Psi^SC - K o Psi^SC step by step*/        
+
+      /* Psi^tot=K o Psi^2LPT + Psi^SC - K o Psi^SC step by step*/
 
       // First: div Psi^SC
 
 #define dPSI_SC dummy2
-      
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-      for(ULONG i=0;i<N;i++)	  
-	{
-	  real_prec psilin=-D1*DELTA_IC[i];
-	  real_prec psisc=0.;
+      for(ULONG i=0;i<N;i++)
+        {
+          real_prec psilin=-D1*DELTA_IC[i];
+          real_prec psisc=0.;
           real_prec insidesqrt=static_cast<real_prec>(1.+2./3.*psilin);
-	  if (insidesqrt > 0.)
-	    psisc=static_cast<real_prec>(3.*(sqrt(insidesqrt)-1.));
-	  else
+          if (insidesqrt > 0.)
+            psisc=static_cast<real_prec>(3.*(sqrt(insidesqrt)-1.));
+          else
             psisc=-3.;
-	  
-	  psisc*=static_cast<real_prec>(-1.);
-	  dPSI_SC[i]=psisc;	    
-	}	
+
+          psisc*=static_cast<real_prec>(-1.);
+          dPSI_SC[i]=psisc;
+        }
+
 
       //Second : K o div v^2LPT + div v^SC
 #define K_CONV_dPSI_2LPT dummy
-      
-#ifdef _USE_OMP_      
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-      for(ULONG i=0;i<N;i++)	  
-	dummy[i]=K_CONV_dPSI_2LPT[i]+ dPSI_SC[i];		
+      for(ULONG i=0;i<N;i++)
+        dummy[i]=K_CONV_dPSI_2LPT[i]+ dPSI_SC[i];
 
       //K o div v^SC
 #define K_CONV_dPSI_SC dummy2
       convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dPSI_SC,K_CONV_dPSI_SC,ftype,kth,this->Output_directory);
-      
-		
-#define dPSI_TOT dummy
-      //K o div v^2LPT + div v^SC - K o div v^SC 
+
+//#define dPSI_TOT dummy // this was already defined in the if(true== zeld), so that the compilor already saw taht definition
+      //K o div v^2LPT + div v^SC - K o div v^SC
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-      for(ULONG i=0;i<N;i++)	  
-	dPSI_TOT[i]=dummy[i]- K_CONV_dPSI_SC[i];		      
-      
+      for(ULONG i=0;i<N;i++)
+        dPSI_TOT[i]=dummy[i]- K_CONV_dPSI_SC[i];
+
       if (this->vslength>0.)
-	convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dPSI_TOT,dPSI_TOT,1,this->vslength,this->Output_directory);
-      
+        convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dPSI_TOT,dPSI_TOT,1,this->vslength,this->Output_directory);
+
     } // close parenthesis over the type of sf model. From here dummy represents the Displacement field
-  
-  
+
+/*
+#ifdef _POWER_BOOST_ALPT_
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Applying power-boost to div of Psi");
+#endif
+    vector<real_prec>KERNEL_POWER(Nhalf,1.0);
+    kernelcomp_for_boost(L1,d1,N1,KERNEL_POWER, this->Output_directory);
+    convolvek(N1,dPSI_TOT,KERNEL_POWER,dPSI_TOT);
+    KERNEL_POWER.clear();KERNEL_POWER.shrink_to_fit();
+#endif
+*/
+
+
   // write divergence of the displacement field
-  this->File.write_array(fnameTHETA,dPSI_TOT);
-  
+#ifndef _DISPLACEMENTS_  // / When studying the displacement field, we do not need to write this file 
+  this->File.write_array(this->fnameTHETA,dPSI_TOT);
+#endif
+
   if (this->velbias>0.)
     comp_velbias(dPSI_TOT,dPSI_TOT,false,true);
-  
-  
+
+
   // Now start component by component. This function deasl with the x-component, for
   // it also computes the theta field. The function *B deals with the other two components, reading the theta field
 
+#ifndef _DISPLACEMENTS_
   if (comp==1)   // The other two components are computed in the function compB, for it reads files already computed, saving time.
-
     {
-      
+#endif
+
       /* Psi^tot x-component */
       //      this->So.message_screen("Getting Psi_tot, x-comp");
+
+
 #define DISPLACEMENT dummy2
-      theta2velcomp(dPSI_TOT,DISPLACEMENT,false,false,1);
+      theta2velcomp(dPSI_TOT,DISPLACEMENT,false,false,comp);
       this->So.DONE();
-      
+
+
+
 #ifdef CELLBOUND
-      cellboundcomp(N1,N2,N3,VEL);         
-#endif          	
-      
+      cellboundcomp(N1,N2,N3,VEL);
+#endif
+
 #ifdef PTCURL
       {
         vector<real_prec> dummy3(N,0);
-	
-	fname=string("curl1");
-	this->File.read_array(fname,dummy);
-	
+        fname=string("curl1");
+        this->File.read_array(fname,dummy);
+
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  dummy3[i]=Dcurl*PSI_TOT[i];
-	
+        for(ULONG i=0;i<N;i++)
+          dummy3[i]=Dcurl*PSI_TOT[i];
+
 #ifdef SMOOTHCURL
-	convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
+        convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
 #endif
-#pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  DISPLACEMENT[i]+=dummy3[i];
 
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+        for(ULONG i=0;i<N;i++)
+          DISPLACEMENT[i]+=dummy3[i];
+
+
+        dummy3.clear();dummy3.shrink_to_fit();
       }
-#endif          	
+#endif
 
 
-      this->displace_part_comp(out,DISPLACEMENT,periodic,1);
+#ifdef _DISPLACEMENTS_
+      this->Displacement=DISPLACEMENT;
+#endif
 
-      /// this to write the velocities, ABA: the PSI_TOT in the fwing is the output of comp_vel_bias
-#define VELX_part dummy2
-       theta2velcomp(DISPLACEMENT,VELX_part,false,true,1);
-#ifdef CELLBOUND
-       cellboundcomp(N1,N2,N3,VELX_part);
-#endif  
 
-       //to convert to km/s we take into account that our units are in Mpc/h -> divide by h to have Mpc
+#ifndef _DISPLACEMENTS_
+#ifdef _WRITE_DISPLACEMENTS_
+      string disp_file=this->params._Output_directory()+"Displacement_comp_"+to_string(comp)+"_"+buffsf;
+      this->File.write_array(disp_file, DISPLACEMENT);
+#endif
+#endif
 
-#pragma omp parallel for
-       for (ULONG i=0;i<N;i++)    
-         VELX_part[i]*=cvel/this->s_cosmo_pars.hubble;
+#ifndef _DISPLACEMENTS_ // When studying the displacement field, we do not need to move particles. We only want the displacement
+      this->displace_part_comp(out,DISPLACEMENT,periodic,comp);
+#endif
 
-       this->File.write_array(this->fnameVXpart, VELX_part);
+#ifndef _DISPLACEMENTS_
    }
-  
+#endif
 
-  
+#undef DELTA_IC
+
+  dummy.clear();dummy.shrink_to_fit();
+  dummy2.clear();dummy2.shrink_to_fit();
+
 }
+
+
+
+
+// ===========================================================================================================================================
+// ===========================================================================================================================================
+// ===========================================================================================================================================
+// ===========================================================================================================================================
+// ===========================================================================================================================================
+
+void PATCHY::Lag2Eul_vel(real_prec biasLAG2,real_prec kth,int ftype,bool periodic)
+{
+
+#ifdef _USE_OMP_
+    int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+#ifdef _FULL_VERBOSE_
+  this->So.message_screen("Getting particle velocities");
+#endif
+  real_prec D1=this->s_cosmo_info.growth_factor;
+  real_prec D2=this->s_cosmo_info.D2;
+  real_prec f1=this->s_cosmo_info.growth_index;
+  real_prec f2=this->s_cosmo_info.growth_index2;
+  real_prec Dcurl=static_cast<real_prec>(-1./7.)*D1*D1*D1;
+  real_prec cvel=num_1/(cgs_km/cgs_Mpc);
+  real_prec rsmolC=this->d1;//static_cast<real_prec>(1.0);//kth
+
+  kernelcomp(this->L1, this->L2,this->L3,this->d1,this->d2,this->d3,this->N1,this->N2,this->N3,rsmolC,ftype,this->Output_directory);
+
+  string fname;
+
+  bool zeld=false;
+  bool twolpt=false;
+  bool alpt=false;
+
+  switch (this->sfmodel)
+    {
+    case 1:
+      zeld=true;
+#ifdef _FULL_VERBOSE_
+      So.message_screen("Using Zel'dovich");
+#endif
+      break;
+    case 2:
+      twolpt=true;
+#ifdef _FULL_VERBOSE_
+      So.message_screen("Using 2LPT");
+#endif
+      break;
+    case 3:
+      alpt=true;
+#ifdef _FULL_VERBOSE_
+      So.message_screen("Using ALPT");
+#endif
+      break;
+    }
+
+  ULONG N=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3);
+  ULONG Nhalf=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3/2+1);
+
+  vector<real_prec>dummy2(N,0);
+  vector<real_prec>dummy(N,0);
+
+  // Here we read the initial overdenisty field. I add *dat, otherwise it will read the white noise (perhaps we can change names to avoid this confusion)
+
+#define DELTA_IC dummy
+#define POTENTIAL dummy
+
+  this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
+
+  if (true==zeld)
+    {
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        DELTA_IC[i]*=D1;
+    }
+
+  if (true==twolpt || true==alpt)
+    {
+      // delta(1)-> Phi(1), needed to obtaine delta(2)
+      PoissonSolver(this->L1,this->N1,DELTA_IC,POTENTIAL);
+
+
+      // Phi(1)  -> delta(2)
+#define DELTA_TWO dummy2
+      ifstream inStream;
+      string ffnn=this->fname2LPTTERM+".dat";
+      inStream.open(ffnn.data());
+
+      if (false==inStream.is_open())
+        {
+          calc_twolptterm(N1,N2,N3,L1,L2,L3,POTENTIAL,DELTA_TWO);
+          this->File.write_array(this->fname2LPTTERM,DELTA_TWO);
+        }
+      else
+        {
+          fname=this->fname2LPTTERM+".dat";
+          this->File.read_array(fname,DELTA_TWO);
+        }
+
+        this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
+
+
+#define PSI_LPT dummy
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        PSI_LPT[i]=D1*DELTA_IC[i]-D2*(f2/f2)*DELTA_TWO[i];
+        //attention!!! The original form for the velocity field has the form f1HaD1ð - f2HaD2ð2. Here we only compute (D1ð - f2D2ð2/f1). The multiplicative factor is added in the
+        // function theta2velcomp(dPSI_TOT,VELX_part,false,true,1) with true, such that inside that function the term f1(z)H(z)a is added.
+        // The term Vsc has also a multiplicative factor f1(z)H(z)a,
+        // The term D1ð - D2ð2 has units of Mpc/h, such that when multiplying it by H /(f and a are dimensionless) we obtain units of km/s.
+
+    }
+
+  if (true==alpt)
+    {
+      //Convolution of Kernel K with divergence of (Psi^2LPT)
+      convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,PSI_LPT,PSI_LPT,ftype,kth,this->Output_directory);
+
+#undef DELTA_IC
+#define DELTA_IC dummy2
+      this->File.read_array(this->fnameICDELTA+".dat",DELTA_IC);
+
+      /* Psi^tot=K o Psi^2LPT + Psi^SC - K o Psi^SC step by step*/
+      // First: div Psi^SC
+
+#define dPSI_SC dummy2
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        {
+          if(D1*DELTA_IC[i] <3./2.)
+            dPSI_SC[i]=D1*DELTA_IC[i]/static_cast<real_prec>(sqrt(1.-(2./3.)*D1*DELTA_IC[i]));
+          else
+            dPSI_SC[i]=0.0;
+          }
+
+      //Second : K o div v^2LPT + div v^SC
+#define K_CONV_dPSI_2LPT dummy
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        dummy[i]=K_CONV_dPSI_2LPT[i] + dPSI_SC[i]; // dummy+=dummy2
+
+      //K o div v^SC
+#define K_CONV_dPSI_SC dummy2
+      convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dPSI_SC,K_CONV_dPSI_SC,ftype,kth,this->Output_directory);
+
+
+#define dPSI_TOT dummy
+      //K o div v^2LPT + div v^SC - K o div v^SC
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        dPSI_TOT[i]=dummy[i]- K_CONV_dPSI_SC[i];  //dummy-=dummy2
+
+
+      if (this->vslength>0.)
+        convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dPSI_TOT,dPSI_TOT,1,this->vslength,this->Output_directory);
+
+    } // close parenthesis over the type of sf model. From here dummy represents the Displacement field
+
+
+  // write divergence of the displacement field
+ // this->File.write_array(this->fnameTHETA,dPSI_TOT);
+
+  if (this->velbias>0.)
+    comp_velbias(dPSI_TOT,dPSI_TOT,false,true);
+
+
+  // Now start component by component. This function deasl with the x-component, for
+  // it also computes the theta field. The function *B deals with the other two components, reading the theta field
+
+
+  /* VEL x-component */
+  //      this->So.message_screen("Getting Psi_tot, x-comp");
+#define VELX_part dummy2
+  theta2velcomp(dPSI_TOT,VELX_part,false,true,1);
+  this->File.write_array(this->fnameVXpart, VELX_part);
+#undef VELX_part
+
+  /* VEL y-component */
+  //      this->So.message_screen("Getting Psi_tot, x-comp");
+#define VELY_part dummy2
+  theta2velcomp(dPSI_TOT,VELY_part,false,true,2);
+  this->File.write_array(this->fnameVYpart, VELY_part);
+#undef VELY_part
+
+  /* VEL z-component */
+  //      this->So.message_screen("Getting Vel, x-comp");
+#define VELZ_part dummy2
+  theta2velcomp(dPSI_TOT,VELZ_part,false,true,3);
+  this->File.write_array(this->fnameVZpart, VELZ_part);
+#undef VELZ_part
+  this->So.DONE();
+
+  dummy.clear();dummy.shrink_to_fit();
+  dummy2.clear();dummy2.shrink_to_fit();
+
+
+
+}
+
+
 
 // ===========================================================================================================================================
 // ===========================================================================================================================================
@@ -1274,128 +1939,140 @@ void PATCHY::Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool period
 void PATCHY::Lag2Eul_compB(real_prec kth,int ftype,bool periodic,vector<real_prec> &out,int comp)
 {
 
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Going Lagrangian to Eulerian, ", comp);
+#endif
 
-
+#ifdef _USE_OMP_
+       int NTHREADS=_NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
   real_prec D1=this->s_cosmo_info.growth_factor;
   real_prec D2=this->s_cosmo_info.D2;
   real_prec Dcurl=static_cast<real_prec>(-1./7.)*D1*D1*D1;
   real_prec D3a=static_cast<real_prec>(-1./3.)*D1*D1*D1;
   real_prec D3b=static_cast<real_prec>(10./21.)*D1*D1*D1;
-  
+
   real_prec cvel=num_1/(cgs_km/cgs_Mpc);
-  
+
   real_prec rsmolC=this->d1;//static_cast<real_prec>(1.0);//kth
-  
+
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
-  
+
   vector<real_prec>  dummy(N,0), dummy2(N,0);
-  
   string fname;
 
   this->File.read_array(this->fnameTHETA+".dat",dummy);
-  
+
   if (this->velbias>0.)
     comp_velbias(dummy,dummy,false,true);
-  
+
   if (comp==2)
     {
       /* Psi^tot y-component */
-      theta2velcomp(dummy,dummy2,false,false,2);
+#define DISPLACEMENT2 dummy2
+
+      this->theta2velcomp(dummy,DISPLACEMENT2,false,false,comp);
 #ifdef CELLBOUND
-      cellboundcomp(N1,N2,N3,dummy2);         
-#endif       
-      
+      cellboundcomp(N1,N2,N3,dummy2);
+#endif
+
 #ifdef PTCURL
       {
         vector<real_prec> dummy3(N,0);
-	
-	fname=string("curl2");
-	
-	this->File.read_array(fname,dummy);
-	
+
+        fname=string("curl2");
+
+        this->File.read_array(fname,dummy);
+
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  dummy3[i]=Dcurl*dummy[i];
-	
-	
+        for(ULONG i=0;i<N;i++)
+          dummy3[i]=Dcurl*dummy[i];
+
+
 #ifdef SMOOTHCURL
-	convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
+        convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
 #endif
 
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  dummy2[i]+=dummy3[i];
+        for(ULONG i=0;i<N;i++)
+          dummy2[i]+=dummy3[i];
       }
-#endif          	
-      
-      this->displace_part_comp(out,dummy2,periodic,2);
-      
-      
-      /// this to write the velocities, ABA: the PSI_TOT in the following is the output of comp_vel_bias
-#define VELY_part dummy2
-      theta2velcomp(dummy,VELY_part,false,true,1);
-#ifdef CELLBOUND
-      cellboundcomp(N1,N2,N3,VELY_part);
 #endif
-      //to convert to km/s we take into account that our units are in Mpc/h -> divide by h to have Mpc
-#pragma omp parallel for
-      for (ULONG i=0;i<N;i++)
-	VELY_part[i]*=cvel/this->s_cosmo_pars.hubble;
-      
-      this->File.write_array(this->fnameVYpart, VELY_part);
-      
-      
+
+#ifndef _DISPLACEMENTS_
+      this->displace_part_comp(out,DISPLACEMENT2,periodic,comp);
+#endif
+
+
+#ifdef _DISPLACEMENTS_
+      this->Displacement=DISPLACEMENT2;
+#endif
+
+#ifdef _WRITE_DISPLACEMENTS_
+      string disp_file=this->params._Output_directory()+"Displacement_comp_"+to_string(comp)+"_"+buffsf;
+      this->File.write_array(disp_file, DISPLACEMENT2);
+#endif
+
+
+
     }
-  
-  if (comp==3)
+
+  if (comp==3) // esto sobra, ya usando comp en todas partes se hace el trabajo si la función es llamada para cada componente por separado
     {
       /* Psi^tot z-component */
-      theta2velcomp(dummy,dummy2,false,false,3);
+#define DISPLACEMENT3 dummy2
+          theta2velcomp(dummy,DISPLACEMENT3,false,false,3);
 #ifdef CELLBOUND
-      cellboundcomp(N1,N2,N3,dummy2);         
-#endif          	
-      
+      cellboundcomp(N1,N2,N3,dummy2);
+#endif
+
 #ifdef PTCURL
       {
         vector<real_prec> dummy3(N,0);
-      	
-	fname=string("curl3");
-	this->File.read_array(fname,dummy);
-	
+
+        fname=string("curl3");
+        this->File.read_array(fname,dummy);
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  dummy3[i]=Dcurl*dummy[i];
-	
+#endif
+        for(ULONG i=0;i<N;i++)
+          dummy3[i]=Dcurl*dummy[i];
+
 #ifdef SMOOTHCURL
-	convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
+        convcomp(L1,L2,L3,d1,d2,d3,N1,N2,N3,dummy3,dummy3,ftype,rsmolC,this->Output_directory);
 #endif
 
 #pragma omp parallel for
-	for(ULONG i=0;i<N;i++)
-	  dummy2[i]+=dummy3[i];
+        for(ULONG i=0;i<N;i++)
+          dummy2[i]+=dummy3[i];
       }
-#endif          	
-      
-      this->displace_part_comp(out,dummy2,periodic,3);
-      
-      
-      /// this to write the velocities, ABA: the PSI_TOT in the following is the output of comp_vel_bias
-#define VELZ_part dummy2
-      theta2velcomp(dummy,VELZ_part,false,true,1);
-#ifdef CELLBOUND
-      cellboundcomp(N1,N2,N3,VELZ_part);
 #endif
-      //to convert to km/s we take into account that our units are in Mpc/h -> divide by h to have Mpc
-#pragma omp parallel for
-      for (ULONG i=0;i<N;i++)
-	VELZ_part[i]*=cvel/this->s_cosmo_pars.hubble;
-      
-      this->File.write_array(this->fnameVZpart, VELZ_part);
-      
-      
+
+#ifndef _DISPLACEMENTS_
+      this->displace_part_comp(out,DISPLACEMENT3,periodic,comp);
+
+
+#endif
+
+
+
+#ifdef _DISPLACEMENTS_
+      this->Displacement=DISPLACEMENT3;
+#endif
     }
- 
+
+
+#ifdef _WRITE_DISPLACEMENTS_
+      string disp_file=this->params._Output_directory()+"Displacement_comp_"+to_string(comp)+"_"+buffsf;
+      this->File.write_array(disp_file, DISPLACEMENT3);
+#endif
+
+
+  dummy.clear();dummy.shrink_to_fit();
+  dummy2.clear();dummy2.shrink_to_fit();
+
 }
 
 
@@ -1422,19 +2099,19 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
   void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng * gBaseRand, int ir)
   {
 #endif
-    
-    
+
+
     this->So.message_screen("Assigning position to tracers using DM particles:");
     cout<<endl;
-    
+
     real_prec redshift=this->s_cosmo_pars.cosmological_redshift;
-    
+
     ULONG N=this->NGRID;
-    
+
   real_prec min1=this->xllc;
   real_prec min2=this->yllc;
   real_prec min3=this->zllc;
-  
+
   real_prec ascale = 1./(1+redshift);
   real_prec Omega_L=this->s_cosmo_pars.Om_vac;
   real_prec Omega_M=this->s_cosmo_pars.Om_matter;
@@ -1467,108 +2144,114 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
   ULONG NOBJt=0;
   //4 perform RSD
   {
-    
+
     {
       vector<real_prec> posx(NLL,0),posy(NLL,0),posz(NLL,0);
       {
-	fname=this->fnamePOSX;
-	this->File.read_array(fname+".dat",posx);
+        fname=this->fnamePOSX;
+        this->File.read_array(fname+".dat",posx);
       }
       {
-	fname=this->fnamePOSY;
-	this->File.read_array(fname+".dat",posy);
+        fname=this->fnamePOSY;
+        this->File.read_array(fname+".dat",posy);
       }
       {
-	fname=this->fnamePOSZ;
-	this->File.read_array(fname+".dat",posz);
+        fname=this->fnamePOSZ;
+        this->File.read_array(fname+".dat",posz);
       }
-      
+
       //      getDensity_NGP(this->N1,this->N2,this->N3,this->L1,this->L2,this->L3,this->d1,this->d2,this->d3,min1,min2,min3,posx,posy,posz,dummy2,NLL,dummy2,false);
-      
+
       int bmax=100;
       char buffc[bmax];
       string buffchunk;
-      
+
       vector<real_prec> dummychunk(NLLchunk*NNCH,0);
-      
+
       //      fname=string("NG")+stradd;
 
 #define MOCK_DEN_FIELD dummy2
       this->File.read_array(fnameMOCK+".dat",MOCK_DEN_FIELD);
-      
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
       for(ULONG i=0;i<NLLchunk*NNCH;i++)
-	dummychunk[i]=0.0;
-      
-#pragma omp parallel for
-      for(ULONG i=0;i<NLL;i++)
-	dummy[i]=0.0;
-      
-      for(ULONG mm=0;mm<Nchunk;mm++)
-	{
-	  sprintf(buffc,"chunk%d",static_cast<int>(mm+1));
-	  buffchunk=static_cast<string>(buffc);
-	  
-	  for(ULONG ll=NLLchunk*(mm);ll<NLLchunk*(1+mm);ll++)
-	    {
-	      real_prec x=posx[ll];
-	      real_prec y=posy[ll];
-	      real_prec z=posz[ll];
-	      
-	      ULONG ix = static_cast<ULONG>(floor((x)/this->d1));
-	      ULONG iy = static_cast<ULONG>(floor((y)/this->d2));
-	      ULONG iz = static_cast<ULONG>(floor((z)/this->d3));
-	      
-	      ix = static_cast<ULONG>(fmod(real_prec(ix),real_prec(N1)));
-	      iy = static_cast<ULONG>(fmod(real_prec(iy),real_prec(N2)));
-	      iz = static_cast<ULONG>(fmod(real_prec(iz),real_prec(N3)));
-	      
-	      if(ix >= this->N1)
-		ix -= this->N1;
-	      if(iy >= this->N2)
-		iy -= this->N2;
-	      if(iz >= this->N3)
-		iz -= this->N3;
-	      
-	      if(ix < 0)
-		ix += this->N1;
-	      if(iy < 0)
-		iy += this->N2;
-	      if(iz < 0)
-		iz += this->N3;
-	      
-	      ULONG lc=index_3d(ix,iy,iz,this->N2, this->N3);//iz+N3*(iy+N2*ix);
-	      
-	      ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));
-	      ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
-	      
-	      ULONG ichunklcc=static_cast<ULONG>(floor(lc/NLLchunk));
-	      ULONG llc=static_cast<ULONG>(floor(lc-ichunklcc*NLLchunk));
-	      
-	      if (static_cast<int>(floor(MOCK_DEN_FIELD[lc]))>0 && static_cast<int>(floor(dummy[lc])) < static_cast<int>(floor(MOCK_DEN_FIELD[lc])))
-		{
-		  dummychunk[lolc]=x;
-		  dummy[lc]+=num_1;
-		}
-	      else
-		dummychunk[lolc]=-num_1;
-	    }
-	  {
-	    
-	    fname=fnamePOSXORD+static_cast<string>(buffchunk);
-	    this->File.write_array(fname,dummychunk);
-	  }
-	}
-      
-      
-  /* order simulated data in grid  */
+        dummychunk[i]=0.0;
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<NLLchunk*NNCH;i++)
+#endif
+      for(ULONG i=0;i<NLL;i++)
+        dummy[i]=0.0;
+
+      for(ULONG mm=0;mm<Nchunk;mm++)
+        {
+          sprintf(buffc,"chunk%d",static_cast<int>(mm+1));
+          buffchunk=static_cast<string>(buffc);
+
+          for(ULONG ll=NLLchunk*(mm);ll<NLLchunk*(1+mm);ll++)
+            {
+              real_prec x=posx[ll];
+              real_prec y=posy[ll];
+              real_prec z=posz[ll];
+
+              ULONG ix = static_cast<ULONG>(floor((x)/this->d1));
+              ULONG iy = static_cast<ULONG>(floor((y)/this->d2));
+              ULONG iz = static_cast<ULONG>(floor((z)/this->d3));
+
+              ix = static_cast<ULONG>(fmod(real_prec(ix),real_prec(N1)));
+              iy = static_cast<ULONG>(fmod(real_prec(iy),real_prec(N2)));
+              iz = static_cast<ULONG>(fmod(real_prec(iz),real_prec(N3)));
+
+              if(ix >= this->N1)
+                ix -= this->N1;
+              if(iy >= this->N2)
+                iy -= this->N2;
+              if(iz >= this->N3)
+                iz -= this->N3;
+
+              if(ix < 0)
+                ix += this->N1;
+              if(iy < 0)
+                iy += this->N2;
+              if(iz < 0)
+                iz += this->N3;
+
+              ULONG lc=index_3d(ix,iy,iz,this->N2, this->N3);//iz+N3*(iy+N2*ix);
+
+              ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));
+              ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
+
+              ULONG ichunklcc=static_cast<ULONG>(floor(lc/NLLchunk));
+              ULONG llc=static_cast<ULONG>(floor(lc-ichunklcc*NLLchunk));
+
+              if (static_cast<int>(floor(MOCK_DEN_FIELD[lc]))>0 && static_cast<int>(floor(dummy[lc])) < static_cast<int>(floor(MOCK_DEN_FIELD[lc])))
+                {
+                  dummychunk[lolc]=x;
+                  dummy[lc]+=num_1;
+                }
+              else
+                dummychunk[lolc]=-num_1;
+            }
+          {
+
+            fname=fnamePOSXORD+static_cast<string>(buffchunk);
+            this->File.write_array(fname,dummychunk);
+          }
+        }
+
+
+  /* order simulated data in grid  */
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<NLLchunk*NNCH;i++)
     dummychunk[i]=0.0;
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<NLL;i++)
+#endif
+      for(ULONG i=0;i<NLL;i++)
     dummy[i]=0.0;
 
   for(ULONG mm=0;mm<Nchunk;mm++)
@@ -1621,19 +2304,22 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
             dummychunk[lolc]=-num_1;
         }
       {
-	fname=fnamePOSYORD+static_cast<string>(buffchunk);
-	this->File.write_array(fname,dummychunk);
+        fname=fnamePOSYORD+static_cast<string>(buffchunk);
+        this->File.write_array(fname,dummychunk);
       }
     }
-  
-  /* order simulated data in grid  */
 
+  /* order simulated data in grid  */
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<NLLchunk*NNCH;i++)
     dummychunk[i]=0.0;
 
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<NLL;i++)
     dummy[i]=0.0;
 
@@ -1713,12 +2399,12 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
     outStream0.open(outputFileName0.data());
     assert(outStream0.is_open());
     this->So.message_screen("Writting in file ", outputFileName0);
-    
+
     for(ULONG i=0;i<this->N1;i++)
       for(ULONG j=0;j<this->N2;j++)
         for(ULONG k=0;k<this->N3;k++)
           {
-	    ULONG ind = index_3d(i,j,k,N2,N3);
+            ULONG ind = index_3d(i,j,k,N2,N3);
             if (MOCK_DEN_FIELD[ind]>0.)
               outStream0<<MOCK_DEN_FIELD[ind]<<" "<<ind<<endl;
           }
@@ -1745,22 +2431,22 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
     outStream.open(outputFileName.data());
     assert(outStream.is_open());
     this->So.message_screen("Ready to write in file ", outputFileName);
-    
+
 
     int bmax_res=100;
     char buffer_res[bmax_res];
-    
+
     {
       vector<real_prec> dummychunk1(NLLchunk*NNCH,0), dummychunk2(NLLchunk*NNCH,0), dummychunk3(NLLchunk*NNCH,0);
-      
+
       ULONG ichunkold=1;
-      
+
       int bmax=100;
       char buffc[bmax];
       string buffchunk;
-      
+
       ULONG keyold=0;
-      
+
 #ifdef OMPPARRANRSD
       int nt=omp_get_max_threads();
   omp_set_num_threads(nt);
@@ -1773,25 +2459,25 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
       {
 #else
        for(ULONG mm=0;mm<Nchunk;mm++)
-	  {
+          {
 #endif
-	    sprintf(buffer_res,"chunk%d",static_cast<int>(mm+1));
-	    
-	    {
-	      string fname_res1=fnamePOSXORD;
-	      string FileName_res1=string(fname_res1)+static_cast<string>(buffer_res)+string(".dat");
-	      this->File.read_array(FileName_res1,dummychunk1);
-	    }
-	    {
-	      string fname_res2=fnamePOSYORD;
-	      string FileName_res2=string(fname_res2)+static_cast<string>(buffer_res)+string(".dat");
-	      this->File.read_array(FileName_res2,dummychunk2);
-	    }
-	    {
-	      string fname_res3=fnamePOSZORD;
-	      string FileName_res3=string(fname_res3)+static_cast<string>(buffer_res)+string(".dat");
-	      this->File.read_array(FileName_res3,dummychunk3);
-	    }
+            sprintf(buffer_res,"chunk%d",static_cast<int>(mm+1));
+
+            {
+              string fname_res1=fnamePOSXORD;
+              string FileName_res1=string(fname_res1)+static_cast<string>(buffer_res)+string(".dat");
+              this->File.read_array(FileName_res1,dummychunk1);
+            }
+            {
+              string fname_res2=fnamePOSYORD;
+              string FileName_res2=string(fname_res2)+static_cast<string>(buffer_res)+string(".dat");
+              this->File.read_array(FileName_res2,dummychunk2);
+            }
+            {
+              string fname_res3=fnamePOSZORD;
+              string FileName_res3=string(fname_res3)+static_cast<string>(buffer_res)+string(".dat");
+              this->File.read_array(FileName_res3,dummychunk3);
+            }
 
         for(ULONG jj=NLLchunk*(mm);jj<NLLchunk*(1+mm);jj++)
           {
@@ -1856,7 +2542,7 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
     this->File.read_array(fname,dummy2);
 
 #else
-    
+
     string outputFileName0=this->Output_directory+string("RANHALOS")+stradd+string(".txt");
 
     ifstream inStream0;
@@ -1898,8 +2584,8 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
         for (ULONG k=0;k<N3;k++)
           {
 #endif
-	    //            ULONG lc=k+N3*(j+N2*i);
-	    ULONG lc= index_3d(i,j,k,N2,N3);
+            //            ULONG lc=k+N3*(j+N2*i);
+            ULONG lc= index_3d(i,j,k,N2,N3);
 #ifdef SAVEMEM
             if (lc==dumRHind[count])
             //if (i==static_cast<ULONG>(dumi[count]) && j==static_cast<ULONG>(dumj[count]) && k==static_cast<ULONG>(dumk[count]) )
@@ -1976,13 +2662,13 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
 
    outStream.close();
   }
-
+#ifdef _FULL_VERBOSE_
   this->So.message_screen("Number of tracers = ",NOBJt);
-
+#endif
 }
 
 
-   
+
 
 // ==================================================================================================================================================
 // ==================================================================================================================================================
@@ -1994,135 +2680,161 @@ void PATCHY::makecat(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rn
 
 
 
-void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &vei, bool zeropad, bool norm, int comp)
- {  
+void PATCHY::theta2velcomp(vector<real_prec> &Theta, vector<real_prec> &vei, bool zeropad, bool norm, int comp)
+ {
+    // theta = nabla V. Getting V given theta is the main goal.
+    // For norm=false, this function solves for the Displacement(vei) from the Divergencve of the Displacement (nabla delta) in order to obtain the component comp of the displacement.
+    // For norm=true, this function solves for the Displacement from the Divergencve of the Displacement and multiply for
+    // the factor fHa in order to get the component comp of te velocity filed.
+    //
 
-
-    //This function solves the velocicy field V from the overdensity field ð, using Nabla V = -ð
    ULONG N=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3);
-   
+
    real_prec Lzp1=this->L1;
    real_prec Lzp2=this->L2;
    real_prec Lzp3=this->L3;
-   
+
    ULONG Nzp1=this->N1;
    ULONG Nzp2=this->N2;
    ULONG Nzp3=this->N3;
-   
+
    if (zeropad==true)
      {
        Lzp1=L1*num_2;
        Lzp2=L2*num_2;
        Lzp3=L3*num_2;
-       
+
        Nzp1=this->N1*2;
        Nzp2=this->N2*2;
        Nzp3=this->N3*2;
      }
-   
-   
+
+
    real_prec cpecvel=1.;
+   if(true==norm)
+     cpecvel=this->s_cosmo_info.growth_index*this->s_cosmo_info.Hubble_parameter/(1.+this->s_cosmo_pars.cosmological_redshift);
+   // f(z)*H(z)/(1+z). The scale factor is used such that we deal with proper velocities
 
-   if (norm==true)
-     cpecvel=this->s_cosmo_info.growth_index*this->s_cosmo_pars.Hubble/(1.+this->s_cosmo_pars.cosmological_redshift);
-   
-   
    ULONG Nhalf=static_cast<ULONG>(this->N1)*static_cast<ULONG>(this->N2)*static_cast<ULONG>(this->N3/2+1);
-   
-   complex_prec *delta_f= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#ifdef DOUBLE_PREC
+   complex_prec *Theta_f= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
    complex_prec *veli= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-   
-   do_fftw_r2c(N1,delta,delta_f);
+#else
+   complex_prec *Theta_f= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+   complex_prec *veli= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
+   // Fourier transform of the nabla X
+   do_fftw_r2c(N1,Theta,Theta_f);
+
+  vector<real_prec> coords(N1,0);
+  real_prec deltak=2.*M_PI/this->params._Lbox();
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<N1 ;++i)
+    coords[i]=deltak*(i<=N1/2? static_cast<real_prec>(i): -static_cast<real_prec>(N1-i));
+
+  // Get X
 
 
-   // THisn function was originally using switch to differentiate amnong comp=1, 2, 3, but it only affects the argument of linearvel3d directly, so I just put comp directly there.  The original is commented below, with switch outside loops
+/*real_prec kstar2=0;
+  // This par tis commeted, for the convolution is to be made at Bam.cpp
+if(true==this->params._use_vel_kernel())
+  kstar2=pow(this->params._slengthv(),2.);  
+*/
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
-#endif  
+#endif
    for (ULONG i=0;i<N1;i++)
      for (ULONG j=0;j<N2;j++)
        for (ULONG k=0;k<N3/2+1;k++)
-	 {
-	   real_prec kx=calc_kx(i,Lzp1,Nzp1);
-	   real_prec ky=calc_ky(j,Lzp2,Nzp2);
-	   real_prec kz=calc_kz(k,Lzp3,Nzp3);
-	   ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
-           veli[index][REAL]=cpecvel*linearvel3d(comp, kx, ky, kz, -delta_f[index][IMAG]);
-           veli[index][IMAG]=cpecvel*linearvel3d(comp, kx, ky, kz, delta_f[index][REAL]);
-	 }	  	  
- 
-   
+         {
+           real_prec kx=calc_kx(i,Lzp1,Nzp1);
+           real_prec ky=calc_ky(j,Lzp2,Nzp2);
+           real_prec kz=calc_kz(k,Lzp3,Nzp3);
+           real_prec kmod2=pow(coords[i],2)+pow(coords[j],2)+pow(coords[k],2);  // Get k**2
+           ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
+           real_prec vel_kernel = 1.0;//1./(1.+kmod2*kstar2);
+           veli[index][REAL]=cpecvel*linearvel3d(comp, kx, ky, kz, -Theta_f[index][IMAG]*vel_kernel);
+           veli[index][IMAG]=cpecvel*linearvel3d(comp, kx, ky, kz, Theta_f[index][REAL]*vel_kernel);
+         }
+
    /*
-     
+
      switch(comp)
      {
      case(1):
        {
 #ifdef _USE_OMP_
 #pragma omp parallel for
-#endif  
-	 for (ULONG i=0;i<N1;i++)
-	   for (ULONG j=0;j<N2;j++)
-	     for (ULONG k=0;k<N3/2+1;k++)
-	       {
-		 real_prec kx=calc_kx(i,Lzp1,Nzp1);
-		 real_prec ky=calc_ky(j,Lzp2,Nzp2);
-		 real_prec kz=calc_kz(k,Lzp3,Nzp3);
-		 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
-		 veli[index][REAL]=cpecvel*linearvel3d(1, kx, ky, kz, -phi[index][IMAG]);
-		 veli[index][IMAG]=cpecvel*linearvel3d(1, kx, ky, kz, phi[index][REAL]);
-	       }	  	  
+#endif
+         for (ULONG i=0;i<N1;i++)
+           for (ULONG j=0;j<N2;j++)
+             for (ULONG k=0;k<N3/2+1;k++)
+               {
+                 real_prec kx=calc_kx(i,Lzp1,Nzp1);
+                 real_prec ky=calc_ky(j,Lzp2,Nzp2);
+                 real_prec kz=calc_kz(k,Lzp3,Nzp3);
+                 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
+                 veli[index][REAL]=cpecvel*linearvel3d(1, kx, ky, kz, -phi[index][IMAG]);
+                 veli[index][IMAG]=cpecvel*linearvel3d(1, kx, ky, kz, phi[index][REAL]);
+               }
        }
        break;
      case(2):
        {
 #ifdef _USE_OMP_
 #pragma omp parallel for
-#endif  
-	 for (ULONG i=0;i<N1;i++)
-	   for (ULONG j=0;j<N2;j++)
-	     for (ULONG k=0;k<N3/2+1;k++)
-	       {
-		 real_prec kx=calc_kx(i,Lzp1,Nzp1);
-		 real_prec ky=calc_ky(j,Lzp2,Nzp2);
-		 real_prec kz=calc_kz(k,Lzp3,Nzp3);
-		 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
-		 veli[index][REAL]=cpecvel*linearvel3d(2, kx, ky, kz, -phi[index][IMAG]);
-		 veli[index][IMAG]=cpecvel*linearvel3d(2, kx, ky, kz, phi[index][REAL]);
-	       }	  	  
+#endif
+         for (ULONG i=0;i<N1;i++)
+           for (ULONG j=0;j<N2;j++)
+             for (ULONG k=0;k<N3/2+1;k++)
+               {
+                 real_prec kx=calc_kx(i,Lzp1,Nzp1);
+                 real_prec ky=calc_ky(j,Lzp2,Nzp2);
+                 real_prec kz=calc_kz(k,Lzp3,Nzp3);
+                 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
+                 veli[index][REAL]=cpecvel*linearvel3d(2, kx, ky, kz, -phi[index][IMAG]);
+                 veli[index][IMAG]=cpecvel*linearvel3d(2, kx, ky, kz, phi[index][REAL]);
+               }
        }
        break;
      case(3):
        {
-	 
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
-#endif  
-	 for (ULONG i=0;i<N1;i++)
-	   for (ULONG j=0;j<N2;j++)
-	     for (ULONG k=0;k<N3/2+1;k++)
-	       {
-		 real_prec kx=calc_kx(i,Lzp1,Nzp1);
-		 real_prec ky=calc_ky(j,Lzp2,Nzp2);
-		 real_prec kz=calc_kz(k,Lzp3,Nzp3);
-		 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
-		 veli[index][REAL]=cpecvel*linearvel3d(3, kx, ky, kz, -phi[index][IMAG]);
-		 veli[index][IMAG]=cpecvel*linearvel3d(3, kx, ky, kz, phi[index][REAL]);
-	       }    
+#endif
+         for (ULONG i=0;i<N1;i++)
+           for (ULONG j=0;j<N2;j++)
+             for (ULONG k=0;k<N3/2+1;k++)
+               {
+                 real_prec kx=calc_kx(i,Lzp1,Nzp1);
+                 real_prec ky=calc_ky(j,Lzp2,Nzp2);
+                 real_prec kz=calc_kz(k,Lzp3,Nzp3);
+                 ULONG index=index_3d(i,j,k,this->N2,this->N3/2+1);
+                 veli[index][REAL]=cpecvel*linearvel3d(3, kx, ky, kz, -phi[index][IMAG]);
+                 veli[index][IMAG]=cpecvel*linearvel3d(3, kx, ky, kz, phi[index][REAL]);
+               }
        }
      }
 
    */
-   
-   
-   
+
+
+
    do_fftw_c2r(this->N1,veli,vei);
+#ifdef DOUBLE_PREC
    fftw_free(veli);
-   fftw_free(delta_f);
-   
+   fftw_free(Theta_f);
+#else
+   fftwf_free(veli);
+   fftwf_free(Theta_f);
+#endif
  }
- 
+
 
 
 
@@ -2137,23 +2849,23 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 
  void PATCHY::read_tabulated_power()
 {
-  
+
   ULONG N=this->NGRID;
   int NTHREADS = omp_get_max_threads();
-  vector<real_prec> Power3D(N,0);  
-  
+  vector<real_prec> Power3D(N,0);
+
   //read file input Pk
-  
+
   real_prec Vol=L1*L2*L3;
   real_prec CONT_NORM=Vol;
   real_prec Norm=1.0;
 
-  
-#ifdef	  FOURIER_DEF_1 
+
+#ifdef	  FOURIER_DEF_1
   Norm=static_cast<real_prec>(1./CONT_NORM);
 #endif
-  
-#ifdef	  FOURIER_DEF_2 
+
+#ifdef	  FOURIER_DEF_2
   Norm=static_cast<real_prec>(static_cast<real_prec>(N)*static_cast<real_prec>(N)/CONT_NORM);
 #endif
 
@@ -2163,80 +2875,83 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
   vector<gsl_real> kPS(nbinPS,0);
   vector<gsl_real> powPS(nbinPS,0);
 
+
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<nbinPS;i++)            
+  for(ULONG i=0;i<nbinPS;i++)
     {
       kPS[i]=static_cast<real_prec>(prop[i*NCOLS]);
-      powPS[i]=static_cast<real_prec>(prop[1+i*NCOLS]);
+      powPS[i]=static_cast<real_prec>(prop[1+i*NCOLS]) / (this->growth_ini*this->growth_ini);
     }
   prop.clear();
   prop.shrink_to_fit();
-   
+
 
   this->So.message_screen("Interpolating initial P(k) on the Fourier grid...");
-  
-  
+  this->So.message_screen("Growth factor at initial redshift in input P(K)=", this->growth_ini);
+
+
   gsl_interp_accel *acc = gsl_interp_accel_alloc ();
   gsl_spline *spline    = gsl_spline_alloc (gsl_interp_linear, kPS.size());
   gsl_spline_init (spline, &kPS[0], &powPS[0], kPS.size());
-  
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<this->N1;i++)	       
-    for(ULONG j=0;j<this->N2;j++)			
+  for(ULONG i=0;i<this->N1;i++)
+    for(ULONG j=0;j<this->N2;j++)
       for(ULONG k=0;k<this->N3;k++)
-	{
-	  real_prec k2=k_squared(i,j,k,this->L1,this->L2,this->L3,this->N1,this->N2,this->N3);
-	  real_prec ktot=sqrt(k2);
-	  ULONG iid=index_3d(i,j,k,N2,N3);
-	  if(i==0 && j==0 && k==0) 
-	    Power3D[iid]=0.;
-	  else
+        {
+          real_prec k2=k_squared(i,j,k,this->L1,this->L2,this->L3,this->N1,this->N2,this->N3);
+          real_prec ktot=sqrt(k2);
+          ULONG iid=index_3d(i,j,k,N2,N3);
+          if(i==0 && j==0 && k==0)
+            Power3D[iid]=0.;
+          else
             Power3D[iid]=static_cast<real_prec>(gsl_spline_eval (spline, ktot, acc)*Norm);
-	}	   
-  
+        }
+
   gsl_spline_free (spline);
   gsl_interp_accel_free (acc);
-  this->So.DONE();  
+  this->So.DONE();
   this->File.write_array(this->fname3DPOWER,Power3D);
- 
+
 }
- 
- 
- 
+
+
+
  // ======================================================================================================
- 
+
  real_prec PATCHY::linInterp(real_prec xpos, real_prec ypos, real_prec zpos, const vector<real_prec>&tab)
  {
-   
+
 #ifndef CELLBOUND
    xpos-=num_0_5*this->d1;
    ypos-=num_0_5*this->d2;
    zpos-=num_0_5*this->d3;
-   
-   {	 
+
+   {
      real_prec xnew=xpos;
      real_prec ynew=ypos;
      real_prec znew=zpos;
-     
+
      if (xnew<0.)
        xnew+=L1;
      if (xnew>=L1)
        xnew-=L1;
-     
+
      if (ynew<0.)
        ynew+=L1;
      if (ynew>=L1)
        ynew-=L1;
-     
+
      if (znew<0.)
        znew+=L1;
      if (znew>=L1)
        znew-=L1;
-     
+
      xpos=xnew;
      ypos=ynew;
      zpos=znew;
@@ -2252,15 +2967,15 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
   real_prec ty = (ypos-static_cast<real_prec>(iy)*d2)/d2;
   real_prec tz = (zpos-static_cast<real_prec>(iz)*d3)/d3;
 
-  
+
   ULONG shiftx=1;
   ULONG shifty=1;
-  ULONG shiftz=1;	
-  
+  ULONG shiftz=1;
+
   long ixs=ix+shiftx;
   long iys=iy+shifty;
   long izs=iz+shiftz;
- 
+
   if (ixs>=N1)
     ixs-=N1;
   if (iys>=N2)
@@ -2281,7 +2996,7 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 
 
 
-  return out; 
+  return out;
 }
 
 
@@ -2301,21 +3016,24 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 // ======================================================================================================
 
 
- 
-//#ifdef OMPPARRANRSD
+
+#ifdef _USE_OMP_
  void PATCHY::makecat_withv(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng ** gBaseRand,int ir)
+#else
+ void PATCHY::makecat_withv(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng * gBaseRand,int ir)
+#endif
  {
    // #else
    //  void PATCHY::makecat_withv(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng *  gBaseRand,int ir){
    // #endif
-   
+
 
      //NLL is passed as NGRID from BAM
 
 
    this->So.message_screen("Assigning position and velocities to tracers using DM particles:");
    cout<<endl;
-   
+
    real_prec redshift=this->s_cosmo_pars.cosmological_redshift;
 
 
@@ -2329,36 +3047,36 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    box.d2= box.d1;
    box.d3= box.d1;
    box.NGRID=this->NGRID;
-   
-   
-   
+
+
+
    ULONG N=this->NGRID;
-   
+
    real_prec min1=this->xllc;
    real_prec min2=this->yllc;
    real_prec min3=this->zllc;
-   
-   
+
+
    real_prec ascale = 1./(1+redshift);
    real_prec Omega_L=this->s_cosmo_pars.Om_vac;
    real_prec Omega_M=this->s_cosmo_pars.Om_matter;
    real_prec hconst=this->s_cosmo_pars.hubble;
    real_prec Omega_c=this->s_cosmo_pars.Om_k;
    real_prec cvel=num_1/(cgs_km/cgs_Mpc);
-   
+
    real_prec H0=static_cast<real_prec>(100.*hconst *cgs_km/cgs_Mpc/cgs_sec);
    real_prec Hub=H0*sqrt(Omega_M/ascale/ascale/ascale+Omega_L+Omega_c/ascale/ascale);
    real_prec Omega= this->s_cosmo_info.omega_matter;
    real_prec cpecvel=this->s_cosmo_info.growth_index*this->s_cosmo_pars.Hubble/(1.+this->s_cosmo_pars.cosmological_redshift);
-   
+
    real_prec deltathH=this->deltathH;
-   
+
    ULONG Nchunk=this->Nchunk;   //original ok
    ULONG NLLchunk=this->NGRID/Nchunk;
-   
+
    ULONG NNCH=1;
-   
-   
+
+
    string fname;
 
    string fnameNUMMRAN=string("auxnummran");//+stradd;
@@ -2366,25 +3084,25 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    string fnamePOSXORD=this->Output_directory+string("aux1");//+stradd;
    string fnamePOSYORD=this->Output_directory+string("aux2");//+stradd;
    string fnamePOSZORD=this->Output_directory+string("aux3");//+stradd;
-   
+
    vector<real_prec> dummy(this->NGRID,0);
    vector<real_prec> dummy2(this->NGRID,0);
-   
+
    real_prec vsmoo=this->vslength;
-         
+
    ULONG NOBJt=0;
-   
-   
+
+
    vector<real_prec> posx(this->NGRID,0),posy(this->NGRID,0),posz(this->NGRID,0);
 
    // Filenames of the bninary files containing the positions of the dark matter particles
    this->File.read_array(this->fnamePOSX+".dat",posx);
    this->File.read_array(this->fnamePOSY+".dat",posy);
    this->File.read_array(this->fnamePOSZ+".dat",posz);
-   
+
    int bmax=100;
-   char buffc[bmax]; 
-   string buffchunk;	      
+   char buffc[bmax];
+   string buffchunk;
 
    vector<real_prec> dummychunk(NLLchunk*NNCH,0);
 
@@ -2399,136 +3117,136 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    ULONG nob=get_nobjects(NUMBER_COUNTS);
 
    // **************************
-   
+
 #pragma omp parallel for
    for(ULONG i=0;i<NLLchunk*NNCH;i++)
-     dummychunk[i]=0.0; 
-   
+     dummychunk[i]=0.0;
+
 #pragma omp parallel for
    for(ULONG i=0;i<this->NGRID;i++)
-     dummy[i]=0.0; 
-   
+     dummy[i]=0.0;
+
    for(ULONG mm=0;mm<Nchunk;mm++)
-     {			  
-       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));     
-       buffchunk=static_cast<string>(buffc);    
-       
+     {
+       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));
+       buffchunk=static_cast<string>(buffc);
+
        for(ULONG ll=NLLchunk*(mm);ll<NLLchunk*(1+mm);ll++)
-	 {	
+         {
            real_prec x=posx[ll]; //positions of the dm particles
-	   real_prec y=posy[ll];
-	   real_prec z=posz[ll];
-	   ULONG lc =grid_ID(&box, x,y,z); //index_3d(ix,iy,iz,N2,N3);
-	   ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));	      
-	   ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
-	   
+           real_prec y=posy[ll];
+           real_prec z=posz[ll];
+           ULONG lc =grid_ID(&box, x,y,z); //index_3d(ix,iy,iz,N2,N3);
+           ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));
+           ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
+
 //	   ULONG ichunklcc=static_cast<ULONG>(floor(lc/NLLchunk));
 //	   ULONG llc=static_cast<ULONG>(floor(lc-ichunklcc*NLLchunk));
-	   
+
            if (static_cast<int>(MOCK_DEN_FIELD[lc])>0 && ( static_cast<int>(floor(dummy[lc])) < static_cast<int>(MOCK_DEN_FIELD[lc]) ))
-	     {
+             {
                dummychunk[lolc]=x;     //save the x-component and write to binary
-	       dummy[lc]++;
-	     }
-	   else
+               dummy[lc]++;
+             }
+           else
              dummychunk[lolc]=-num_1;  //else mark them with -1
-	 }
-       
+         }
+
        fname=fnamePOSXORD+static_cast<string>(buffchunk);
        this->File.write_array(fname,dummychunk);
      }
-     
+
    /* order simulated data in grid  */
-   
+
 #pragma omp parallel for
    for(ULONG i=0;i<NLLchunk*NNCH;i++)
-     dummychunk[i]=0.0; 
-   
+     dummychunk[i]=0.0;
+
 #pragma omp parallel for
    for(ULONG i=0;i<this->NGRID;i++)
-     dummy[i]=0.0; 
-   
+     dummy[i]=0.0;
+
    for(ULONG mm=0;mm<Nchunk;mm++)
-     {			  
-       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));     
+     {
+       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));
        buffchunk=static_cast<string>(buffc);
-       
+
        for(ULONG ll=NLLchunk*(mm);ll<NLLchunk*(1+mm);ll++)
-	 {		  			  
-	   real_prec x=posx[ll];
-	   real_prec y=posy[ll];
-	   real_prec z=posz[ll];
-	   ULONG lc=grid_ID(&box, x,y,z);
-	   ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));	      
-	   ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
+         {
+           real_prec x=posx[ll];
+           real_prec y=posy[ll];
+           real_prec z=posz[ll];
+           ULONG lc=grid_ID(&box, x,y,z);
+           ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));
+           ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
            if (static_cast<int>(MOCK_DEN_FIELD[lc])>0 && static_cast<int>(floor(dummy[lc])) < static_cast<int>(floor(MOCK_DEN_FIELD[lc])))
-	     {
+             {
                dummychunk[lolc]=y;   //save the y-component and write to binary
-	       dummy[lc]++;
-	     }
-	   else
-	     dummychunk[lolc]=-num_1;
-	 }
-       
+               dummy[lc]++;
+             }
+           else
+             dummychunk[lolc]=-num_1;
+         }
+
        fname=fnamePOSYORD+static_cast<string>(buffchunk);
        this->File.write_array(fname,dummychunk);
      }
-   
+
    /* order simulated data in grid  */
-   
+
 #pragma omp parallel for
    for(ULONG i=0;i<NLLchunk*NNCH;i++)
-     dummychunk[i]=0.0; 
-   
-   
+     dummychunk[i]=0.0;
+
+
 #pragma omp parallel for
    for(ULONG i=0;i<NLL;i++)
-     dummy[i]=0.0; 
-   
+     dummy[i]=0.0;
+
    for(ULONG mm=0;mm<Nchunk;mm++)
-     {			  
-       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));     
+     {
+       sprintf(buffc,"chunk%d",static_cast<int>(mm+1));
        buffchunk=static_cast<string>(buffc);
-       
+
        for(ULONG ll=NLLchunk*(mm);ll<NLLchunk*(1+mm);ll++)
-	 {	
-	   real_prec x=posx[ll];
-	   real_prec y=posy[ll];
-	   real_prec z=posz[ll];
-	   ULONG lc=grid_ID(&box, x,y,z);
-	   ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));	      
-	   ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
+         {
+           real_prec x=posx[ll];
+           real_prec y=posy[ll];
+           real_prec z=posz[ll];
+           ULONG lc=grid_ID(&box, x,y,z);
+           ULONG ichunklc=static_cast<ULONG>(floor(ll/NLLchunk));
+           ULONG lolc=static_cast<ULONG>(floor(ll-ichunklc*NLLchunk));
            if (static_cast<int>(MOCK_DEN_FIELD[lc])>0) // If we have tracers in that cell:
-	     {
+             {
                dummychunk[lolc]=z;	      // save the z-coordinate component to be written to binary
                MOCK_DEN_FIELD[lc]--;     // and subtract one particle from that cell. Note that this subtraction is only done here, for this is the last place calling the MOCK_NUM_DEN
-	     }
-	   else
+             }
+           else
              dummychunk[lolc]=-num_1;         // otherwise assign a -1
-	 }
+         }
        fname=fnamePOSZORD+static_cast<string>(buffchunk);
        this->File.write_array(fname,dummychunk);
      }
-   
-   
-   
-   string outputFileName0=this->Output_directory+string("RANHALOS")+stradd+string(".txt");	
+
+
+
+   string outputFileName0=this->Output_directory+string("RANHALOS")+stradd+string(".txt");
    ofstream outStream0;
    outStream0.open(outputFileName0.data());
    assert(outStream0.is_open());
-   
+
    // In the previous part the MOCK_DEN_FIELD container was reduced, leaving the number of random objects required per cell:
    // This is written now here:
    ULONG cc=0;
    for(ULONG ind=0;ind<this->NGRID;++ind)
      if(MOCK_DEN_FIELD[ind]>0.)
        {
-	 cc++;
-	 outStream0<<MOCK_DEN_FIELD[ind]<<" "<<ind<<endl;
-	 }
+         cc++;
+         outStream0<<MOCK_DEN_FIELD[ind]<<" "<<ind<<endl;
+         }
    outStream0.close();
    So.message_screen("fraction of random objects = ", 100.0*cc/static_cast<real_prec>(nob));
-   
+
    // Open file to print catalog
    string outputFileName=this->Output_directory+"CAT_realization"+to_string(ir)+"_"+this->stradd+string(".txt");
    this->fnameTRACERCAT=outputFileName;
@@ -2538,104 +3256,104 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    outStream.precision(8);
    outStream.setf(ios::showpoint);
    outStream.setf(ios::scientific);
-   
+
 
    vector<real_prec>vex (NLL,0);
    vector<real_prec>vey(NLL,0);
-   
 
-   
+
+
 #ifdef NORSD
 #pragma omp parallel for
    for(ULONG i=0;i<NLL;i++)
      {
-       vex[i]=0.0; 
-       vey[i]=0.0; 
-       dummy2[i]=0.0; 
+       vex[i]=0.0;
+       vey[i]=0.0;
+       dummy2[i]=0.0;
      }
 #else
    this->File.read_array(this->fnameVX+".dat",vex);
    this->File.read_array(this->fnameVY+".dat",vey);
    this->File.read_array(this->fnameVZ+".dat",dummy2);
-   
+
 #endif
-   
+
    int bmax_res=100;
-   char buffer_res[bmax_res];  	    
+   char buffer_res[bmax_res];
 
 
    vector<real_prec> dummychunk1(NLLchunk*NNCH,0), dummychunk2(NLLchunk*NNCH,0), dummychunk3(NLLchunk*NNCH,0);
-  
+
    ULONG ichunkold=1;
 
    //***** test by aba to verify number counts******************
-   
+
    int nt=omp_get_max_threads();
    omp_set_num_threads(nt);
- 
-   
+
+
    {
-     
+
      int jthread = omp_get_thread_num();   // original ok
-     
+
     //Write to cat the positions of tracers identified with dark matter particles
-     
+
 #pragma omp for
-     for(ULONG mm=0;mm<Nchunk;mm++)  
+     for(ULONG mm=0;mm<Nchunk;mm++)
        {
-	 sprintf(buffer_res,"chunk%d",static_cast<int>(mm+1));    
-	 
-	 string fname_res1=fnamePOSXORD;
-	 string FileName_res1=string(fname_res1)+static_cast<string>(buffer_res)+string(".dat");
-	 this->File.read_array(FileName_res1,dummychunk1);
-	 
-	 
-	 string fname_res2=fnamePOSYORD;
-	 string FileName_res2=string(fname_res2)+static_cast<string>(buffer_res)+string(".dat");
-	 this->File.read_array(FileName_res2,dummychunk2);
-	 
-	 
-	 string fname_res3=fnamePOSZORD;
-	 string FileName_res3=string(fname_res3)+static_cast<string>(buffer_res)+string(".dat");
-	 this->File.read_array(FileName_res3,dummychunk3);
-	 
-	 
-	 for(ULONG jj=NLLchunk*(mm);jj<NLLchunk*(1+mm);jj++)
-	   {	    
-	     ULONG jchunk=static_cast<ULONG>(floor(jj/NLLchunk));	      
-	     ULONG jjchunk=static_cast<ULONG>(floor(jj-jchunk*NLLchunk));
-	     
-	     if (dummychunk1[jjchunk]>=0. && dummychunk2[jjchunk]>=0. && dummychunk3[jjchunk]>=0. )
-	       {		
-		 real_prec posxoj=dummychunk1[jjchunk];
-		 real_prec posyoj=dummychunk2[jjchunk];
-		 real_prec poszoj=dummychunk3[jjchunk]; 
-     		 
-		 real_prec vx=this->linInterp(posxoj,posyoj,poszoj,vex);
-		 real_prec vy=this->linInterp(posxoj,posyoj,poszoj,vey);
-		 real_prec vz=this->linInterp(posxoj,posyoj,poszoj,dummy2);
-		 
-		 real_prec vexoj=vx;
-		 real_prec veyoj=vy;
-		 real_prec vezoj=vz;
-				 
-		 real_prec dums=0.0;
+         sprintf(buffer_res,"chunk%d",static_cast<int>(mm+1));
+
+         string fname_res1=fnamePOSXORD;
+         string FileName_res1=string(fname_res1)+static_cast<string>(buffer_res)+string(".dat");
+         this->File.read_array(FileName_res1,dummychunk1);
+
+
+         string fname_res2=fnamePOSYORD;
+         string FileName_res2=string(fname_res2)+static_cast<string>(buffer_res)+string(".dat");
+         this->File.read_array(FileName_res2,dummychunk2);
+
+
+         string fname_res3=fnamePOSZORD;
+         string FileName_res3=string(fname_res3)+static_cast<string>(buffer_res)+string(".dat");
+         this->File.read_array(FileName_res3,dummychunk3);
+
+
+         for(ULONG jj=NLLchunk*(mm);jj<NLLchunk*(1+mm);jj++)
+           {
+             ULONG jchunk=static_cast<ULONG>(floor(jj/NLLchunk));
+             ULONG jjchunk=static_cast<ULONG>(floor(jj-jchunk*NLLchunk));
+
+             if (dummychunk1[jjchunk]>=0. && dummychunk2[jjchunk]>=0. && dummychunk3[jjchunk]>=0. )
+               {
+                 real_prec posxoj=dummychunk1[jjchunk];
+                 real_prec posyoj=dummychunk2[jjchunk];
+                 real_prec poszoj=dummychunk3[jjchunk];
+
+                 real_prec vx=this->linInterp(posxoj,posyoj,poszoj,vex);
+                 real_prec vy=this->linInterp(posxoj,posyoj,poszoj,vey);
+                 real_prec vz=this->linInterp(posxoj,posyoj,poszoj,dummy2);
+
+                 real_prec vexoj=vx;
+                 real_prec veyoj=vy;
+                 real_prec vezoj=vz;
+
+                 real_prec dums=0.0;
                  int index=1;
                  outStream << posxoj <<"\t"<< posyoj <<"\t"<< poszoj <<"\t"<< vexoj <<"\t"<< veyoj <<"\t"<< vezoj <<"\t"<< dums <<"\t"<<index<<endl;
-		 
-		 NOBJt++;
-	       }
-	   }
+
+                 NOBJt++;
+               }
+           }
        }
-     
+
    }
-   
-     
+
+
    outputFileName0=this->Output_directory+string("RANHALOS")+stradd+string(".txt");
    ifstream inStream0;
    this->So.message_screen("Writting in file", outputFileName0);
    inStream0.open(outputFileName0.data());
-   assert(inStream0.is_open());  
+   assert(inStream0.is_open());
    ULONG NCO=m_countLines(inStream0);
    vector<int> dumRH(NCO, 0);
    vector<ULONG> dumRHind(NCO, 0);
@@ -2644,80 +3362,89 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    for(ULONG i=0;i<NCO;i++)
      inStream0>>dumRH[i]>>dumRHind[i];
    inStream0.close();
-   
+
   // Write in this part the position of the tracers identified with random positions
- 
+
    //#ifdef OMPPARRANRSD
-   
+
    nt=omp_get_max_threads();
    omp_set_num_threads(nt);
-   
+
    {
      int jthread = omp_get_thread_num();
-     ULONG count=0;     
-#pragma omp for
+     ULONG count=0;
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
      for (ULONG i=0;i<N1;i++)
        for (ULONG j=0;j<N2;j++)
-	 for (ULONG k=0;k<N3;k++)
-	   {     
-	     ULONG lc=index_3d(i,j,k,N2,N3);
-	     if (lc==dumRHind[count])
-	       {
-		 for(ULONG kk=0;kk < dumRH[count]; ++kk) // loop over the number of random objects in cells
-		   {
-		     real_prec rx=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
-		     real_prec ry=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
-		     real_prec rz=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));		    
-		     
-		     real_prec posxoj=d1*(static_cast<real_prec>(i)+rx);
-		     real_prec posyoj=d2*(static_cast<real_prec>(j)+ry);
-		     real_prec poszoj=d3*(static_cast<real_prec>(k)+rz); 
-		     
-		     // esto las pone en el centro de la celda, y reduce de 876 a 680 el numero de celdas que no coinciden en number counts
-		     // dejo la de arriba pero ultiplico el random por un factor 0.95 par asegurarnos que que quede dentro	     
-		     // real_prec posxoj=d1*(static_cast<real_prec>(i)+0.5);
-		     // real_prec posyoj=d2*(static_cast<real_prec>(j)+0.5);
-		     // real_prec poszoj=d3*(static_cast<real_prec>(k)+0.5); 
+         for (ULONG k=0;k<N3;k++)
+           {
+             ULONG lc=index_3d(i,j,k,N2,N3);
+             if (lc==dumRHind[count])
+               {
+                 for(ULONG kk=0;kk < dumRH[count]; ++kk) // loop over the number of random objects in cells
+                   {
+
+#ifdef _USE_OMP_
+                     real_prec rx=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+                     real_prec ry=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+                     real_prec rz=static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+#else
+                         real_prec rx=static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+                         real_prec ry=static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+                         real_prec rz=static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+
+#endif
+
+                     real_prec posxoj=d1*(static_cast<real_prec>(i)+rx);
+                     real_prec posyoj=d2*(static_cast<real_prec>(j)+ry);
+                     real_prec poszoj=d3*(static_cast<real_prec>(k)+rz);
+
+                     // esto las pone en el centro de la celda, y reduce de 876 a 680 el numero de celdas que no coinciden en number counts
+                     // dejo la de arriba pero ultiplico el random por un factor 0.95 par asegurarnos que que quede dentro
+                     // real_prec posxoj=d1*(static_cast<real_prec>(i)+0.5);
+                     // real_prec posyoj=d2*(static_cast<real_prec>(j)+0.5);
+                     // real_prec poszoj=d3*(static_cast<real_prec>(k)+0.5);
 
 
-  
-		     real_prec vx=this->linInterp(posxoj,posyoj,poszoj,vex);
-		     real_prec vy=this->linInterp(posxoj,posyoj,poszoj,vey);
+
+                     real_prec vx=this->linInterp(posxoj,posyoj,poszoj,vex);
+                     real_prec vy=this->linInterp(posxoj,posyoj,poszoj,vey);
                      real_prec vz=this->linInterp(posxoj,posyoj,poszoj,dummy2);
-		     
-		     real_prec vexoj=vx;
-		     real_prec veyoj=vy;
-		     real_prec vezoj=vz;
-		     real_prec dums=0.0;
+
+                     real_prec vexoj=vx;
+                     real_prec veyoj=vy;
+                     real_prec vezoj=vz;
+                     real_prec dums=0.0;
                      int index=-num_1;
-		     
+
                      outStream << posxoj <<"\t"<< posyoj <<"\t"<< poszoj <<"\t"<< vexoj <<"\t"<< veyoj <<"\t"<< vezoj <<"\t"<< dums <<"\t"<<index<<endl;
-		     NOBJt++;
-		   }
-		 count++;
-	       }
-	   }
-     outStream.close();    
-     
+                     NOBJt++;
+                   }
+                 count++;
+               }
+           }
+     outStream.close();
+#ifdef _FULL_VERBOSE_
      this->So.message_screen("Number of tracers = ",NOBJt);
-     
+#endif
    }// close omp
-   
-   this->Number_of_Tracers = NOBJt;   
 
-
+   this->Number_of_Tracers = NOBJt;
  }
- 
- 
 
- // ======================================================================================================
 // ======================================================================================================
- // ======================================================================================================
 // ======================================================================================================
- // ======================================================================================================
 // ======================================================================================================
-
+// ======================================================================================================
+// ======================================================================================================
+// ======================================================================================================
+#ifdef _USE_OMP_
  void PATCHY::makecat_withv_new(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng ** gBaseRand,int ir)
+#else
+ void PATCHY::makecat_withv_new(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng * gBaseRand,int ir)
+#endif
  {
 
    this->So.message_screen("Assigning position and velocities to tracers using DM particles:");
@@ -2763,16 +3490,11 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    ULONG NLLchunk=this->NGRID/Nchunk;
 
    ULONG NNCH=1;
-
-
    string fname;
-
    string fnameNUMMRAN=string("auxnummran");//+stradd;
-
    string fnamePOSXORD=this->Output_directory+string("aux1");//+stradd;
    string fnamePOSYORD=this->Output_directory+string("aux2");//+stradd;
    string fnamePOSZORD=this->Output_directory+string("aux3");//+stradd;
-
 
    // ****************************DM POSITIONS *******************************************
    ULONG N_dm=this->NGRID;
@@ -2784,12 +3506,12 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    this->File.read_array(this->fnamePOSX+".dat",posx);
    this->File.read_array(this->fnamePOSY+".dat",posy);
    this->File.read_array(this->fnamePOSZ+".dat",posz);
-     
+
    vector<real_prec> velx(N_dm,0),vely(N_dm,0),velz(N_dm,0);
    this->File.read_array(this->fnameVX+".dat",velx);
    this->File.read_array(this->fnameVY+".dat",vely);
    this->File.read_array(this->fnameVZ+".dat",velz);
-   
+
    struct s_cell_info{
      vector<real_prec> posx_p;
      vector<real_prec> posy_p;
@@ -2800,55 +3522,50 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
      vector<real_prec> mass_p;
      vector<ULONG> id_p;
    };
-   
+
    vector<s_cell_info> cell_inf_dm(this->NGRID);
-   
-   
+
    vector<real_prec> MOCK_DEN_FIELD(this->NGRID,0);
    this->File.read_array(fnameMOCK+".dat",MOCK_DEN_FIELD);
 
-   
-
-   
-   
    vector<int> aux_cont(this->NGRID,0);
 #pragma omp parallel for
    for(ULONG i=0;i<N_dm;++i)
      {
        real_prec x = static_cast<real_prec>(posx[i]);
        real_prec y = static_cast<real_prec>(posy[i]);
-       real_prec z = static_cast<real_prec>(posz[i]);      
+       real_prec z = static_cast<real_prec>(posz[i]);
        ULONG ind=grid_ID(&box, x,y,z);
        index[i]=ind;
 #pragma omp atomic update
        aux_cont[ind]++;  //count the number of dm particle in a cell
      }
-   
+
    vector<bool>dm_used(this->NGRID,false);
    vector<int>dm_cases(this->NGRID,0);
-   
+
    //ACA DEBEMOS CONTEMPLAR TRES CASOS:
-   
+
    // I) EN UNA CELDA HAY MAS TRACERS QUE DM
    // II) EN UNA CELDA HAY DM QUE TRACERS
    // III) En una celda hay Tracers pero no hay DM
    // IV) Celdas vacias, deben permanecer vacias
-   
-   
+
+
    ULONG Nobjects_mock=get_nobjects(MOCK_DEN_FIELD);
-   
+
    ULONG empty_cells_original=0;
 #pragma omp parallel for reduction(+:empty_cells_original)
    for(ULONG id=0;id<this->NGRID;++id)
      if(MOCK_DEN_FIELD[id]==0)
        {
-	 empty_cells_original++;
-	 dm_cases[id]=4;
-	 dm_used[id]=false;
+         empty_cells_original++;
+         dm_cases[id]=4;
+         dm_used[id]=false;
        }
-   
+
    //   So.message_screen("Original number of empty cells ", empty_cells_original);
-   
+
    So.message_screen("Retrieving positions of dm particles");
 
    vector<int> aux_cont1(this->NGRID,0);
@@ -2859,84 +3576,84 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
     {
       real_prec x = static_cast<real_prec>(posx[i]);
       real_prec y = static_cast<real_prec>(posy[i]);
-      real_prec z = static_cast<real_prec>(posz[i]);      
+      real_prec z = static_cast<real_prec>(posz[i]);
       ULONG id   =  index[i];    //identify the cell where this particle lives
       if(MOCK_DEN_FIELD[id]>0 &&  aux_cont[id]>0)  // si hay tracers en esta celda y dm tambien
-	{
-	  if(MOCK_DEN_FIELD[id]> aux_cont[id]) //si  hay mas o igual número tracers que dm (y hay dm), tomar todas las dm que hay en cada celda. Al haber mas tracers que dm, vendrá la necesidad de tener randoms
-	    {
-	      real_prec vx=this->linInterp(x,y,z,velx);
-	      real_prec vy=this->linInterp(x,y,z,vely);
-	      real_prec vz=this->linInterp(x,y,z,velz);
-	      cell_inf_dm[id].posx_p.push_back(x);
-	      cell_inf_dm[id].posy_p.push_back(y);
-	      cell_inf_dm[id].posz_p.push_back(z);
-	      cell_inf_dm[id].velx_p.push_back(vx);
-	      cell_inf_dm[id].vely_p.push_back(vy);
-	      cell_inf_dm[id].velz_p.push_back(vz);
-	      cell_inf_dm[id].id_p.push_back(id);
-	      dm_used[id]=true;
-	      dm_cases[id]=1;
-	      aux_cont1[id]++;
-	    }
-	  else
-	    { // caso II: se necesitan menor numero de tracers que el numero de dm en la celda. Ntr<=Ndm
-	      if(aux_cont2[id]< MOCK_DEN_FIELD[id]) // el "if" es para tomar sólo los que necesitamos
-		{
-		  real_prec vx=this->linInterp(x,y,z,velx);
-		  real_prec vy=this->linInterp(x,y,z,vely);
-		  real_prec vz=this->linInterp(x,y,z,velz);
-		  cell_inf_dm[id].posx_p.push_back(x);
-		  cell_inf_dm[id].posy_p.push_back(y);
-		  cell_inf_dm[id].posz_p.push_back(z);
-		  cell_inf_dm[id].velx_p.push_back(vx);
-		  cell_inf_dm[id].vely_p.push_back(vy);
-		  cell_inf_dm[id].velz_p.push_back(vz);
-		  cell_inf_dm[id].id_p.push_back(id);
-		  dm_used[id]=true;
-		  dm_cases[id]=2;
-		  aux_cont2[id]++;
-		}
-	    }
-	}
+        {
+          if(MOCK_DEN_FIELD[id]> aux_cont[id]) //si  hay mas o igual número tracers que dm (y hay dm), tomar todas las dm que hay en cada celda. Al haber mas tracers que dm, vendrá la necesidad de tener randoms
+            {
+              real_prec vx=this->linInterp(x,y,z,velx);
+              real_prec vy=this->linInterp(x,y,z,vely);
+              real_prec vz=this->linInterp(x,y,z,velz);
+              cell_inf_dm[id].posx_p.push_back(x);
+              cell_inf_dm[id].posy_p.push_back(y);
+              cell_inf_dm[id].posz_p.push_back(z);
+              cell_inf_dm[id].velx_p.push_back(vx);
+              cell_inf_dm[id].vely_p.push_back(vy);
+              cell_inf_dm[id].velz_p.push_back(vz);
+              cell_inf_dm[id].id_p.push_back(id);
+              dm_used[id]=true;
+              dm_cases[id]=1;
+              aux_cont1[id]++;
+            }
+          else
+            { // caso II: se necesitan menor numero de tracers que el numero de dm en la celda. Ntr<=Ndm
+              if(aux_cont2[id]< MOCK_DEN_FIELD[id]) // el "if" es para tomar sólo los que necesitamos
+                {
+                  real_prec vx=this->linInterp(x,y,z,velx);
+                  real_prec vy=this->linInterp(x,y,z,vely);
+                  real_prec vz=this->linInterp(x,y,z,velz);
+                  cell_inf_dm[id].posx_p.push_back(x);
+                  cell_inf_dm[id].posy_p.push_back(y);
+                  cell_inf_dm[id].posz_p.push_back(z);
+                  cell_inf_dm[id].velx_p.push_back(vx);
+                  cell_inf_dm[id].vely_p.push_back(vy);
+                  cell_inf_dm[id].velz_p.push_back(vz);
+                  cell_inf_dm[id].id_p.push_back(id);
+                  dm_used[id]=true;
+                  dm_cases[id]=2;
+                  aux_cont2[id]++;
+                }
+            }
+        }
     }
    index.clear();
    index.shrink_to_fit();
-   
+
    // Get the number of randoms from case i and ii
    vector<int>Nrandom_tracers(this->NGRID,0);
-   
+
 #pragma omp parallel for
    for(ULONG id=0;id<this->NGRID;++id)
      if(MOCK_DEN_FIELD[id]>0)
        if(1==dm_cases[id] || 2==dm_cases[id])
-	 Nrandom_tracers[id]=MOCK_DEN_FIELD[id]-cell_inf_dm[id].posx_p.size();
-   
-   
+         Nrandom_tracers[id]=MOCK_DEN_FIELD[id]-cell_inf_dm[id].posx_p.size();
+
+
    ULONG Ndm_used_I=0;
-   ULONG Nrandoms1=0;     
+   ULONG Nrandoms1=0;
 #pragma omp parallel for reduction(+:Ndm_used_I, Nrandoms1)
    for(ULONG id=0;id<this->NGRID;++id)
      if(dm_cases[id]==1)
        {
-	 Ndm_used_I+=aux_cont1[id];
-	 Nrandoms1+=Nrandom_tracers[id];
-       }   
+         Ndm_used_I+=aux_cont1[id];
+         Nrandoms1+=Nrandom_tracers[id];
+       }
    // So.message_screen("Number of dm used in case I",Ndm_used_I);
    // So.message_screen("Number of randoms demanded from case I ", Nrandoms1);
-   
-   
+
+
 //    ULONG Ndm_used_II=0;
 // #pragma omp parallel for reduction(+:Ndm_used_II)
 //    for(ULONG id=0;id<this->NGRID;++id)
 //      Ndm_used_II+=aux_cont2[id];
    // So.message_screen("Number of dm used in case II",Ndm_used_II);
    // So.message_screen("(case II demands no randoms)");
-   
+
    posx.clear();posx.shrink_to_fit();
    posy.clear();posy.shrink_to_fit();
    posz.clear();posz.shrink_to_fit();
-   
+
    // So.message_screen("Total Number of dm used",Ndm_used_I+Ndm_used_II);
 
 
@@ -2946,33 +3663,33 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
    for(ULONG id=0;id<this->NGRID;++id)
      {
        if(MOCK_DEN_FIELD[id]>0 && 0==aux_cont[id])
-	 if(dm_cases[id]!=1 && dm_cases[id]!=2)
-	   {
-	     dm_used[id]=false;
-	     Nrandom_tracers[id]=MOCK_DEN_FIELD[id]; //todas randoms  
-	     dm_cases[id]=3;
-	   }
+         if(dm_cases[id]!=1 && dm_cases[id]!=2)
+           {
+             dm_used[id]=false;
+             Nrandom_tracers[id]=MOCK_DEN_FIELD[id]; //todas randoms
+             dm_cases[id]=3;
+           }
      }
-   
+
    ULONG Nrandoms3=0;
 #pragma omp parallel for reduction(+:Nrandoms3)
    for(ULONG id=0;id<this->NGRID;++id)
      if(MOCK_DEN_FIELD[id]>0 && aux_cont[id]==0)
        if(3==dm_cases[id])
-	 Nrandoms3+=Nrandom_tracers[id];
-   
+         Nrandoms3+=Nrandom_tracers[id];
+
    // So.message_screen("Total number of randoms requested from case 3", Nrandoms3);
    // So.message_screen("Total number of randoms requested", Nrandoms1+Nrandoms3);
    // So.message_screen("Randoms requested + Ndm", Nrandoms3+Nrandoms1+Ndm_used_I+Ndm_used_II);
    // So.message_screen("Number of original tracers",Nobjects_mock);
    Nrandoms1+=Nrandoms3;
-   
+
    ULONG ncells_check=0;
 #pragma omp parallel for reduction(+:ncells_check)
    for(ULONG id=0;id<this->NGRID;++id)
      {
        if(dm_cases[id]>=1 && dm_cases[id]<=4)
-	 ncells_check++;
+         ncells_check++;
      }
    if(ncells_check!=this->NGRID)
      {
@@ -2980,49 +3697,55 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
        So.message_screen("Total number of cells", this->NGRID);
        exit(0);
      }
-   
-   
+
+
    int jthread=1;
    vector<s_cell_info> cell_inf_ran(this->NGRID);
    vector<bool>random_used(this->NGRID,false);
-  
+
   if(Nrandoms1>0)
     {
-      
+
       So.message_screen("Creating random positions");
       for(ULONG i=0; i<this->N1; ++i)
-	for(ULONG j=0; j<this->N2; ++j)
-	  for(ULONG k=0; k<this->N3; ++k)
-	    {
-	      ULONG id=index_3d(i,j,k,N2,N3);
-	      if(Nrandom_tracers[id]>0)
-		{
-		  cell_inf_ran[id].posx_p.resize(Nrandom_tracers[id],0);
-		  cell_inf_ran[id].posy_p.resize(Nrandom_tracers[id],0);
-		  cell_inf_ran[id].posz_p.resize(Nrandom_tracers[id],0);
-		  cell_inf_ran[id].velx_p.resize(Nrandom_tracers[id],0);
-		  cell_inf_ran[id].vely_p.resize(Nrandom_tracers[id],0);
-		  cell_inf_ran[id].velz_p.resize(Nrandom_tracers[id],0);
-		  random_used[id]=true;
-		  for(int ir=0;ir<Nrandom_tracers[id];++ir)
-		    {
-		      real_prec rx= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
-		      real_prec ry= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
-		      real_prec rz= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
-		      
-		      real_prec x = d1*static_cast<real_prec>(i) + d1*rx;
-		      real_prec y = d1*static_cast<real_prec>(j) + d2*ry;
-		      real_prec z = d1*static_cast<real_prec>(k) + d3*rz;
-		      cell_inf_ran[id].posx_p[ir]=x;
-		      cell_inf_ran[id].posy_p[ir]=y;
-		      cell_inf_ran[id].posz_p[ir]=z;
-		      cell_inf_ran[id].velx_p[ir]=this->linInterp(x,y,z,velx);
-		      cell_inf_ran[id].vely_p[ir]=this->linInterp(x,y,z,vely);
-		      cell_inf_ran[id].velz_p[ir]=this->linInterp(x,y,z,velz);
-		      cell_inf_ran[id].id_p.push_back(id);
-		    }
-		}
-	    }
+        for(ULONG j=0; j<this->N2; ++j)
+          for(ULONG k=0; k<this->N3; ++k)
+            {
+              ULONG id=index_3d(i,j,k,N2,N3);
+              if(Nrandom_tracers[id]>0)
+                {
+                  cell_inf_ran[id].posx_p.resize(Nrandom_tracers[id],0);
+                  cell_inf_ran[id].posy_p.resize(Nrandom_tracers[id],0);
+                  cell_inf_ran[id].posz_p.resize(Nrandom_tracers[id],0);
+                  cell_inf_ran[id].velx_p.resize(Nrandom_tracers[id],0);
+                  cell_inf_ran[id].vely_p.resize(Nrandom_tracers[id],0);
+                  cell_inf_ran[id].velz_p.resize(Nrandom_tracers[id],0);
+                  random_used[id]=true;
+                  for(int ir=0;ir<Nrandom_tracers[id];++ir)
+                    {
+#ifdef _USE_OMP_
+                      real_prec rx= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+                      real_prec ry= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+                      real_prec rz= static_cast<real_prec>(gsl_rng_uniform(gBaseRand[jthread]));
+#else
+
+                      real_prec rx= static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+                      real_prec ry= static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+                      real_prec rz= static_cast<real_prec>(gsl_rng_uniform(gBaseRand));
+#endif
+                      real_prec x = d1*static_cast<real_prec>(i) + d1*rx;
+                      real_prec y = d1*static_cast<real_prec>(j) + d2*ry;
+                      real_prec z = d1*static_cast<real_prec>(k) + d3*rz;
+                      cell_inf_ran[id].posx_p[ir]=x;
+                      cell_inf_ran[id].posy_p[ir]=y;
+                      cell_inf_ran[id].posz_p[ir]=z;
+                      cell_inf_ran[id].velx_p[ir]=this->linInterp(x,y,z,velx);
+                      cell_inf_ran[id].vely_p[ir]=this->linInterp(x,y,z,vely);
+                      cell_inf_ran[id].velz_p[ir]=this->linInterp(x,y,z,velz);
+                      cell_inf_ran[id].id_p.push_back(id);
+                    }
+                }
+            }
       So.DONE();
     }
   velx.clear();velx.shrink_to_fit();
@@ -3033,7 +3756,7 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
   // Before write to file we assign masses. This replaces the call of the function in bamrunner
 
 
-  
+
   string outputFileName=this->Output_directory+"CAT_realization"+to_string(ir)+"_"+this->stradd+string(".txt");
   this->fnameTRACERCAT=outputFileName;
   ofstream outStream;
@@ -3042,43 +3765,43 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
   outStream.precision(8);
   outStream.setf(ios::showpoint);
   outStream.setf(ios::scientific);
-  
+
   this->So.message_screen("Writting dm particles to file", outputFileName);
-  
+
   //write dms pos to file:
   ULONG Nobjects_mock_rc=0;
 
   for(ULONG id=0;id<this->NGRID;++id)
     {
       if(MOCK_DEN_FIELD[id]>0)
-	if(true==dm_used[id])
-	  for(int in=0;in < cell_inf_dm[id].posx_p.size(); ++in)
-	    {
-	      Nobjects_mock_rc++;
-	      outStream<<cell_inf_dm[id].posx_p[in]<<"\t"<<cell_inf_dm[id].posy_p[in]<<"\t"<<cell_inf_dm[id].posz_p[in]<<"\t"<<cell_inf_dm[id].velx_p[in]<<"\t"<<cell_inf_dm[id].vely_p[in]<<"\t"<<cell_inf_dm[id].velz_p[in]<<"\t"<<0.0<<"\t"<<1<<endl;
-	    }
+        if(true==dm_used[id])
+          for(int in=0;in < cell_inf_dm[id].posx_p.size(); ++in)
+            {
+              Nobjects_mock_rc++;
+              outStream<<cell_inf_dm[id].posx_p[in]<<"\t"<<cell_inf_dm[id].posy_p[in]<<"\t"<<cell_inf_dm[id].posz_p[in]<<"\t"<<cell_inf_dm[id].velx_p[in]<<"\t"<<cell_inf_dm[id].vely_p[in]<<"\t"<<cell_inf_dm[id].velz_p[in]<<"\t"<<0.0<<"\t"<<1<<endl;
+            }
     }
   So.DONE();
-  
+
   // So.message_screen("Number dm objecs written = ", Nobjects_mock_rc);
-  
-  if(Nrandoms1>0) 
+
+  if(Nrandoms1>0)
     {
       this->So.message_screen("Adding random particles:");
       for(ULONG id=0;id<this->NGRID;++id)
-	{
-	  if(MOCK_DEN_FIELD[id]>0)
-	    if(true==random_used[id])
-	      for(int in=0;in<cell_inf_ran[id].posx_p.size();++in)
-		{
-		  Nobjects_mock_rc++;
-		  outStream<<cell_inf_ran[id].posx_p[in]<<"\t"<<cell_inf_ran[id].posy_p[in]<<"\t"<<cell_inf_ran[id].posz_p[in]<<"\t"<<cell_inf_ran[id].velx_p[in]<<"\t"<<cell_inf_ran[id].vely_p[in]<<"\t"<<cell_inf_ran[id].velz_p[in]<<"\t"<<0.0<<"\t"<<-1<<endl;
-		}
-	}
+        {
+          if(MOCK_DEN_FIELD[id]>0)
+            if(true==random_used[id])
+              for(int in=0;in<cell_inf_ran[id].posx_p.size();++in)
+                {
+                  Nobjects_mock_rc++;
+                  outStream<<cell_inf_ran[id].posx_p[in]<<"\t"<<cell_inf_ran[id].posy_p[in]<<"\t"<<cell_inf_ran[id].posz_p[in]<<"\t"<<cell_inf_ran[id].velx_p[in]<<"\t"<<cell_inf_ran[id].vely_p[in]<<"\t"<<cell_inf_ran[id].velz_p[in]<<"\t"<<0.0<<"\t"<<-1<<endl;
+                }
+        }
       So.DONE();
     }
-  
-  
+
+
   outStream.close();
   if(Nobjects_mock_rc!=Nobjects_mock)
     {
@@ -3086,7 +3809,7 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
       So.message_screen("Original Number of objects = ", Nobjects_mock);
       exit(0);
     }
-   
+
  }
 
  // ======================================================================================================
@@ -3094,10 +3817,10 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 // ======================================================================================================
 
 
- void PATCHY::comp_velbias(const vector<real_prec> &delta, vector<real_prec>&out, bool zeropad, bool norm)
-{  
+ void PATCHY::comp_velbias(vector<real_prec> &delta, vector<real_prec>&out, bool zeropad, bool norm)
+{
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
-  
+
   real_prec Lzp1=L1;
   real_prec Lzp2=L2;
   real_prec Lzp3=L3;
@@ -3105,7 +3828,7 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
   ULONG Nzp1=N1;
   ULONG Nzp2=N2;
   ULONG Nzp3=N3;
- 
+
   if (zeropad==true)
     {
       Lzp1=L1*num_2;
@@ -3116,71 +3839,86 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
       Nzp2=N2*2;
       Nzp3=N3*2;
     }
- 
+
   ULONG Nzp=Nzp1*Nzp2*Nzp3;
 
 
   real_prec cpecvel=num_1;
   if (norm==true)
-    cpecvel=this->s_cosmo_info.growth_index*this->s_cosmo_pars.Hubble/(1.+this->s_cosmo_pars.cosmological_redshift);
+    cpecvel=this->s_cosmo_info.growth_index*this->s_cosmo_info.Hubble_parameter/(1.+this->s_cosmo_pars.cosmological_redshift);
 
 
-  
-  ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);	
+
+  ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);
+#ifdef DOUBLE_PREC
   complex_prec *phi= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
- 
+#else
+  complex_prec *phi= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
+
   do_fftw_r2c(N1, delta, phi);
-  
-  
+
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
-#endif  
+#endif
   for (ULONG i=0;i<N1;i++)
     for (ULONG j=0;j<N2;j++)
       for (ULONG k=0;k<N3/2+1;k++)
-	{
-	  real_prec k2=k_squared(i,j,k,L1,L2,L3,N1,N2,N3);
-	  ULONG ll=index_3d(i,j,k,this->N2,this->N3/2+1);
-	  phi[ll][REAL]=(num_1+this->velbias*this->velbias*k2)*phi[ll][REAL];
+        {
+          real_prec k2=k_squared(i,j,k,L1,L2,L3,N1,N2,N3);
+          ULONG ll=index_3d(i,j,k,this->N2,this->N3/2+1);
+          phi[ll][REAL]=(num_1+this->velbias*this->velbias*k2)*phi[ll][REAL];
           phi[ll][IMAG]=(num_1+this->velbias*this->velbias*k2)*phi[ll][IMAG];
-	  
-	}    
+
+        }
   do_fftw_c2r(this->N1,phi,out);
- 
+
+#ifdef DOUBLE_PREC
+       fftw_free(phi);
+#else
+       fftwf_free(phi);
+#endif
 }
 
 // ======================================================================================================
 // ======================================================================================================
-
- void PATCHY::normalize_df_z_ini(vector<real_prec>&in, vector<real_prec>&out, string type, gsl_rng * seed)
+ void PATCHY::normalize_df_z_ini(vector<real_prec>&in, vector<real_prec>&out, string type)
  {
-   real_prec gf = this->Cosmo.growth_factor(this->Redshift_initial, (void *)&this->s_cosmo_pars)/this->Cosmo.growth_factor(0.0,(void *)&this->s_cosmo_pars);
-   
-   So.message_screen("Normalizing Initial density field using growth factor @ z inital. D(z=z_ini) = ", gf);
-   
 
 
+   real_prec gf = this->Cosmo.growth_factor(this->Initial_Redshift_DELTA, (void *)&this->s_cosmo_pars)/this->Cosmo.growth_factor(0.041,(void *)&this->s_cosmo_pars);
 
+#ifdef _FULL_VERBOSE_
+   So.message_screen("Normalizing Initial density");
+   So.message_screen("Normalizing Initial density field using growth D(z=z_ini) = ", gf);
+   So.message_screen("@ z inital = ",this->Initial_Redshift_DELTA);
+#endif
+/*
    // Get the PDF if the IC:
    int Nk=600;
    vector<real_prec>xbaux(Nk, 0);
    vector<real_prec>pdf(Nk, 0);
    real_prec max=get_max<real_prec>(in);
    real_prec min=get_min<real_prec>(in);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
    for(int i=0;i<Nk; ++i)
      xbaux[i]=min+static_cast<real_prec>(i+0.5)*(max-min)/static_cast<real_prec>(Nk);
    string filex="pdf_X_MASX_IC.txt";
    calc_pdf("lin", in.size(),Nk,max,min,in,pdf);
    this->File.write_to_file(filex, xbaux,pdf);
-
+*/
 
 
    // -----------------------------------------------------------------------------------------
 
-   
+
    // This test is meant to FIX THE ISSUE OF THE MISSING POWER IN THE Ic
 //#define _DO_TEST_
-   
+
 #ifdef _DO_TEST_
 
    So.message_screen("THIS IS A TEST");
@@ -3230,23 +3968,23 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 
           real_prec k2=k_squared(i,j,k,this->L1,this->L2,this->L3,this->N1,this->N2,this->N3);
           real_prec ktot=sqrt(k2);
-	  
-	  real_prec power_shells;
+
+          real_prec power_shells;
           if(i==0 && j==0 && k==0)
             power_shells=0;
            else
               power_shells=static_cast<real_prec>(gsl_spline_eval (spline, ktot, acc));
-	  
-	  // espectro de las IC con fixed amplitude
-          real_prec Power3D=pow(AUX[ihalf][REAL],2)+pow(AUX[ihalf][IMAG],2);
-	  
-	  AUX[ihalf][REAL]*=sqrt(power_shells/Power3D);
-	  AUX[ihalf][IMAG]*=sqrt(power_shells/Power3D);
-	  //AUX[ihalf][REAL]=sqrt(power_shells);
-	  //AUX[ihalf][IMAG]=sqrt(power_shells);
 
-	  
-	}
+          // espectro de las IC con fixed amplitude
+          real_prec Power3D=pow(AUX[ihalf][REAL],2)+pow(AUX[ihalf][IMAG],2);
+
+          AUX[ihalf][REAL]*=sqrt(power_shells/Power3D);
+          AUX[ihalf][IMAG]*=sqrt(power_shells/Power3D);
+          //AUX[ihalf][REAL]=sqrt(power_shells);
+          //AUX[ihalf][IMAG]=sqrt(power_shells);
+
+
+        }
 
   do_fftw_c2r(N1,AUX,in);
 
@@ -3262,10 +4000,6 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
 
 #endif
   // -----------------------------------------------------------------------------------------
-
-
-
-
 
 // NOrmalising IC from initial z to z=0
   if(type=="delta")
@@ -3283,13 +4017,175 @@ void PATCHY::theta2velcomp(const vector<real_prec> &delta, vector<real_prec> &ve
         out[i]=mean*(1.-1./gf)+(1./gf)*in[i];
     }
 
-
-  
-  
-   
    So.DONE();
  }
 
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================
+ void PATCHY::DM_to_RSS(int los){
 
+  int NTHREADS=1;
+#ifdef _USE_OMP_
+  NTHREADS=_NTHREADS_;
+#endif
+
+   ULONG Ndm=this->NGRID;
+   vector<real_prec>Position(Ndm,0);
+   vector<real_prec>Velocity(Ndm,0);
+
+   switch(los){
+      case(1):
+        this->File.read_array(this->fnamePOSX+".dat",Position);
+        this->File.read_array(this->fnameVXpart+".dat",Velocity);
+        break;
+      case(2):
+          this->File.read_array(this->fnamePOSY+".dat",Position);
+          this->File.read_array(this->fnameVYpart+".dat",Velocity);
+      break;
+      case(3):
+          this->File.read_array(this->fnamePOSZ+".dat",Position);
+          this->File.read_array(this->fnameVZpart+".dat",Velocity);
+      break;
+      }
+
+      // This converts km /s to Mpc/h
+    real_prec conversion_factor=1./(this->Cosmo.Hubble_function(this->s_cosmo_pars.cosmological_redshift, (void *)&this->s_cosmo_pars));
+
+
+
+    // Add peculiar velocities 
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0; i<Ndm; ++i)
+          Position[i]+=Velocity[i]*conversion_factor;
+
+        Velocity.clear(); Velocity.shrink_to_fit();
+
+//    Add fingers of God
+#ifdef _USE_FOGS_
+
+   vector<real_prec>Position1(Ndm,0);
+   vector<real_prec>Position2(Ndm,0);
+
+   switch(los){
+      case(1):
+        this->File.read_array(this->fnamePOSY+".dat",Position1);
+        this->File.read_array(this->fnamePOSZ+".dat",Position2);
+        break;
+      case(2):
+        this->File.read_array(this->fnamePOSX+".dat",Position1);
+        this->File.read_array(this->fnamePOSZ+".dat",Position2);
+      break;
+      case(3):
+        this->File.read_array(this->fnamePOSX+".dat",Position1);
+        this->File.read_array(this->fnamePOSY+".dat",Position2);
+      break;
+      }
+
+
+
+   s_params_box_mas box;
+   box.min1=this->params._xllc();
+   box.min2=this->params._yllc();
+   box.min3=this->params._zllc();
+   box.Lbox=this->params._Lbox();
+   box.Nft=this->params._Nft();
+   box.d1= box.Lbox/static_cast<real_prec>(box.Nft);   /* grid spacing x-direction */
+   box.d2= box.d1;
+   box.d3= box.d1;
+   box.NGRID=(box.Nft*box.Nft*box.Nft);
+
+ //Read the density field
+  vector<real_prec>density(this->NGRID,0);
+  this->File.read_array(this->fnameDM, density);  //write DMDF to binary file
+  get_overdens(density, density);
+
+  int jthread=0;
+  const gsl_rng_type *Trn;
+  gsl_rng *gBaseRand;
+  vector<ULONG>vseeds(NTHREADS,0);
+  for(int i=0;i<vseeds.size();++i)
+    vseeds[i]=static_cast<ULONG>(i+14)*56045;
+#ifdef _USE_OMP_
+#pragma omp parallel private (jthread, Trn, gBaseRand)// this is causing problem
+   {
+#endif
+
+    jthread=omp_get_thread_num();
+    gsl_rng_default_seed=vseeds[jthread];
+    Trn = gsl_rng_mt19937;
+    gBaseRand= gsl_rng_alloc (Trn);
+
+   switch(los){
+    case(1):
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+        for(ULONG i=0; i<Ndm; ++i)
+           {
+              ULONG iindex=grid_ID(&box,Position[i],Position1[i],Position2[i]);
+              real_prec deltaloc=density[iindex];
+              real_prec sigma=pow(1+this->params._biasL()*deltaloc,this->params._ep())*this->params._sfac();
+              Position[i]+= gsl_ran_gaussian(gBaseRand,sigma)*conversion_factor;
+            }
+      break;
+     case(2):
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+        for(ULONG i=0; i<Ndm; ++i)
+           {
+              ULONG iindex=grid_ID(&box,Position1[i],Position[i],Position2[i]);
+              real_prec deltaloc=density[iindex];
+              real_prec sigma=pow(1+this->params._biasL()*deltaloc,this->params._ep())*this->params._sfac();
+              Position[i]+= gsl_ran_gaussian(gBaseRand,sigma)*conversion_factor;
+            }
+     break;
+     case(3):
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+        for(ULONG i=0; i<Ndm; ++i)
+           {
+              ULONG iindex=grid_ID(&box,Position1[i],Position2[i],Position[i]);
+              real_prec deltaloc=density[iindex];
+              real_prec sigma=pow(1+this->params._biasL()*deltaloc,this->params._ep())*this->params._sfac();
+              Position[i]+= gsl_ran_gaussian(gBaseRand,sigma)*conversion_factor;
+            }
+     break;
+      }
+
+#ifdef _USE_OMP_
+  }
+#endif
 
  
+#endif // end for use fogs
+
+
+
+   string output_file;
+   switch(los)
+    {
+      case(1):
+         output_file= this->fnamePOSX_RS;
+        break;
+      case(2):
+        output_file= this->fnamePOSY_RS;
+        break;
+      case(3):
+        output_file= this->fnamePOSZ_RS;
+        break;
+    }
+
+      this->File.write_array(output_file,Position);
+ }
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================
+ // ======================================================================================================

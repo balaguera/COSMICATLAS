@@ -30,6 +30,10 @@ int my_gsl_rng_uniform_(gsl_rng *r, int Nmax){
 
 }
 
+ULONG factorial(int n){
+  if(n<=0 || n==1 ) return 1;
+  else return tgammal(n+1);
+}
 
 // ********************************************************************
 // ********************************************************************
@@ -100,7 +104,7 @@ void  get_high_res_id_from_low_res_id(int Nft_high, int Nft_low,vector<ULONG>&id
 
 
 //void  get_low_res_id_from_high_res_id(int Nft, int Nft_low, vector<ULONG>&ID_low, vector<s_cell_info>&cell_info_low)
-void  get_low_res_id_from_high_res_id(int Nft, int Nft_low, vector<s_cell_info>&cell_info_low)
+void  get_low_res_id_from_high_res_id(int Nft, int Nft_low, vector<s_cell_info_reduced>&cell_info_low)
 {
 
     double delta_low=static_cast<double>(Nft)/static_cast<double>(Nft_low);
@@ -115,129 +119,235 @@ void  get_low_res_id_from_high_res_id(int Nft, int Nft_low, vector<s_cell_info>&
            ULONG id_l = index_3d(il,jl,kl,Nft_low,Nft_low);
            ULONG id   = index_3d(i, j, k, Nft, Nft);
            cell_info_low[id_l].gal_index.push_back(id);  // allocate for each lowres ID all those high_res id living inside
-            }
+         }
 }
 
 
 // ********************************************************************
 // ********************************************************************
 // ********************************************************************
-// This function returns a structure of size Nft*Nft*Nft with the info of the ID's of the neighbouring cells of eachy cell
-// in a mesh of size Nft³. The parameter N_cells_back_forth controls how far we want to go from each cell in order to define "neighbours"
 void get_neighbour_cells(int Nft, int N_cells_back_forth,vector<s_nearest_cells>&nearest_cells_to_cell){
 
-    // IS IT RIGHT TO INCLUDE THE CELL ITSELF???
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
 #if defined _USE_NEIGHBOURS_ || defined _GET_DIST_MIN_SEP_REF_ || defined _GET_DIST_MIN_SEP_MOCK_
-  int max_neigh_per_dim = 1+2*N_cells_back_forth; // Number of neighbouring cells pr dimension, including the same itself;
+  int max_neigh_per_dim = 2*N_cells_back_forth+1; // Number of neighbouring cells pr dimension, including the centrak cell;
+  int N_Neigh_cells=pow(max_neigh_per_dim+1,2)+ pow(max_neigh_per_dim+1,2)  + (pow(max_neigh_per_dim+1,2)); // total number of cells to explore around a cell, excluding the central
 #else
-  int max_neigh_per_dim =2*N_cells_back_forth; // Number of neighbouring cells pr dimension, excluding the cell itself;
+  int max_neigh_per_dim =2*N_cells_back_forth+1; // Number of neighbouring cells pr dimension, including the central cell;
+  int N_Neigh_cells=pow(max_neigh_per_dim,2)+ pow(max_neigh_per_dim,2)  + (pow(max_neigh_per_dim,2)-1); // total number of cells to explore around a cell, excluding the central
 #endif
 
-  int N_Neigh_cells=pow(max_neigh_per_dim,3); // total number of cells to explore around a cell
+  vector<int> index_cells_dime(max_neigh_per_dim,0);
 
-   vector<int> index_cells_dime(max_neigh_per_dim,0);
+  for(int i=0;i< max_neigh_per_dim ;++i)
+     index_cells_dime[i]= i-N_cells_back_forth;  // e.g., 1, 0, -1 if N_cells_back_forth=1 and the central excluded
 
-   for(int i=0;i< max_neigh_per_dim ;++i)
-     {
-       int index=N_cells_back_forth-i;
-#if !defined _USE_NEIGHBOURS_ || defined _GET_DIST_MIN_SEP_REF_ || defined _GET_DIST_MIN_SEP_MOCK_
-       if(index!=0)  // This excludes the cell in the center, which is the cell we are looking for the neighbours to.
-#endif
-           index_cells_dime[i]= index;  // e.g., 1, -1 if N_cells_back_forth=1
-     }
 
  #pragma omp parallel for collapse(3)
-   for(int i=0;i<Nft ;++i)
-     for(int j=0;j<Nft ;++j)
-        for(int k=0;k<Nft ;++k)
-          {
-            ULONG ID=index_3d(i,j,k,Nft,Nft);//get ID of cell
-            nearest_cells_to_cell[ID].close_cell.resize(N_Neigh_cells,0);
+  for(int i=0;i<Nft ;++i)
+    for(int j=0;j<Nft ;++j)
+      for(int k=0;k<Nft ;++k)
+        {
+          ULONG ID=index_3d(i,j,k,Nft,Nft);//get ID of cell
+
+          nearest_cells_to_cell[ID].close_cell.resize(N_Neigh_cells,0);
+
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-            nearest_cells_to_cell[ID].bc_x.resize(N_Neigh_cells,0);
-            nearest_cells_to_cell[ID].bc_y.resize(N_Neigh_cells,0);
-            nearest_cells_to_cell[ID].bc_z.resize(N_Neigh_cells,0);
+          nearest_cells_to_cell[ID].bc_x.resize(N_Neigh_cells,0);
+          nearest_cells_to_cell[ID].bc_y.resize(N_Neigh_cells,0);
+          nearest_cells_to_cell[ID].bc_z.resize(N_Neigh_cells,0);
 #endif
-            int count=0;
-               // Given this ID,
-            for(int idx =0; idx < max_neigh_per_dim; ++idx)
-              {
-                int new_ni = i - index_cells_dime[idx];
+          ULONG count=0;
+          for(int idx =0; idx < max_neigh_per_dim; ++idx)  // loop in the x-direction
+            {
+              int new_ni = i - index_cells_dime[idx];
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                int aux_bc_x=0;
+                 int aux_bc_x=0;
 #endif
-                if(new_ni<0)
-                 {
+                 if(new_ni<0)
+                  {
                     new_ni+= Nft;
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                    aux_bc_x=-1;
+                     aux_bc_x=-1;
 #endif
-                 }
-                if(new_ni>= Nft)
+                  }
+                 if(new_ni>= Nft)
                   {
-                    new_ni-=Nft;
+                     new_ni-=Nft;
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                    aux_bc_x=1;
+                     aux_bc_x=1;
 #endif
-                 }
-                for(int idy =0; idy < max_neigh_per_dim; ++idy)
-                  {
-                    int new_nj = j - index_cells_dime[idy];
+                  }
+               for(int idy =0; idy < max_neigh_per_dim; ++idy) // loop in the y-direction
+                 {
+                   int new_nj = j - index_cells_dime[idy];
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                    int aux_bc_y=0;
+                   int aux_bc_y=0;
 #endif
-                    if(new_nj<0)
-                    {
-                        new_nj+=Nft;
+                   if(new_nj<0)
+                     {
+                       new_nj+=Nft;
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                        aux_bc_y=-1;
+                       aux_bc_y=-1;
 #endif
-                    }//si la celda esta por detrñas, ponga -1
+                     }//si la celda esta por detrñas, ponga -1
                     if(new_nj>= Nft)
-                    {
-                        new_nj-=Nft;
+                      {
+                       new_nj-=Nft;
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                        aux_bc_y=1;
+                       aux_bc_y=1;
 #endif
-                    }
-                    for(int idz =0; idz < max_neigh_per_dim; ++idz)
-                       {
-                         int new_nk = k - index_cells_dime[idz];
+                      }
+                    
+                    for(int idz =0; idz < max_neigh_per_dim; ++idz) // loop in the z-direction
+                      {
+                        int new_nk = k - index_cells_dime[idz];
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                         int aux_bc_z=0;
+                          int aux_bc_z=0;
 #endif
-                         if(new_nk<0)
-                         {
+                          if(new_nk<0)
+                           {
                              new_nk+=Nft;
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
                              aux_bc_z=-1;
 #endif
-                         }
-                         if(new_nk>=Nft)
+                           }
+                          if(new_nk>=Nft)
+                            {
+                              new_nk-=Nft;
+#if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
+                              aux_bc_z=1;
+#endif
+                          }
+                        
+                        ULONG new_id=index_3d(new_ni,new_nj,new_nk,Nft,Nft); // Get the ID of the neighbouring cells;
+                        if(new_id!=ID) // This explicitely excludes the ID of the same cell where we are now.
                          {
-                             new_nk-=Nft;
+                           nearest_cells_to_cell[ID].close_cell[count]=new_id;                        
 #if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                             aux_bc_z=1;
+                           nearest_cells_to_cell[ID].bc_x[count]=aux_bc_x;
+                           nearest_cells_to_cell[ID].bc_y[count]=aux_bc_y;
+                           nearest_cells_to_cell[ID].bc_z[count]=aux_bc_z;
 #endif
+                           count++;
                          }
-                         // Get the ID of the neighbouring cells
-                         nearest_cells_to_cell[ID].close_cell[count]=index_3d(new_ni,new_nj,new_nk,Nft,Nft);
-#if defined _USE_NEIGHBOURS_|| defined (_GET_DIST_MIN_SEP_REF_) || defined (_GET_DIST_MIN_SEP_MOCK_)
-                         nearest_cells_to_cell[ID].bc_x[count]=aux_bc_x;
-                         nearest_cells_to_cell[ID].bc_y[count]=aux_bc_y;
-                         nearest_cells_to_cell[ID].bc_z[count]=aux_bc_z;
-#endif
-                         count++;
-                       }
+                      }
                    }
-               }
-          }
-}
+                }
+              }  
+          } 
 
 // ********************************************************************
 // ********************************************************************
 // ********************************************************************
 // ********************************************************************
+// ********************************************************************
+// ********************************************************************
+// ********************************************************************
+void get_neighbour_cells_cat_analyze(int Nft, int N_cells_back_forth,vector<s_nearest_cells>&nearest_cells_to_cell){
+
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+  ULONG max_neigh_per_dim = 2*N_cells_back_forth+1; // Number of neighbouring cells pr dimension, including the central cell;
+  vector<int> index_cells_dime(max_neigh_per_dim,0);
+  for(int i=0;i< max_neigh_per_dim ;++i)
+     index_cells_dime[i]= i-N_cells_back_forth;  // e.g., 1, 0, -1 if N_cells_back_forth=1 and the central excluded
+ 
+
+  // total number of cells to explore around a cell, including the central only once as it should be
+// ULONG N_Neigh_cells=pow(max_neigh_per_dim+1,2)+ pow(max_neigh_per_dim+1,2)  + pow(max_neigh_per_dim+1,2); 
+  ULONG N_Neigh_cells=pow(max_neigh_per_dim,3)-2;  // subtract 2 to avoid cunting 3 times the central cell
+  
+  ULONG NGRID = Nft*Nft*Nft;
+ 
+ #pragma omp parallel for
+  for(ULONG ID=0;ID<NGRID ;++ID)
+    { 
+      nearest_cells_to_cell[ID].close_cell.resize(N_Neigh_cells,0);
+      nearest_cells_to_cell[ID].bc_x.resize(N_Neigh_cells,0);
+      nearest_cells_to_cell[ID].bc_y.resize(N_Neigh_cells,0);
+      nearest_cells_to_cell[ID].bc_z.resize(N_Neigh_cells,0);
+    }
+
+ #pragma omp parallel for collapse(3)
+  for(int i=0;i<Nft ;++i)
+    for(int j=0;j<Nft ;++j)
+      for(int k=0;k<Nft ;++k)
+        {
+          ULONG ID=index_3d(i,j,k,Nft,Nft);//get ID of cell
+          ULONG count=0;
+          for(int idx =0; idx < max_neigh_per_dim; ++idx)  // loop in the x-direction
+            {
+              int new_ni = i - index_cells_dime[idx];
+                 int aux_bc_x=0;
+                 if(new_ni<0)
+                  {
+                    new_ni+= Nft;
+                     aux_bc_x=-1;
+                  }
+                 if(new_ni>= Nft)
+                  {
+                     new_ni-=Nft;
+                     aux_bc_x=1;
+                  }
+               for(int idy =0; idy < max_neigh_per_dim; ++idy) // loop in the y-direction
+                 {
+                   int new_nj = j - index_cells_dime[idy];
+                   int aux_bc_y=0;
+                   if(new_nj<0)
+                     {
+                       new_nj+=Nft;
+                       aux_bc_y=-1;
+                     }//si la celda esta por detrñas, ponga -1
+                    if(new_nj>= Nft)
+                      {
+                       new_nj-=Nft;
+                       aux_bc_y=1;
+                      }
+                    
+                    for(int idz =0; idz < max_neigh_per_dim; ++idz) // loop in the z-direction
+                      {
+                        int new_nk = k - index_cells_dime[idz];
+                          int aux_bc_z=0;
+                          if(new_nk<0)
+                           {
+                             new_nk+=Nft;
+                             aux_bc_z=-1;
+                           }
+                          if(new_nk>=Nft)
+                            {
+                              new_nk-=Nft;
+                              aux_bc_z=1;
+                          }
+                        
+                        ULONG new_id=index_3d(new_ni,new_nj,new_nk,Nft,Nft); // Get the ID of the neighbouring cells;
+                        if(new_id!=ID) // This explicitely excludes the ID of the same cell where we are now.
+                         {
+                          if(count>N_Neigh_cells) cout<<count<<"  "<<N_Neigh_cells<<endl;
+                           nearest_cells_to_cell[ID].close_cell[count]=new_id;                        
+                           nearest_cells_to_cell[ID].bc_x[count]=aux_bc_x;
+                           nearest_cells_to_cell[ID].bc_y[count]=aux_bc_y;
+                           nearest_cells_to_cell[ID].bc_z[count]=aux_bc_z;
+                           count++;
+                         }
+                      }
+                   }
+                }
+              }  
+          } 
+
+// ********************************************************************
+// ********************************************************************
+// ********************************************************************
+// ********************************************************************
+
 
 // ********************************************************************
 // ********************************************************************
@@ -246,7 +356,10 @@ void get_scalar(string FNAME,vector<real_prec>&OUT,ULONG N1,ULONG N2,ULONG N3)
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
   fftw_array<real_prec> dummy(N);
   string fname=FNAME+string(".dat");
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Reading binary file "<<CYAN<<fname<<RESET<<endl;
+#endif
+
   bifstream inStream(fname.data(),file_is_natural);
   assert(inStream.is_open());
   inStream.get(dummy.data,N);
@@ -255,7 +368,9 @@ void get_scalar(string FNAME,vector<real_prec>&OUT,ULONG N1,ULONG N2,ULONG N3)
 #pragma omp parallel for
   for(ULONG i=0;i<N;i++)
     OUT[i]=dummy[i];
-    cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#ifdef _FULL_VERBOSE_
+  cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
 
 }
 // ********************************************************************
@@ -271,13 +386,16 @@ void dump_scalar(const vector<real_prec>&A_rm,ULONG N1,ULONG N2,ULONG N3,int sam
     dummy[i]=A_rm[i];
   
   string FNAME=fname+string(".dat");
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Writting binary file "<<CYAN<<FNAME<<RESET<<endl;
+#endif
   bofstream outStream(FNAME.data(),file_is_natural);
   assert(outStream.is_open());
   outStream.put(dummy.data,N);
   outStream.close();
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
-
+#endif
 }
 
 
@@ -339,7 +457,9 @@ void gsl_get_GL_weights(gsl_real LowLimit,gsl_real UpLimit, gsl_integration_glfi
 {
   gsl_real xi, wi;
   int nn=XX.size();
+#ifdef _USE_OMP_
   omp_set_num_threads(omp_get_max_threads());
+#endif
 
   for(int i=0;i<nn;++i){
     gsl_integration_glfixed_point(LowLimit,UpLimit, i, &xi, &wi, wf);
@@ -526,6 +646,12 @@ void gsl_bspline(vector<gsl_real>&xx, vector<gsl_real>&yy, vector<gsl_real>&new_
       new_yy[i]=yi;
     }
   }
+//  int dof = n - new_n;
+//  gsl_real tss = gsl_stats_wtss(w->data, 1, y->data, 1, y->size);
+//  gsl_real Rsq = 1.0 - chisq / tss;
+//  cout<<"Rsq = "<<Rsq<<endl;
+//  cout<<"chisq/dof = "<<chisq/dof<<endl;
+
   gsl_bspline_free(bw);
   gsl_vector_free(B);
   gsl_vector_free(x);
@@ -690,9 +816,6 @@ void get_det_matrix(vector<vector<real_prec>>&matriz, real_prec &determinant){
      determinant*=det[i];
 }
 
-
-
-
 //##################################################################################
 
 real_prec real_sh(int l, int m, real_prec theta, real_prec phi){
@@ -730,16 +853,21 @@ real_prec ddbessel(real_prec x, int n){
 // sort (Quicksort) by reindexing adopted from Numerical Recipes in C++
 //##################################################################################
 
-inline void SWAP_L(long &a, long &b) {
+inline void SWAP_L(int &a, int &b) {
   int dum=a;
+  a=b;
+  b=dum;
+}
+
+inline void SWAP_LU(ULONG &a, ULONG &b) {
+  ULONG dum=a;
   a=b;
   b=dum;
 }
 
 
 //##################################################################################
-
-void indexx(vector<int>&arr, vector<long>&indx)
+void indexx(vector<int>&arr, vector<int>&indx)
 {
   const int M=7,NSTACK=50;
 
@@ -751,57 +879,138 @@ void indexx(vector<int>&arr, vector<long>&indx)
   ir=n-1;
   for (j=0;j<n;j++) indx[j]=j;
   for (;;) {
-    if (ir-l < M) {
-      for (j=l+1;j<=ir;j++) {
-	indxt=indx[j];
-	a=arr[indxt];
-	for (i=j-1;i>=l;i--) {
-	  if (arr[indx[i]] <= a) break;
-	  indx[i+1]=indx[i];
-	}
-	indx[i+1]=indxt;
-      }
+    if (ir-l < M)
+     {
+       for (j=l+1;j<=ir;j++) 
+       {
+         indxt=indx[j];
+	       a=arr[indxt];
+	       for (i=j-1;i>=l;i--) 
+          {
+	          if (arr[indx[i]] <= a) break;
+       	  indx[i+1]=indx[i];
+          }
+	      indx[i+1]=indxt;
+       }
       if (jstack < 0) break;
       ir=istack[jstack--];
       l=istack[jstack--];
-    } else {
-      k=(l+ir) >> 1;
-      SWAP_L(indx[k],indx[l+1]);
-      if (arr[indx[l]] > arr[indx[ir]]) {
-	SWAP_L(indx[l],indx[ir]);
-      }
+      } 
+      else 
+      {
+       k=(l+ir) >> 1;
+       SWAP_L(indx[k],indx[l+1]);
+        if (arr[indx[l]] > arr[indx[ir]]) {
+        	SWAP_L(indx[l],indx[ir]);
+        }
       if (arr[indx[l+1]] > arr[indx[ir]]) {
-	SWAP_L(indx[l+1],indx[ir]);
+	      SWAP_L(indx[l+1],indx[ir]);
       }
       if (arr[indx[l]] > arr[indx[l+1]]) {
-	SWAP_L(indx[l],indx[l+1]);
+       	SWAP_L(indx[l],indx[l+1]);
       }
       i=l+1;
       j=ir;
       indxt=indx[l+1];
       a=arr[indxt];
       for (;;) {
-	do i++; while (arr[indx[i]] < a);
-	do j--; while (arr[indx[j]] > a);
-	if (j < i) break;
-	SWAP_L(indx[i],indx[j]);
+    	 do i++; while (arr[indx[i]] < a);
+	     do j--; while (arr[indx[j]] > a);
+	     if (j < i) break;
+	       SWAP_L(indx[i],indx[j]);
       }
       indx[l+1]=indx[j];
       indx[j]=indxt;
       jstack += 2;
       if (jstack >= NSTACK) {
-	cerr << "NSTACK too small in indexx." << endl;
-	exit(1);
+	       cerr << "NSTACK too small in indexx." << endl;
+      	exit(1);
       }
       if (ir-i+1 >= j-l) {
-	istack[jstack]=ir;
-	istack[jstack-1]=i;
-	ir=j-1;
-      } else {
-	istack[jstack]=j-1;
-	istack[jstack-1]=l;
-	l=i;
+	      istack[jstack]=ir;
+	      istack[jstack-1]=i;
+      	ir=j-1;
+      } 
+      else {
+	     istack[jstack]=j-1;
+       istack[jstack-1]=l;
+    	l=i;
+     }
+    }
+  }
+}
+
+
+//##################################################################################
+void indexx_ulong(vector<ULONG>&arr, vector<ULONG>&indx)
+{
+  const int M=7,NSTACK=50;
+
+  ULONG n = indx.size();
+  ULONG i,indxt,ir,j,k,jstack=-1,l=0;
+  ULONG a;
+  int istack[NSTACK];
+  
+  ir=n-1;
+  for (j=0;j<n;j++) indx[j]=j;
+  for (;;) {
+    if (ir-l < M)
+     {
+       for (j=l+1;j<=ir;j++) 
+       {
+         indxt=indx[j];
+         a=arr[indxt];
+         for (i=j-1;i>=l;i--) 
+          {
+            if (arr[indx[i]] <= a) break;
+          indx[i+1]=indx[i];
+          }
+        indx[i+1]=indxt;
+       }
+      if (jstack < 0) break;
+      ir=istack[jstack--];
+      l=istack[jstack--];
+      } 
+      else 
+      {
+       k=(l+ir) >> 1;
+       SWAP_LU(indx[k],indx[l+1]);
+        if (arr[indx[l]] > arr[indx[ir]]) {
+          SWAP_LU(indx[l],indx[ir]);
+        }
+      if (arr[indx[l+1]] > arr[indx[ir]]) {
+        SWAP_LU(indx[l+1],indx[ir]);
       }
+      if (arr[indx[l]] > arr[indx[l+1]]) {
+        SWAP_LU(indx[l],indx[l+1]);
+      }
+      i=l+1;
+      j=ir;
+      indxt=indx[l+1];
+      a=arr[indxt];
+      for (;;) {
+       do i++; while (arr[indx[i]] < a);
+       do j--; while (arr[indx[j]] > a);
+       if (j < i) break;
+         SWAP_LU(indx[i],indx[j]);
+      }
+      indx[l+1]=indx[j];
+      indx[j]=indxt;
+      jstack += 2;
+      if (jstack >= NSTACK) {
+         cerr << "NSTACK too small in indexx." << endl;
+        exit(1);
+      }
+      if (ir-i+1 >= j-l) {
+        istack[jstack]=ir;
+        istack[jstack-1]=i;
+        ir=j-1;
+      } 
+      else {
+       istack[jstack]=j-1;
+       istack[jstack-1]=l;
+      l=i;
+     }
     }
   }
 }
@@ -809,17 +1018,17 @@ void indexx(vector<int>&arr, vector<long>&indx)
 
 
 //##################################################################################
-void sort_vectors(vector<int>& v1,vector<int>&v2, vector<int>&v3, vector<int>& v4, vector<int>&v5, vector<int>& v6, vector<int>& v7, vector<real_prec>& v8 ){
+void sort_vectors(vector<ULONG>& v1,vector<ULONG>&v2, vector<ULONG>&v3, vector<ULONG>& v4, vector<ULONG>&v5, vector<ULONG>& v6, vector<ULONG>& v7, vector<real_prec>& v8 ){
   // v1 is to be sorted. The elements of the other vectors
   // are shuffled accordingly.
 
   
   unsigned long j;
   long n=v1.size();
-  vector<long>iwksp(n,0);
+  vector<ULONG>iwksp(n,0);
   vector<float>wksp(n,0);
   
-  indexx(v1,iwksp);
+  indexx_ulong(v1,iwksp);
   for (j=0;j<n;++j) wksp[j]=v1[j];
   for (j=0;j<n;++j) v1[j]=wksp[iwksp[j]];
 
@@ -864,7 +1073,6 @@ size_t m_getBuffer(istream& inStream) {
     size_t numLines = 3*1024*1024/line.size();
     numLines += numLines&0x1;
 
-    //    cout << "  - 3MB buffer: " << numLines << " lines";
 
     // reset buffer
     inStream.clear();
@@ -903,14 +1111,17 @@ size_t m_countLines(istream& inStream) {
 //##################################################################################
 //##################################################################################
 
-real_prec get_mean(const vector<real_prec> & ini)
+real_prec get_mean(const vector<real_prec>& ini)
 {
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
   double mean=0.;
 #pragma opmp parallel for reduction(+:mean)
   for(ULONG i=0;i<ini.size();++i)
     mean+=static_cast<double>(ini[i]);
   mean/=static_cast<double>(ini.size());
-
   return static_cast<real_prec>(mean);
 }
 
@@ -922,9 +1133,16 @@ real_prec get_mean(const vector<real_prec> & ini)
 
 real_prec get_var(const vector<real_prec> & ini)
 {
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
   real_prec mean=get_mean(ini);
   real_prec vari=0.;
+#ifdef _USE_OMP_
 #pragma opmp parallel for reduction(+:vari)
+#endif
   for(ULONG i=0;i<ini.size();++i)
     vari+=pow(ini[i]-mean,2);
   vari=vari/(static_cast<double>(ini.size())-1.0);
@@ -937,8 +1155,15 @@ real_prec get_var(const vector<real_prec> & ini)
 
 real_prec get_var(real_prec mean, const vector<real_prec> & ini)
 {
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
   real_prec vari=0.;
+#ifdef _USE_OMP_
 #pragma opmp parallel for reduction(+:vari)
+#endif
   for(ULONG i=0;i<ini.size();++i)
     vari+=pow(ini[i]-mean,2);
   vari=vari/(static_cast<double>(ini.size())-1.0);
@@ -970,11 +1195,12 @@ void log_smooth(vector<real_prec>&xin, vector<real_prec>&vin)
   for(ULONG i = 0;i < vin.size(); ++i)
     vin_new[i]=static_cast<gsl_real>(vin[i]);
 
-  int n_smooth=100;
+  int n_smooth=vin.size()*2;
+
   // Begin smooth ker_aux in log k
   // Log bins, in the same range as the original modes
   
-  real_prec deltalk= static_cast<real_prec>(log10(xin[xin.size()-1]/xin[0])/static_cast<real_prec>(n_smooth-1.0));
+  real_prec deltalk= static_cast<real_prec>(log10(xin[xin.size()-1.0]/xin[0])/static_cast<real_prec>(n_smooth-1.0));
   vector<gsl_real>aux_logk(n_smooth,0);
   
 #ifdef _USE_OMP_
@@ -993,13 +1219,13 @@ void log_smooth(vector<real_prec>&xin, vector<real_prec>&vin)
     aux_oratio[i]=gsl_inter_new(lkvec,vin_new, aux_logk[i]);
   
   // Bspline smooth ratio, already interpolated in log
-  int n_smooth_new= 60;
+  int n_smooth_new=  static_cast<int>(floor(vin.size()/2));    //60;
   vector<gsl_real>aux_kvec(n_smooth_new, 0);
   vector<gsl_real>aux_ratio(n_smooth_new, 0);
 
   gsl_bspline(aux_logk, aux_oratio,  aux_kvec, aux_ratio);
 
-  // Reassign the smoothed version to Kernel_bins
+  // Reassign the smoothed version to Kernel_bins via interpolation
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -1012,17 +1238,89 @@ void log_smooth(vector<real_prec>&xin, vector<real_prec>&vin)
 //##################################################################################
 //##################################################################################
 
+void lin_smooth(vector<real_prec>&xin, vector<real_prec>&vin, int nr)
+{
+
+  // **************************************************************************************
+  // steps:
+  // i ) interpolate the raw ratio in log bins in k
+  // ii) smooth the result
+  // iii) interpolate the smoothed version and update power_ratio
+
+  // Original modes, converted to log
+  vector<gsl_real>lkvec(vin.size(),0);
+  vector<gsl_real>vin_new(vin.size(),0);
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i = 0;i < xin.size(); ++i)
+    lkvec[i]=static_cast<gsl_real>(xin[i]);
+
+  for(ULONG i = 0;i < vin.size(); ++i)
+    vin_new[i]=static_cast<gsl_real>(vin[i]);
+
+
+
+  /*
+  int n_smooth=static_cast<int>(floor(vin.size()/3));
+  // Begin smooth ker_aux in log k
+  // Log bins, in the same range as the original modes
+
+  real_prec deltalk= (xin[xin.size()-1]-xin[0])/static_cast<real_prec>(n_smooth-1);
+  vector<gsl_real>aux_logk(n_smooth,xin[0]);
+  aux_logk[n_smooth-1]=lkvec[xin.size()-1];
+
+#pragma omp parallel for
+  for(ULONG i = 1; i < n_smooth; ++i)
+      aux_logk[i]=xin[0]+static_cast<real_prec>(i)*deltalk;
+
+  // Interpolate original ratio in log k
+  vector<gsl_real>aux_oratio(n_smooth,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i = 0;i < n_smooth; ++i)
+    aux_oratio[i]=gsl_inter_new(lkvec,vin_new, aux_logk[i]);
+
+  // Bspline smooth ratio, already interpolated in log
+*/
+
+  int n_smooth_new= static_cast<int>(floor(vin.size())/nr);
+  vector<gsl_real>aux_kvec(n_smooth_new, 0);
+  vector<gsl_real>aux_ratio(n_smooth_new, 0);
+
+//  gsl_bspline(aux_logk, aux_oratio,  aux_kvec, aux_ratio);
+
+
+ gsl_bspline(lkvec, vin_new,  aux_kvec, aux_ratio);
+
+  // Reassign the smoothed version to Kernel_bins via interpolation
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i = 0;i < vin.size(); ++i)
+    vin[i]=gsl_inter_new(aux_kvec, aux_ratio, lkvec[i]);
+
+}
+//##################################################################################
+//##################################################################################
+//##################################################################################
+
 void gradfindif(ULONG N1,ULONG N2,ULONG N3,real_prec L1,real_prec L2,real_prec L3,vector<real_prec>in,vector<real_prec>&out,int dim)
 {
     // Gradient using finite differences
-  real_prec factor=static_cast<real_prec>(N1)/static_cast<real_prec>(num_2*L1);
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+    real_prec factor=static_cast<real_prec>(N1)/static_cast<real_prec>(num_2*L1);
 
   int N1i=static_cast<int>(N1);
   int N2i=static_cast<int>(N2);
   int N3i=static_cast<int>(N3);
 
 #ifdef _USE_OMP_
-  omp_get_max_threads();
 #pragma omp parallel for
 #endif
   for(int x = 0; x < N1i; x++)
@@ -1106,10 +1404,19 @@ void gradfindif(ULONG N1,ULONG N2,ULONG N3,real_prec L1,real_prec L2,real_prec L
 //##################################################################################
 //##################################################################################
 //##################################################################################
+
+// This function expects delta.
+// for type= log, it uses log10(1+delta)
+// for type= lin, it uses delta
+// It returns delta again
+
 void calc_pdf(string type, ULONG N, ULONG Nk, real_prec maxk, real_prec mink, const vector<real_prec>&in, vector<real_prec>&pdfin)
 {
-
-  real_prec dk=(maxk-mink)/static_cast<real_prec>(Nk);
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+    real_prec dk=(maxk-mink)/static_cast<double>(Nk);
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -1120,54 +1427,48 @@ void calc_pdf(string type, ULONG N, ULONG Nk, real_prec maxk, real_prec mink, co
   ULONG ntot=0;
 
   if(type=="log")
-      {
+    {
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:ntot)
 #endif
-  for(ULONG i=0;i<N;i++)
-    {
-      real_prec den=log10(NUM_IN_LOG+static_cast<real_prec>(in[i]));
-      if (den>=mink && den<=maxk)
-        {
-          ULONG ik=static_cast<ULONG>(floor((den-mink)/dk));
-          if(ik==Nk)ik--;
+      for(ULONG i=0;i<N;i++)
+       {
+        real_prec den=log10(NUM_IN_LOG+static_cast<real_prec>(in[i]));
+        if (den>=mink && den<=maxk)
+          {
+            ULONG ik=static_cast<ULONG>(floor((den-mink)/dk));
+            if(ik==Nk)ik--;
 #ifdef _USE_OMP_
 #pragma omp atomic update
 #endif
-          pdfin[ik]+=1.0;
-          ntot++;
-        }
+            pdfin[ik]+=1.0;
+           ntot++;
+          }
+       }
     }
-   }
   else
-      {
+    {
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:ntot)
 #endif
     for(ULONG i=0;i<N;i++)
       {
-       real_prec den=in[i];
-       if (den>=mink && den<=maxk)
+        real_prec den=in[i];
+        if(den>=mink && den<=maxk)
           {
-          ULONG ik=static_cast<ULONG>(floor((den-mink)/dk));
-         if(ik==Nk)ik--;
+            ULONG ik=static_cast<ULONG>(floor((den-mink)/dk));
+            if(ik==Nk)ik--;
 #ifdef _USE_OMP_
 #pragma omp atomic update
 #endif
-          pdfin[ik]+=1.0;
-          ntot++;
-         }
-    }
-}
+            pdfin[ik]+=1.0;
+            ntot++;
+          }
+      }
+ }
 
-
-
-
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-  for(ULONG i=0;i<Nk;i++)
-    pdfin[i]/=static_cast<real_prec>(ntot);
+ for(ULONG i=0;i<Nk;i++)
+    pdfin[i]/=static_cast<double>(ntot);
 
 
 
@@ -1176,19 +1477,21 @@ void calc_pdf(string type, ULONG N, ULONG Nk, real_prec maxk, real_prec mink, co
 
 //##################################################################################
 //##################################################################################
-
-void rankorder(int seed, vector<real_prec>dens, ULONG N, ULONG Nk, real_prec maxk, real_prec mink, vector<real_prec>&in, vector<real_prec>&pdfin, vector<real_prec>&pdfout)
+//Input must be delta, and tjhe limits must be max and mins in log(1+detla)
+// The pdfs must be P(log(1+delta))
+void rankorder(int seed, vector<real_prec>dens_bins, ULONG Nk, real_prec maxk, real_prec mink, vector<real_prec>&in, vector<real_prec>&pdfin, vector<real_prec>&pdfout)
 {
-  // Function s by F. Kitaura
-  
-  int nt=1;
-  int jthread=1;
 #ifdef _USE_OMP_
-  omp_get_max_threads();
-  omp_set_num_threads(nt);
-  jthread = omp_get_thread_num();
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
 #endif
-  
+
+  ULONG N=in.size();
+  double dk=(maxk-mink)/static_cast<double>(Nk);
+
+  for (ULONG i=0;i<N;i++)
+    in[i]=log10(NUM_IN_LOG+static_cast<real_prec>(in[i]));
+
   const gsl_rng_type *  Ta;
   gsl_rng * ra ;
   gsl_rng_env_setup();
@@ -1196,32 +1499,15 @@ void rankorder(int seed, vector<real_prec>dens, ULONG N, ULONG Nk, real_prec max
   Ta = gsl_rng_ranlux;
   ra = gsl_rng_alloc (Ta);
 
-#ifdef _USE_OMP_
-#endif
-#pragma omp parallel for
-  for (ULONG i=0;i<N;i++)
-    in[i]=log10(NUM_IN_LOG+static_cast<real_prec>(in[i]));
-
-  real_prec dk=(maxk-mink)/static_cast<real_prec>(Nk);
-
-  real_prec dth=0.;
-
-  /*   real_prec muD=0.; */
-  /* #pragma omp parallel for reduction(+:muD) */
-  /*   for(ULONG i=0;i<N;i++) */
-  /*     muD+=static_cast<real_prec>(in[i]); */
-  /*   real_prec mu=static_cast<real_prec>(muD)/static_cast<real_prec>(N); */
-
-
   for (ULONG i=0;i<N;i++)
     {
-      real_prec den=in[i];
-
+/*
       ULONG ik=0;
       if (den>=mink)
         ik=static_cast<ULONG>(floor((den-mink)/dk));
-
-      if(ik==Nk)ik--;
+       if(ik==Nk)ik--;
+*/
+      ULONG ik=get_bin(in[i],mink,Nk,dk,true);
 
       real_prec pdfdi=0.;
       for (ULONG j=0;j<ik+1;j++)
@@ -1229,7 +1515,6 @@ void rankorder(int seed, vector<real_prec>dens, ULONG N, ULONG Nk, real_prec max
 
       real_prec pdfdo=0.;
       ULONG kk=0;
-
       while (pdfdo<pdfdi)
         {
           pdfdo+=pdfout[kk];
@@ -1238,37 +1523,38 @@ void rankorder(int seed, vector<real_prec>dens, ULONG N, ULONG Nk, real_prec max
 
       ULONG l=kk;
       if (kk>0)
-        l-=1; //??
+        l-=1; 
+      if (kk>Nk)
+        l=Nk; 
 
       /* real_prec dr=static_cast<real_prec>(2.*gsl_rng_uniform(ra)*dk); */
       /* real_prec denB=dens[l]+dr-  2.*dk;  // ?? repartirlo aleatoriamente en este bin. OJO ACA VERIFICARLOS */
       // this depends on the way the vector dens has been designed.
 
-
       //* / I defined it to lie a the center of the bin */
-      // El factor 8 permite que la pdf final sea más suave
-      real_prec dr= static_cast<real_prec>(10.0*gsl_rng_uniform(ra)*dk);
-      real_prec denB=dens[l] + dr-10.0*(dk/2.0);  // ?? repartirlo aleatoriamente en este bin. OJO ACA VERIFICARLOS */
-
-      in[i]=pow(10, denB)-NUM_IN_LOG; // Convert to the format of the input density field
-
+      // El factor 10 permite que la pdf final sea más suave
+      real_prec xr= static_cast<real_prec>(gsl_rng_uniform(ra));
+      real_prec denB=dens_bins[l]+ (xr-0.5)*dk;  //s ?? repartirlo aleatoriamente en este bin. OJO ACA VERIFICARLOS */
+      in[i]=pow(10.0, denB)-NUM_IN_LOG; // Convert to the format of the input density field
     }
+
 }
 
 
 
 //##################################################################################
 //##################################################################################
-void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, const vector<real_prec> &phi, vector<real_prec> &out1, vector<real_prec> &out2, vector<real_prec> &out3, vector<real_prec> &S2, vector<real_prec> &S3, vector<real_prec> &N2D)
+void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, const vector<real_prec> &phi, vector<real_prec> &out1, vector<real_prec> &out2, vector<real_prec> &out3)
 {
     // Function from webclass by F. Kitaura. File webclass.cc
     // The potential vctor is the gravitational potential obtained form the Poisson solver
     real_prec L2=L1;
     real_prec L3=L2;
 
-
+#ifdef _USE_OMP_
     int NTHREADS = omp_get_max_threads();
     omp_set_num_threads(NTHREADS);
+#endif
 
     ULONG NGRID = static_cast<ULONG>(Nft*Nft*Nft);
     ULONG Nhalf=static_cast<ULONG>(Nft)*static_cast<ULONG>(Nft)*static_cast<ULONG>(Nft/2+1);
@@ -1305,7 +1591,9 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
     gradfindif(Nft,Nft,Nft,L1,L2,L3,dummy,LapPhivzy,2);
 #elif defined _USE_GFFT_EIGENV_
     complex_prec *philv= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-  #pragma omp parallel for
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
     for(ULONG i=0;i<Nhalf;i++)
       {
         philv[i][REAL]=0.0;
@@ -1318,8 +1606,10 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
     calc_LapPhiv(Nft,Nft,Nft,L1,L2,L3,philv,dummy,1,1); // from Phi(k) get \partial Phi(r)/\partial x
     // Get second derivatives of grad_x
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<Nhalf;i++)
+#endif
+    for(ULONG i=0;i<Nhalf;i++)
     {
       philv[i][REAL]=0.0;
       philv[i][IMAG]=0.0;
@@ -1331,7 +1621,9 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
   calc_LapPhiv(Nft,Nft,Nft,L1,L2,L3,philv,LapPhivxz,1,3); // From Phi'(k)_x get \partial²Phi/\partial z \partial x
 
     // Get gradient in y-direction
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<Nhalf;i++)
     {
       philv[i][REAL]=0.0;
@@ -1341,8 +1633,10 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
 
     calc_LapPhiv(Nft,Nft,Nft,L1,L2,L3,philv,dummy,2,2); // from Phi(k) get \partial Phi(r)/\partial y
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<Nhalf;i++)
+#endif
+    for(ULONG i=0;i<Nhalf;i++)
     {
       philv[i][REAL]=0.0;
       philv[i][IMAG]=0.0;
@@ -1354,8 +1648,10 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
     calc_LapPhiv(Nft,Nft,Nft,L1,L2,L3,philv,LapPhivyz,2,3);
 
     // Get gradient in y-direction
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<Nhalf;i++)
+#endif
+    for(ULONG i=0;i<Nhalf;i++)
     {
       philv[i][REAL]=0.0;
       philv[i][IMAG]=0.0;
@@ -1363,8 +1659,11 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
     do_fftw_r2c(Nft,phi,philv);
 
     calc_LapPhiv(Nft,Nft,Nft,L1,L2,L3,philv,dummy,3,3);
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<Nhalf;i++)
+#endif
+    for(ULONG i=0;i<Nhalf;i++)
     {
       philv[i][REAL]=0.0;
       philv[i][IMAG]=0.0;
@@ -1379,89 +1678,6 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
 #endif
 
 
-
-
-#ifdef _USE_S2_
-    // Get S2:
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-    for(ULONG i=0;i<NGRID;++i)
-       {
-        real_prec S11=LapPhivx[i]-(1./3.)*delta[i];
-        real_prec S12=LapPhivxy[i];
-        real_prec S13=LapPhivxz[i];
-        real_prec S21=LapPhivyx[i];
-        real_prec S22=LapPhivy[i]-(1./3.)*delta[i];
-        real_prec S23=LapPhivyz[i];
-        real_prec S31=LapPhivzx[i];
-        real_prec S32=LapPhivzy[i];
-        real_prec S33=LapPhivz[i]-(1./3.)*delta[i];
-        S2[i]=S11*S11 +S12*S21 + S13*S31+ S21*S12 +S22*S22 + S23*S32 +S31*S13 +S23*S32 +S33*S33;
-       }
-#endif
-
-
-
-#ifdef _USE_S3_
-    // Get S3:
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-    for(ULONG i=0;i<NGRID;++i)
-        {
-         real_prec S11=LapPhivx[i]-(1./3.)*delta[i];
-         real_prec S12=LapPhivxy[i];
-         real_prec S13=LapPhivxz[i];
-         real_prec S21=LapPhivyx[i];
-         real_prec S22=LapPhivy[i]-(1./3.)*delta[i];
-         real_prec S23=LapPhivyz[i];
-         real_prec S31=LapPhivzx[i];
-         real_prec S32=LapPhivzy[i];
-         real_prec S33=LapPhivz[i]-(1./3.)*delta[i];
-         real_prec A1=S11*(S11*S11+S12*S21+S12*S31)+S21*(S11*S12+S12*S21+S12*S31)+S31*(S11*S13+S12*S23+S13*S33);
-         real_prec A2=S12*(S21*S11+S22*S21+S23*S31)+S22*(S21*S12+S22*S22+S23*S32)+S32*(S21*S13+S22*S23+S23*S33);
-         real_prec A3=S13*(S31*S11+S32*S21+S33*S31)+S23*(S31*S12+S32*S22+S33*S32)+S33*(S31*S31+S32*S23+S33*S33);
-         S3[i]=A1+A2+A3;
-     }
-
-#endif
-
-
-#ifdef _USE_NABLA2DELTA_
-
-    vector<real_prec> NLapPhivx(NGRID,0), NLapPhivy(NGRID,0), NLapPhivz(NGRID,0);
-
-    // Get partial delta/partial x
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,delta,NLapPhivx,1);
-    // Get partial delta/partial y
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,delta,NLapPhivy,2);
-    // Get partial delta/partial z
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,delta,NLapPhivz,3);
-
-    // Get partial( delta/partial x) /partial x
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,NLapPhivx,NLapPhivx,1);
-    // Get partial( delta/partial y) /partial y
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,NLapPhivy,NLapPhivy,2);
-    // Get partial( delta/partial z) /partial z
-    gradfindif(Nft,Nft,Nft,L1,L2,L3,NLapPhivz,NLapPhivz,3);
-
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-    for(ULONG i=0;i<NGRID;++i)
-      N2D[i]=NLapPhivx[i]+NLapPhivy[i]+NLapPhivz[i];
-    NLapPhivx.clear();
-    NLapPhivx.shrink_to_fit();
-    NLapPhivy.clear();
-    NLapPhivy.shrink_to_fit();
-    NLapPhivz.clear();
-    NLapPhivz.shrink_to_fit();
-  
-
-#endif
-
-    
     
     dummy.clear();
     dummy.shrink_to_fit();
@@ -1591,6 +1807,262 @@ void EigenValuesTweb(ULONG Nft, real_prec L1, const vector<real_prec> &delta, co
 //##################################################################################
 //##################################################################################
 //##################################################################################
+void downsampling(ULONG Nft_HR, ULONG Nft_LR, int imas, vector<real_prec>&HR_field, vector<real_prec>&LR_field, real_prec Lbox)
+{
+
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+
+  ULONG NTT_HR=static_cast<ULONG>(Nft_HR*Nft_HR*(Nft_HR/2+1));
+  ULONG NTT_LR=static_cast<ULONG>(Nft_LR*Nft_LR*(Nft_LR/2+1));
+  ULONG NGRID_LR=LR_field.size();
+
+  if(NTT_HR<NTT_LR)
+    {
+      cout<<RED<<"Error. High resolution mesh must have larger number of Nft cells than low resolution."<<endl;
+      exit(0);
+    }
+
+#ifdef _DOUBLE_PREC_
+    complex_prec *HR_FOURIER= (complex_prec *)fftw_malloc(2*NTT_HR*sizeof(real_prec));
+#else
+  complex_prec *HR_FOURIER= (complex_prec *)fftwf_malloc(2*NTT_HR*sizeof(real_prec));
+#endif
+
+#pragma omp parallel for
+   for(ULONG i=0;i<NTT_HR;++i)HR_FOURIER[i][REAL]=0;
+#pragma omp parallel for
+   for(ULONG i=0;i<NTT_HR;++i)HR_FOURIER[i][IMAG]=0;
+
+
+   // DO FFT of the high-res density field
+   do_fftw_r2c(Nft_HR,HR_field,HR_FOURIER);
+
+
+
+    // Get the MAS correction for the H-Res density field
+   vector<real_prec> correction(Nft_HR,1.0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+   for(int i = 1 ; i < Nft_HR; ++i )
+    {
+      int  coords= i<=Nft_HR/2? i: i-Nft_HR;
+      real_prec xx=static_cast<real_prec>(coords)*M_PI/static_cast<real_prec>(Nft_HR);
+      real_prec kernel= sin(xx)/static_cast<real_prec>(xx);
+      correction[i]= pow(kernel,imas+1);
+    }
+
+#ifdef _DOUBLE_PREC_
+  complex_prec *LR_FOURIER= (complex_prec *)fftw_malloc(2*NTT_LR*sizeof(real_prec));
+#else
+   complex_prec *LR_FOURIER= (complex_prec *)fftwf_malloc(2*NTT_LR*sizeof(real_prec));
+#endif
+
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+   for(ULONG i=0;i<NTT_LR;++i)LR_FOURIER[i][REAL]=0;
+#ifdef _USE_OMP_
+#pragma omp parallel for
+  for(ULONG i=0;i<NTT_LR;++i)LR_FOURIER[i][IMAG]=0;
+#endif
+
+  vector<real_prec> kmodes_lr(Nft_LR,0.0);
+  real_prec delta_k= 2*M_PI/Lbox;
+
+#pragma omp parallel for
+   for(int i = 0 ; i < Nft_LR; ++i )
+   {
+      int coords= i < Nft_LR/2+1? i: i-Nft_LR;
+      kmodes_lr[i]=static_cast<real_prec>(coords)*delta_k;
+   }
+
+
+   // Get the FT of the Low-res density field
+real_prec delta_box_hr= Lbox/static_cast<real_prec>(Nft_HR);
+real_prec alpha=static_cast<double>(Nft_HR)/static_cast<double>(Nft_LR);
+real_prec delta_shift= 0.5*(alpha-1.0)*delta_box_hr; //Yu
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<Nft_LR;++i)
+    {
+      ULONG i_hr = i < Nft_LR/2 +1 ? i : i+Nft_HR-Nft_LR;
+      for(ULONG j=0;j< Nft_LR;++j)
+        {
+          ULONG j_hr = j < Nft_LR/2 +1 ? j : j+Nft_HR-Nft_LR;
+          for(ULONG k=0;k<Nft_LR/2+1;++k)
+            {
+              ULONG k_hr=  k < Nft_LR/2 +1 ? k : k+Nft_HR-Nft_LR;
+              ULONG index_lr=index_3d(i,   j,   k,   Nft_LR, Nft_LR/2+1);
+              ULONG index_hr=index_3d(i_hr,j_hr,k_hr,Nft_HR ,Nft_HR/2+1);
+              real_prec corr=correction[i_hr]*correction[j_hr]*correction[k_hr];
+              real_prec new_real=HR_FOURIER[index_hr][REAL]/corr;
+              real_prec new_imag=HR_FOURIER[index_hr][IMAG]/corr;
+              real_prec shift=delta_shift*(kmodes_lr[i] + kmodes_lr[j] + kmodes_lr[k]);
+              LR_FOURIER[index_lr][REAL] = (cos(shift)*new_real - sin(shift)*new_imag); //This follows the convention delta_2-> exp(iks)*delta_2
+              LR_FOURIER[index_lr][IMAG] = (cos(shift)*new_imag + sin(shift)*new_real);
+            }
+        }
+    }
+
+
+  // Set Ny freq of the FT of the L-res density field to real:
+  real_prec a, b;
+  int ii, jj, kk;
+  ULONG ind;
+  real_prec fac=1.0;
+
+  ii=0; jj=0; kk=0;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=0; jj=0; kk=Nft_LR/2;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=0; jj=Nft_LR/2; kk=0;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=0; jj=Nft_LR/2; kk=Nft_LR/2;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=Nft_LR/2; jj=0; kk=0;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=Nft_LR/2; jj=0; kk=Nft_LR/2;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=Nft_LR/2; jj=Nft_LR/2; kk=0;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+  ii=Nft_LR/2; jj=Nft_LR/2; kk=Nft_LR/2;
+  ind = index_3d(ii,jj,kk, Nft_LR, Nft_LR/2+1);
+  a  =  LR_FOURIER[ind][REAL];
+  b  =  fac*LR_FOURIER[ind][IMAG];
+  LR_FOURIER[ind][REAL]=sqrt(a*a+b*b);
+  LR_FOURIER[ind][IMAG]=0.0;
+
+
+ // Transform to L-res density field.
+  do_fftw_c2r(Nft_LR ,LR_FOURIER,LR_field);
+
+
+#ifdef _DOUBLE_PREC_
+  fftw_free(LR_FOURIER);
+  fftw_free(HR_FOURIER);
+#else
+  fftwf_free(LR_FOURIER);
+  fftwf_free(HR_FOURIER);
+#endif
+
+
+}
+
+
+
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################
+/*
+delta1 = Aexp(i phi1)
+delta2 = Bexp(i phi2)
+output delta2=A exp(i phi2), that is, conserves the phases but with a different amplitude
+*/
+
+
+void swap_amp_fourier(ULONG Nft, vector<real_prec>&in_ref, vector<real_prec>&out_field)
+{
+
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+  ULONG NTT=static_cast<ULONG>(Nft*Nft*(Nft/2+1));
+  ULONG NGRID=in_ref.size();
+
+#ifdef _DOUBLE_PREC_
+  complex_prec *in_FOURIER= (complex_prec *)fftw_malloc(2*NTT*sizeof(real_prec));
+  complex_prec *out_FOURIER= (complex_prec *)fftw_malloc(2*NTT*sizeof(real_prec));
+#else
+  complex_prec *in_FOURIER= (complex_prec *)fftwf_malloc(2*NTT*sizeof(real_prec));
+  complex_prec *out_FOURIER= (complex_prec *)fftwf_malloc(2*NTT*sizeof(real_prec));
+#endif
+
+#pragma omp parallel for
+  for(ULONG i=0;i<NTT;++i)in_FOURIER[i][REAL]=0;
+#pragma omp parallel for
+  for(ULONG i=0;i<NTT;++i)in_FOURIER[i][IMAG]=0;
+#pragma omp parallel for
+  for(ULONG i=0;i<NTT;++i)out_FOURIER[i][REAL]=0;
+#pragma omp parallel for
+  for(ULONG i=0;i<NTT;++i)out_FOURIER[i][IMAG]=0;
+  do_fftw_r2c(Nft,in_ref,in_FOURIER);
+  do_fftw_r2c(Nft,out_field,out_FOURIER);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<NTT;++i)
+   {
+     real_prec Amp_in = sqrt(pow(in_FOURIER[i][REAL],2)+pow(in_FOURIER[i][IMAG],2));
+     real_prec phi_o  = atan2(out_FOURIER[i][IMAG],out_FOURIER[i][REAL]);
+     out_FOURIER[i][REAL] = Amp_in*cos(phi_o); 
+     out_FOURIER[i][IMAG] = Amp_in*sin(phi_o);
+   }
+  do_fftw_c2r(Nft,out_FOURIER,out_field);
+#ifdef _DOUBLE_PREC_
+  fftw_free(in_FOURIER);
+  fftw_free(out_FOURIER);
+#else
+  fftwf_free(in_FOURIER);
+  fftwf_free(out_FOURIER);
+#endif
+
+
+}
+
+
+
+//##################################################################################
+//##################################################################################
+
 void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delta, const vector<real_prec> &phi, vector<real_prec> &S2, vector<real_prec> &S3, vector<real_prec> &N2D)
 {
     // Function from webclass by F. Kitaura. File webclass.cc
@@ -1598,9 +2070,10 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
     real_prec L2=L1;
     real_prec L3=L2;
 
-
+#ifdef _USE_OMP_
     int NTHREADS = omp_get_max_threads();
     omp_set_num_threads(NTHREADS);
+#endif
 
     ULONG NGRID = static_cast<ULONG>(Nft*Nft*Nft);
 
@@ -1608,6 +2081,7 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
     vector<real_prec> LapPhivx(NGRID,0), LapPhivy(NGRID,0), LapPhivz(NGRID,0);
     vector<real_prec> LapPhivxy(NGRID,0), LapPhivxz(NGRID,0), LapPhivyz(NGRID,0);
     vector<real_prec> LapPhivzx(NGRID,0), LapPhivzy(NGRID,0), LapPhivyx(NGRID,0);
+
 
 
     vector<real_prec> dummy(NGRID,0);
@@ -1633,22 +2107,33 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
     gradfindif(Nft,Nft,Nft,L1,L2,L3,dummy,LapPhivzy,2);
 
 
+#if defined (_USE_S3_) || defined (_USE_S3_)
+    vector<real_prec> La1(NGRID,0), La2(NGRID,0), La3(NGRID,0),Phi(NGRID,0);
+    PoissonSolver(L1, Nft,delta,Phi);
+    EigenValuesTweb(Nft,L1, delta, Phi, La1, La2, La3);
+    Phi.clear();Phi.shrink_to_fit();
+#endif
+
+
+
 #ifdef _USE_S2_
     // Get S2:
+
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
     for(ULONG i=0;i<NGRID;++i)
        {
-        real_prec S11=LapPhivx[i]-(1./3.)*delta[i];
+        real_prec S11=LapPhivx[i]-(1./3.)*(La1[i]+La2[i]+La3[i]);
         real_prec S12=LapPhivxy[i];
         real_prec S13=LapPhivxz[i];
         real_prec S21=LapPhivyx[i];
-        real_prec S22=LapPhivy[i]-(1./3.)*delta[i];
+        real_prec S22=LapPhivy[i]-(1./3.)*(La1[i]+La2[i]+La3[i]);
         real_prec S23=LapPhivyz[i];
         real_prec S31=LapPhivzx[i];
         real_prec S32=LapPhivzy[i];
-        real_prec S33=LapPhivz[i]-(1./3.)*delta[i];
+        real_prec S33=LapPhivz[i]-(1./3.)*(La1[i]+La2[i]+La3[i]);
         S2[i]= S11 *S11 +S12*S21 + S13*S31+ S21*S12 +S22*S22 + S23*S32 +S31*S13 +S23*S32 +S33*S33;
        }
 #endif
@@ -1662,15 +2147,15 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
 #endif
     for(ULONG i=0;i<NGRID;++i)
         {
-         real_prec S11=LapPhivx[i]-(1./3.)*delta[i];
+         real_prec S11=LapPhivx[i]-(1./3.)*(La1[i]+La2[i]+La3[i]);
          real_prec S12=LapPhivxy[i];
          real_prec S13=LapPhivxz[i];
          real_prec S21=LapPhivyx[i];
-         real_prec S22=LapPhivy[i]-(1./3.)*delta[i];
+         real_prec S22=LapPhivy[i]-(1./3.)*(La1[i]+La2[i]+La3[i]);
          real_prec S23=LapPhivyz[i];
          real_prec S31=LapPhivzx[i];
          real_prec S32=LapPhivzy[i];
-         real_prec S33=LapPhivz[i]-(1./3.)*delta[i];
+         real_prec S33=LapPhivz[i]-(1./3.)*(La1[i]+La2[i]+La2[i]);
          real_prec A1=S11*(S11*S11+S12*S21+S12*S31)+S21*(S11*S12+S12*S21+S12*S31)+S31*(S11*S13+S12*S23+S13*S33);
          real_prec A2=S12*(S21*S11+S22*S21+S23*S31)+S22*(S21*S12+S22*S22+S23*S32)+S32*(S21*S13+S22*S23+S23*S33);
          real_prec A3=S13*(S31*S11+S32*S21+S33*S31)+S23*(S31*S12+S32*S22+S33*S32)+S33*(S31*S31+S32*S23+S33*S33);
@@ -1679,7 +2164,11 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
 
 #endif
 
-
+#if defined (_USE_S3_) || defined (_USE_S3_)
+    La1.clear(); La1.shrink_to_fit();
+    La2.clear(); La2.shrink_to_fit();
+    La3.clear(); La3.shrink_to_fit();
+#endif
 
 
 #ifdef _USE_NABLA2DELTA_
@@ -1712,9 +2201,7 @@ void EigenValuesTweb_bias(ULONG Nft, real_prec L1, const vector<real_prec> &delt
     NLapPhivz.clear();
     NLapPhivz.shrink_to_fit();
 
-
 #endif
-
 
 
     dummy.clear();
@@ -1731,6 +2218,13 @@ void EigenValuesVweb(ULONG Nft, real_prec L1, vector<real_prec>&Vinx, vector<rea
 
     //Get divergence of vel field and eigenvalues of velocity shear tensor
     // Function from webclass by F. Kitaura. File webclass.cc
+
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
+
+
     real_prec L2=L1;
     real_prec L3=L2;
 
@@ -1921,8 +2415,14 @@ void EigenValuesVweb(ULONG Nft, real_prec L1, vector<real_prec>&Vinx, vector<rea
 //##################################################################################
 //##################################################################################
 
-void PoissonSolver(real_prec Lbox, ULONG Nft, const vector<real_prec>&in, vector<real_prec>&out)
+void PoissonSolver(real_prec Lbox, ULONG Nft,  vector<real_prec>&in, vector<real_prec>&out)
 {
+
+
+#ifdef _USE_OMP_
+    int NTHREADS = _NTHREADS_;
+    omp_set_num_threads(NTHREADS);
+#endif
 
 #ifdef _USE_ZERO_PADDING_POT_
     int factor_ntt=_EXTRA_NFT_FACTOR_*_EXTRA_NFT_FACTOR_*_EXTRA_NFT_FACTOR_;
@@ -1945,12 +2445,23 @@ void PoissonSolver(real_prec Lbox, ULONG Nft, const vector<real_prec>&in, vector
   ULONG NTT = static_cast<ULONG>(Nft*Nft*(Nft/2+1));
   real_prec deltak=2.*M_PI/Lbox;
   
-  complex_prec *data_out= (complex_prec *)fftw_malloc(2*NTT*sizeof(real_prec));
 
+#ifdef DOUBLE_PREC
+   complex_prec *data_out= (complex_prec *)fftw_malloc(2*NTT*sizeof(real_prec));
+#else
+   complex_prec *data_out= (complex_prec *)fftwf_malloc(2*NTT*sizeof(real_prec));
+#endif
+
+
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<NTT;++i)data_out[i][REAL]=0;
+#endif
+   for(ULONG i=0;i<NTT;++i)data_out[i][REAL]=0;
+#ifdef _USE_OMP_
 #pragma omp parallel for
-  for(ULONG i=0;i<NTT;++i)data_out[i][IMAG]=0;
+#endif
+   for(ULONG i=0;i<NTT;++i)data_out[i][IMAG]=0;
   
 #ifdef _USE_ZERO_PADDING_POT_
   do_fftw_r2c(Nft,new_in,data_out);
@@ -1999,9 +2510,12 @@ void PoissonSolver(real_prec Lbox, ULONG Nft, const vector<real_prec>&in, vector
 #endif
 
 
-
+#ifdef _DOUBLE_PREC_
   fftw_free(data_out);
-  
+#else
+  fftwf_free(data_out);
+#endif
+
 }
 //##################################################################################
 //##################################################################################
@@ -2010,10 +2524,10 @@ void exchange_xy(int Nft,const vector<real_prec>&in, vector<real_prec>&out)
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i=0;i<Nft;++i)
-      for(ULONG j=0;j<Nft;++j)
-         for(ULONG k=0;k<Nft;++k)
-             out[index_3d(i,j,k,Nft,Nft)]=in[index_3d(j,i,k,Nft,Nft)];
+for(ULONG i=0;i<Nft;++i)
+  for(ULONG j=0;j<Nft;++j)
+    for(ULONG k=0;k<Nft;++k)
+      out[index_3d(i,j,k,Nft,Nft)]=in[index_3d(j,i,k,Nft,Nft)];
 }
 
 
@@ -2103,16 +2617,32 @@ ULONG index_4d(int i, int j, int k, int l, int Nj, int Nk, int Nl)
 }
 //##################################################################################
 //##################################################################################
-ULONG index_3d(int i, int j, int k, int Nj, int Nk)
-{
-  return static_cast<ULONG>(k)+static_cast<ULONG>(Nk*j)+static_cast<ULONG>(Nk*Nj*i);
+ULONG index_3d(ULONG i, ULONG j, ULONG k, int Nj, int Nk)
+{ // if k denots the z coordinate, then this is row majort (c) order
+  return k+ static_cast<ULONG>(Nk*j)+static_cast<ULONG>(Nk*Nj*i);
 }
 //##################################################################################
 //##################################################################################
-ULONG index_2d(int i, int j, int Nj)
+ULONG index_2d(ULONG i, ULONG j, ULONG Nj)
 {
-  return static_cast<ULONG>(j)+static_cast<ULONG>(Nj*i);
+  return j+Nj*i;
 }
+
+//##################################################################################
+//##################################################################################
+
+// This funciton can be applied to both C like (row-major) or Fortran like (columnm major) order
+
+void index2coords(ULONG index, ULONG N,  ULONG  &XG, ULONG &YG, ULONG &ZG )
+{
+//  see https://math.stackexchange.com/questions/3758576/how-to-convert-from-a-flattened-3d-index-to-a-set-of-coordinates
+
+  ZG=index % N;  // Fast varying coordinate. Can be z(c++) or x (Fortran)
+  index = static_cast<ULONG>(static_cast<real_prec>(index)/static_cast<real_prec>(N));
+  YG=index % N;
+  XG = static_cast<ULONG>(static_cast<real_prec>(index)/static_cast<real_prec>(N));  // Slow varying coordinate. Can be x(c++) or z(Fortran)
+}
+
 
 //##################################################################################
 //#################################################################################
@@ -2138,50 +2668,94 @@ ULONG grid_ID(s_params_box_mas *params, const real_prec &x, const real_prec &y, 
 //##################################################################################
 //##################################################################################
 //##################################################################################
-void do_fftw_r2c(int Nft, vector<real_prec>in, complex_prec *out)
+void do_fftw_r2c(int Nft, vector<real_prec>&in, complex_prec *out)
 {
-  int *n=(int *)fftw_malloc(ic_rank*sizeof(float));
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+#ifdef DOUBLE_PREC
+  int *n=(int *)fftw_malloc(ic_rank*sizeof(int));
+#else
+  int *n=(int *)fftwf_malloc(ic_rank*sizeof(int));
+#endif
+
+
   for(int i=0;i<ic_rank;++i)n[i]=Nft;
-  fftw_init_threads();
-  fftw_plan_with_nthreads(omp_get_max_threads());
 #ifdef SINGLE_PREC
+#ifdef _USE_OMP_
+  fftwf_init_threads();
+  fftwf_plan_with_nthreads(NTHREADS);
+#endif
   fftwf_plan plan_r2c=fftwf_plan_dft_r2c(ic_rank,n,&in[0],out,FFTW_ESTIMATE);
   fftwf_execute(plan_r2c);
   fftwf_destroy_plan(plan_r2c);
+  fftwf_free(n);
 #endif
 #ifdef DOUBLE_PREC
+#ifdef _USE_OMP_
+  fftw_init_threads();
+  fftw_plan_with_nthreads(NTHREADS);
+#endif
   fftw_plan plan_r2c=fftw_plan_dft_r2c(ic_rank,n,&in[0],out,FFTW_ESTIMATE);
   fftw_execute(plan_r2c);
   fftw_destroy_plan(plan_r2c);
-#endif
   fftw_free(n);
+#endif
 }
 
 //##################################################################################
 //##################################################################################
 void do_fftw_c2r(int Nft, complex_prec *in, vector<real_prec>&out)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
   ULONG NGRID = static_cast<ULONG>(Nft*Nft*Nft);
-  int *n=(int *)malloc(ic_rank*sizeof(float));
+
+
+#ifdef DOUBLE_PREC
+  int *n=(int *)fftw_malloc(ic_rank*sizeof(int));
+#else
+  int *n=(int *)fftwf_malloc(ic_rank*sizeof(int));
+#endif
+
+
   for(int i=0;i<ic_rank;++i)n[i]=Nft;
 #ifdef SINGLE_PREC
+#ifdef _USE_OMP_
+  fftwf_init_threads();
+  fftwf_plan_with_nthreads(omp_get_max_threads());
+#endif
   fftwf_plan plan_c2r=fftwf_plan_dft_c2r(ic_rank,n,in,&out[0], FFTW_ESTIMATE);
   fftwf_execute(plan_c2r);
   fftwf_destroy_plan(plan_c2r);
+  fftwf_free(n);
 #endif
 #ifdef DOUBLE_PREC
-  fftw_plan plan_c2r=fftw_plan_dft_c2r(ic_rank,n,in,&out[0], FFTW_ESTIMATE); 
+#ifdef _USE_OMP_
+  fftw_init_threads();
+  fftw_plan_with_nthreads(omp_get_max_threads());
+#endif
+  fftw_plan plan_c2r=fftw_plan_dft_c2r(ic_rank,n,in,&out[0], FFTW_ESTIMATE);
   fftw_execute(plan_c2r);
   fftw_destroy_plan(plan_c2r);
+  fftw_free(n);
 #endif
 
-  free(n);
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
   for(ULONG i=0;i<NGRID;i++)  // normalize the c2r transform
-    out[i]/=static_cast<double>(NGRID);
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+      out[i]/=static_cast<double>(NGRID);
 
 }
 
@@ -2189,6 +2763,11 @@ void do_fftw_c2r(int Nft, complex_prec *in, vector<real_prec>&out)
 //##################################################################################
 void do_fftw_3d(ULONG Nft, bool direction, complex_prec *in, complex_prec *out)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
   ULONG factor=Nft*Nft*Nft;
   
@@ -2248,6 +2827,12 @@ void do_fftw_3d(ULONG Nft, bool direction, complex_prec *in, complex_prec *out)
 
 void get_cumulative(const vector<real_prec> &dist, vector<real_prec> &cumu, unsigned long &NTOT_h)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   NTOT_h=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:NTOT_h)
@@ -2261,7 +2846,7 @@ void get_cumulative(const vector<real_prec> &dist, vector<real_prec> &cumu, unsi
    for(int i=0;i<dist.size();++i)
     for(int j=0;j<=i;++j)
 #ifdef _USE_OMP_
-#pragma omp atomic
+#pragma omp atomic update
 #endif
         cumu[i]+=dist[j];
 
@@ -2269,13 +2854,22 @@ void get_cumulative(const vector<real_prec> &dist, vector<real_prec> &cumu, unsi
 #pragma omp parallel for
 #endif
   for(int i=0;i<dist.size();++i)
-    cumu[i]/=static_cast<double>(NTOT_h);
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+      cumu[i]/=static_cast<double>(NTOT_h);
 }
 
 //##################################################################################
 //##################################################################################
 real_prec get_nobjects(const vector<real_prec> &density_field)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   double ans=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:ans)
@@ -2289,6 +2883,12 @@ real_prec get_nobjects(const vector<real_prec> &density_field)
 //##################################################################################
 ULONG get_nobjects(const vector<ULONG> &density_field)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   ULONG ans=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:ans)
@@ -2304,7 +2904,15 @@ ULONG get_nobjects(const vector<ULONG> &density_field)
 void get_overdens(const vector<real_prec>&in, vector<real_prec>&out)
 {
 
-  cout<<YELLOW<<"Converting to Overdensity"<<RESET<<endl;
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+#ifdef _FULL_VERBOSE_
+    cout<<YELLOW<<"Converting to Overdensity"<<RESET<<endl;
+#endif
+
   double mean=get_nobjects(in);
   mean/=static_cast<double>(in.size());
 #ifdef _USE_OMP_
@@ -2312,8 +2920,9 @@ void get_overdens(const vector<real_prec>&in, vector<real_prec>&out)
 #endif
   for(ULONG i=0;i< in.size();++i)
     out[i]=in[i]/mean-num_1;
-  
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
 }
 
 
@@ -2321,12 +2930,22 @@ void get_overdens(const vector<real_prec>&in, vector<real_prec>&out)
 //##################################################################################
 void convert_ngp_to_cic(vector<real_prec>&in, vector<real_prec>&out)
 {
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   cout<<YELLOW<<"Transforming NGP to CIC "<<RESET<<endl;
   ULONG N=in.size();
   ULONG N1=static_cast<ULONG>(pow(N,1./3.))+1;
   ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N1)*static_cast<ULONG>(N1/2+1);  	
+
+#ifdef DOUBLE_PREC
   complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-  
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -2344,7 +2963,9 @@ void convert_ngp_to_cic(vector<real_prec>&in, vector<real_prec>&out)
   vector<real_prec> coords(N1,0);
   vector<real_prec> correction(N1,0);
   
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(int i = 0 ; i < N1; ++i )
     {
       coords[i]=static_cast<real_prec>( i<=N1/2? i: i-(N1));
@@ -2353,7 +2974,9 @@ void convert_ngp_to_cic(vector<real_prec>&in, vector<real_prec>&out)
     }
   
   real_prec we=0;
+#ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:we)
+#endif
   for(ULONG i=0;i< N1; i++)
     for(ULONG j=0;j< N1; j++)
       for(ULONG k=0;k< N1/2+1; k++)
@@ -2366,14 +2989,22 @@ void convert_ngp_to_cic(vector<real_prec>&in, vector<real_prec>&out)
 	}
 
   do_fftw_c2r(N1,AUX,out);
-
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(ULONG i=0;i<N;i++)
     out[i]=(out[i]<0 ? 0: out[i]);//*(static_cast<real_prec>(N)/static_cast<real_prec>(2.0*we));
   
-
+#ifdef DOUBLE_PREC
   fftw_free(AUX);
+#else
+  fftwf_free(AUX);
+#endif
+
+
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;  
+#endif
 }
 
 
@@ -2385,11 +3016,24 @@ void convert_ngp_to_cic(vector<real_prec>&in, vector<real_prec>&out)
 //##################################################################################
 void convert_cic_to_ngp(vector<real_prec>&in, vector<real_prec>&out)
 {
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Transforming CIC to NGP "<<RESET<<endl;
+#endif
   ULONG N=in.size();
   ULONG N1=static_cast<ULONG>(pow(N,1./3.))+1;
   ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N1)*static_cast<ULONG>(N1/2+1);
+
+#ifdef DOUBLE_PREC
   complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -2431,23 +3075,40 @@ void convert_cic_to_ngp(vector<real_prec>&in, vector<real_prec>&out)
   for(ULONG i=0;i<N;i++)
     out[i]=(out[i]<0 ? 0: out[i]);//*(static_cast<real_prec>(N)/static_cast<real_prec>(2.0*we));
 
-
+#ifdef DOUBLE_PREC
   fftw_free(AUX);
+#else
+  fftwf_free(AUX);
+#endif
+
+
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
 }
 
 //##################################################################################
 //##################################################################################
 void get_overdens(const vector<real_prec>&in, real_prec mean, vector<real_prec>&out)
 {
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Converting to Overdensity"<<RESET<<endl;
+#endif
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
   for(ULONG i=0;i< in.size();++i)
     out[i]=in[i]/static_cast<double>(mean)-1.0;
+
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
 }
 
 //##################################################################################
@@ -2456,13 +3117,18 @@ void get_overdens(const vector<real_prec>&in, real_prec mean, vector<real_prec>&
 void get_overdens(const vector<real_prec>&in,const vector<real_prec>&weight,vector<real_prec>&out, bool wind_binary)
 {
 
-  cout<<YELLOW<<"Converting to Overdensity with weights"<<RESET<<endl;
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
+#ifdef _FULL_VERBOSE_
+  cout<<YELLOW<<"Converting to Overdensity with weights"<<RESET<<endl;
+#endif
+  double mean=0;
+  double veff=0;
 
 #ifdef _USE_OMP_
-double mean=0;
-double veff=0;
-
 #pragma omp parallel for reduction(+:mean, veff)
 #endif
   for(ULONG i=0;i< in.size();++i)
@@ -2482,8 +3148,9 @@ double veff=0;
 #endif
   for(ULONG i=0;i< in.size();++i)
     out[i]=in[i]/mean-weight[i];
-
+#ifdef _FULL_VERBOSE_
   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
 }
 
 
@@ -2605,20 +3272,6 @@ void grid_assignment_cic(real_prec deltax, ULONG Nft, real_prec Lside, real_prec
 
 
 
-//##################################################################################
-//##################################################################################
-
-void index2coords(ULONG N, ULONG index, real_prec  *XG, real_prec *YG, real_prec *ZG )
-{
-  real_prec zz=index % N;
-  index = static_cast<real_prec>(index)/static_cast<real_prec>(N);
-  real_prec yy=index % N;
-  index = static_cast<real_prec>(index)/static_cast<real_prec>(N);
-  real_prec xx = index;
-  *XG=xx;
-  *YG=yy;
-  *ZG=zz;
-}
 
 
 //##################################################################################
@@ -2684,16 +3337,26 @@ real_prec GR_NUM(gsl_rng * SEED, real_prec sigma ,int GR_METHOD)
 {
 #endif
   
-  
+  #ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   //  FileOutput File;
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
   //  ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);
   ULONG Nhalf = static_cast<ULONG>(N1*N2*(N3/2+1));
-  cout<<YELLOW<<"Computing white noise "<<RESET<<endl;
-  
-  complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
 
+  #ifdef _FULL_VERBOSE_
+  cout<<YELLOW<<"Computing white noise "<<RESET<<endl;
+#endif  
+#ifdef DOUBLE_PREC
+  complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
   
+
   for (ULONG i=0;i<N;i++)
     delta[i] = static_cast<real_prec>(GR_NUM(seed,num_1,0));
   
@@ -2703,9 +3366,10 @@ real_prec GR_NUM(gsl_rng * SEED, real_prec sigma ,int GR_METHOD)
   do_fftw_r2c(N1,delta,AUX);
   //#endif
 
-    
+#ifdef _FULL_VERBOSE_
     cout<<YELLOW<<"Going to the Fourier grid "<<RESET<<endl;
-    
+#endif    
+
 #ifdef _USE_OMP_
 #pragma omp parallel for// take care!!!
 #endif
@@ -2739,10 +3403,13 @@ real_prec GR_NUM(gsl_rng * SEED, real_prec sigma ,int GR_METHOD)
             }
     
     do_fftw_c2r(N1,AUX,delta); 
-    
+#ifdef DOUBLE_PREC
     fftw_free(AUX);
-    
-}
+#else
+    fftwf_free(AUX);
+#endif
+
+  }
   
 
 //##################################################################################
@@ -2752,14 +3419,26 @@ real_prec GR_NUM(gsl_rng * SEED, real_prec sigma ,int GR_METHOD)
 void create_GARFIELD_FIXED_AMP(ULONG N1,ULONG N2,ULONG N3,  vector<real_prec> &delta, const vector<real_prec> &Power, gsl_rng * seed)
  {
 
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
    ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
    ULONG Nhalf = static_cast<ULONG>(N1*N2*(N3/2+1));
    cout<<YELLOW<<"Computing white noise "<<N2<<RESET<<endl;
 
+#ifdef DOUBLE_PREC
    complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+   complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
 
+#endif
+#ifdef _FULL_VERBOSE_
    cout<<YELLOW<<"Going to the Fourier grid "<<RESET<<endl;
-
+#endif
  #ifdef _USE_OMP_
  #pragma omp parallel for// take care!!!
  #endif
@@ -2768,7 +3447,7 @@ void create_GARFIELD_FIXED_AMP(ULONG N1,ULONG N2,ULONG N3,  vector<real_prec> &d
          for (ULONG k=0 ; k<=N3/2;k++)
            {
              ULONG iind = index_3d(i,j,k,N2,N3);
-             real_prec sigma = sqrt(Power[iind]);
+             real_prec sigma = sqrt(Power[iind]); // In order to generate WN set sigma=1
              real_prec phase =2.*M_PI*gsl_rng_uniform(seed);
 
              ULONG ihalf= index_3d(i,j,k,N2,N3/2+1);
@@ -2776,14 +3455,19 @@ void create_GARFIELD_FIXED_AMP(ULONG N1,ULONG N2,ULONG N3,  vector<real_prec> &d
              AUX[ihalf][IMAG]=sigma*sin(phase);
            }
 
-     cout<<YELLOW<<"Computing white noise "<<N2<<RESET<<endl;
+
      do_fftw_c2r(N1,AUX,delta);
      real_prec meanWN=get_mean(delta);
      cout<<YELLOW<<"Mean WN = "<<CYAN<<meanWN<<RESET<<endl;
      real_prec sigma2D=get_var(meanWN, delta);
      cout<<YELLOW<<"Sigma_corr WN = "<<CYAN<<sqrt(sigma2D)<<RESET<<endl;
-     
-     fftw_free(AUX);
+
+
+#ifdef DOUBLE_PREC
+      fftw_free(AUX);
+#else
+     fftwf_free(AUX);
+#endif
 
    }
 
@@ -2796,6 +3480,13 @@ void create_GARFIELD_FIXED_AMP(ULONG N1,ULONG N2,ULONG N3,  vector<real_prec> &d
 void create_GARFIELDR_from_WHITENOISE(string power_file,ULONG N1,ULONG N2,ULONG N3, vector<real_prec> &in)
 {
 
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
   FileOutput File;
 
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);	
@@ -2803,9 +3494,11 @@ void create_GARFIELDR_from_WHITENOISE(string power_file,ULONG N1,ULONG N2,ULONG 
 
   vector<real_prec>Power(N,0);
   File.read_array(power_file,Power);
-
+#ifdef DOUBLE_PREC
   complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
 
   do_fftw_r2c(N1,in,AUX);
   
@@ -2831,9 +3524,13 @@ void create_GARFIELDR_from_WHITENOISE(string power_file,ULONG N1,ULONG N2,ULONG 
          }
   
   do_fftw_c2r(N1,AUX,in);      
-  fftw_free(AUX);
 
-  
+
+#ifdef DOUBLE_PREC
+  fftw_free(AUX);
+#else
+  fftwf_free(AUX);
+#endif
 }
   
 
@@ -2865,49 +3562,57 @@ real_prec k_squared(ULONG i,ULONG j,ULONG k,real_prec L1,real_prec L2,real_prec 
  void kernelcomp(real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3,ULONG N1, ULONG N2, ULONG N3, real_prec smol, int filtertype, string output_dir)
  {
 
-   cout<<YELLOW<<"Computing kernel"<<RESET<<endl;
+#ifdef _USE_OMP_
+   int NTHREADS=_NTHREADS_;
+   omp_set_num_threads(NTHREADS);
+#endif
 
+#ifdef _FULL_VERBOSE_
+   cout<<YELLOW<<"Computing kernel  "<<__PRETTY_FUNCTION__<<RESET<<endl;
+#endif
    string fnameR=output_dir+"kernel"+to_string(N1)+"V"+to_string(L1)+"r"+to_string(smol);
-   
    
    ifstream inStream;
    string ffnn=fnameR+".dat";
    inStream.open(ffnn.data());
 
    if (inStream.is_open() == false )
-     {
-       bool gauss=false;
-       bool errfunc=false;
-       bool tophat=false;
+    {
+      bool gauss=false;
+      bool errfunc=false;
+      bool tophat=false;
        
-       switch (filtertype)
-	 {
-	 case 1:
-	   gauss=true;
-	   break;
-	 case 2:
-	   tophat=true;
-	   break;
-	 case 3:
-	   errfunc=true;
-	   break;
-	 }
-       
-       ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
-       ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);
-       
-       vector<real_prec> out(Nhalf,0);
+      switch (filtertype)
+     	 {
+ 	      case 1:
+	      gauss=true;
+	      break;
+	      case 2:
+        tophat=true;
+	      break;
+	      case 3:
+	      errfunc=true;
+	      break;
+  	   }
+    
+      ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
+      ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);
+      vector<real_prec> out(Nhalf,0);
 
-       complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-       real_prec asmth=num_1;
-       real_prec u;
-       
-       real_prec rS=smol;
-       real_prec rS2=rS*rS;
-       real_prec kcut=smol;//2.*M_PI/rS;
-       real_prec sigma=static_cast<real_prec>(.3);
-
+#ifdef DOUBLE_PREC
+      complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+      complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+     real_prec asmth=num_1;
+     real_prec u; 
+     real_prec rS=smol;
+     real_prec rS2=rS*rS;
+     real_prec kcut=smol;//2.*M_PI/rS;
+     real_prec sigma=static_cast<real_prec>(.3);
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
        for (ULONG i=0;i<N1;i++)
 	 for (ULONG j=0;j<N2;j++)
 	   for (ULONG k=0;k<N3/2+1;k++)
@@ -2940,8 +3645,9 @@ real_prec k_squared(ULONG i,ULONG j,ULONG k,real_prec L1,real_prec L2,real_prec 
 	       AUX[ii][IMAG]=0.0;
 
 	     }
-       
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
        for(ULONG i=0;i<Nhalf;i++)
    	   out[i]=AUX[i][REAL];
 
@@ -2949,36 +3655,135 @@ real_prec k_squared(ULONG i,ULONG j,ULONG k,real_prec L1,real_prec L2,real_prec 
        do_fftw_c2r(N1, AUX, aux);
 	
         real_prec wtotD=0.;
+#ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:wtotD)
-	for(ULONG i=0;i<N;i++)
+#endif
+        for(ULONG i=0;i<N;i++)
           wtotD+=static_cast<real_prec>(aux[i]);
 
 	aux.clear();
 	aux.shrink_to_fit();
 
 	// Normalize kernel in Fourier space
+#ifdef _USE_OMP_
 #pragma omp parallel for
-	for(ULONG i=0;i<Nhalf;i++)
+#endif
+        for(ULONG i=0;i<Nhalf;i++)
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
           out[i]/=static_cast<real_prec>(wtotD);
 	
 	
 	// este out debe ser en Fourier espace
+
        dump_scalar(out,N1,N2,N3/2+1,0,fnameR);
 
+#ifdef DOUBLE_PREC
        fftw_free(AUX);
-     }
+#else
+       fftwf_free(AUX);
+#endif
 
+       }
 
-   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
-   
  }
  
 
+ //##################################################################################
+ //##################################################################################
+ //##################################################################################
+ //##################################################################################
+ void kernelcomp_for_boost(real_prec L, real_prec d,ULONG N, vector<real_prec>&kernel,string output_dir)
+ {
+#ifdef _USE_OMP_
+   int NTHREADS=_NTHREADS_;
+   omp_set_num_threads(NTHREADS);
+#endif
 
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
+#ifdef _FULL_VERBOSE_
+   cout<<YELLOW<<"Computing kernel from ratio of HF/Linear power spectrum"<<RESET<<endl;
+#endif
+   string fnameR=output_dir+"kernel_boost"+to_string(N);
+
+   ifstream inStream;
+   string ffnn=fnameR+".dat";
+   inStream.open(ffnn.data());
+
+   FileOutput File;
+   vector<real_prec> prop;
+   string file_lin="../Output/linear_matter_power_spectrum_EH_redshift_0.000000.txt";
+   int nlines=File.read_file(file_lin,prop,1);
+
+   vector<real_prec> l_power(nlines,0);
+#pragma omp parallel for
+   for(int i=0;i<l_power.size();++i)
+       l_power[i]=prop[1+i*2];
+   prop.clear(); prop.shrink_to_fit();
+
+   string file_nlin="../Output/non_linear_matter_power_spectrum_EH_halo_fit_redshift_0.000000.txt";
+   nlines=File.read_file(file_nlin,prop,1);
+   vector<gsl_real> nl_power(nlines,0);
+   vector<gsl_real> kvp(nlines,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+   for(int i=0;i<nlines;++i)
+      kvp[i]=prop[i*2];
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+   for(int i=0;i<nlines;++i)
+      nl_power[i]=prop[1+i*2];
+   prop.clear(); prop.shrink_to_fit();
+
+    for(int i=0;i<nl_power.size();++i)
+      nl_power[i]=(nl_power[i]/l_power[i]);
+
+    l_power.clear(); l_power.shrink_to_fit();
+
+    vector<real_prec> coords(N,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+    for(ULONG i=0;i<coords.size() ;++i)
+      coords[i]= (i<=N/2? static_cast<real_prec>(i): -static_cast<real_prec>(N-i));
+
+    gsl_interp_accel *acc = gsl_interp_accel_alloc ();
+    gsl_spline *spline    = gsl_spline_alloc (gsl_interp_linear, nl_power.size());
+    gsl_spline_init (spline, &kvp[0], &nl_power[0], nl_power.size());
+
+#ifdef _FULL_VERBOSE_
+    cout<<YELLOW<<"Computing kernel"<<RESET<<endl;
+#endif
+
+    real_prec delta=2.0*M_PI/static_cast<real_prec>(L);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+    for (ULONG i=0;i<N;i++)
+         for (ULONG j=0;j<N;j++)
+           for (ULONG k=0;k<N/2+1;k++)
+             {
+              real_prec kv=  sqrt(pow(coords[i],2)+pow(coords[j],2)+pow(coords[k],2));
+              int kmod=static_cast<int>(floor(kv));
+              if(kmod<N/2 && kmod >0)
+                kernel[index_3d(i,j,k,N,N/2+1)]=static_cast<real_prec>(gsl_spline_eval (spline,kv*delta, acc));
+
+          }
+
+#ifdef _FULL_VERBOSE_
+   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
+
+ }
+
+
+
+ //##################################################################################
+ //##################################################################################
+ //##################################################################################
+ //##################################################################################
 
 real_prec calc_kx(ULONG i,real_prec L1,ULONG N1)
 {
@@ -3034,8 +3839,15 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 //##################################################################################
 //##################################################################################
 //##################################################################################
- void calc_twolptterm(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, const vector<real_prec>&phiv, vector<real_prec> &m2v)
+ void calc_twolptterm(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, vector<real_prec>&phiv, vector<real_prec> &m2v)
 {  
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
   ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);
   
@@ -3043,7 +3855,13 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 
 
 #ifndef COMPATCTWOLPT
+  #ifdef DOUBLE_PREC
   complex_prec *philv= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *philv= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
+
   //  fftw_array<complex_prec> philv(Nhalf);
   
 #pragma omp parallel for
@@ -3278,6 +4096,15 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
     m2v[i]-=dummy[i]*dummy[i];
 #endif 
 #endif
+
+
+
+#ifdef DOUBLE_PREC
+       fftw_free(philv);
+#else
+       fftwf_free(philv);
+#endif
+
 }
 
  //##################################################################################
@@ -3287,10 +4114,20 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
  void calc_LapPhiv(ULONG N1,ULONG N2,ULONG N3,real_prec L1,real_prec L2,real_prec L3, complex_prec *philv,vector<real_prec>&LapPhiv,int index1,int index2)
 {
 
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
   ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);	
-
+#ifdef DOUBLE_PREC
   complex_prec *LapPhivl= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *LapPhivl= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
 
   real_prec k1=0.;
   real_prec k2=0.;
@@ -3352,6 +4189,13 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 
  void calc_curlcomp(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, const vector<real_prec> &phiv, vector<real_prec> phiv2, vector<real_prec> &m2v, int comp)
 {  
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
   int pcomp, mcomp;
 
   switch(comp)
@@ -3602,6 +4446,12 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 
  void calc_mu2term(ULONG N1, ULONG N2, ULONG N3,real_prec L1, real_prec L2, real_prec L3, const vector<real_prec> &phiv, vector<real_prec> phiv2, vector<real_prec>&m2v)
 {  
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
  
   string fnamef;     
@@ -3917,6 +4767,13 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
  
  void calc_Det(ULONG N1, ULONG N2, ULONG N3, real_prec L1, real_prec L2, real_prec L3, const vector<real_prec>&in, vector<real_prec> &out)
  {  
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
   ULONG N=N1*N2*N3;
 
   string fname;
@@ -4076,15 +4933,20 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 //##################################################################################
 //##################################################################################
 
- void convcomp(real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3,ULONG N1, ULONG N2, ULONG N3, const vector<real_prec>&in, vector<real_prec> &out, int filtertype,real_prec smol, string file_kernel)
+ void convcomp(real_prec L1, real_prec L2, real_prec L3, real_prec d1, real_prec d2, real_prec d3,ULONG N1, ULONG N2, ULONG N3,  vector<real_prec>&in, vector<real_prec> &out, int filtertype,real_prec smol, string file_kernel)
 {
 
 
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Convolution"<<RESET<<endl;
+#endif
   ULONG N=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3);
   ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N2)*static_cast<ULONG>(N3/2+1);  	
+#ifdef DOUBLE_PRC
   complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
-
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -4094,9 +4956,9 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
       AUX[i][IMAG]=0;
     }
 
+
   // Convert input field to Fourier space
-  do_fftw_r2c(N1,in,AUX);
-    
+
   //read the kernel in 3D
   string fname=file_kernel+"kernel"+to_string(N1)+"V"+to_string(L1)+"r"+to_string(smol);
 
@@ -4104,6 +4966,7 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
   vector<real_prec> kern(Nhalf,0);
   get_scalar(fname,kern,N1,N2,N3/2+1);
    
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -4113,26 +4976,43 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
       AUX[i][REAL]*=cor;
       AUX[i][IMAG]*=cor;
     }
+
+  do_fftw_r2c(N1,in,AUX);
+
   kern.clear();
   kern.shrink_to_fit();
 
   do_fftw_c2r(N1,AUX,out);
- 
+
+#ifdef DOUBLE_PRC
   fftw_free(AUX);
-}
+#else
+  fftwf_free(AUX);
+#endif
+
+
+ }
 
  //##################################################################################
  //#################################################################################
-
-
  void convolvek(ULONG N1, vector<real_prec>&in, vector<real_prec> &kernel, vector<real_prec> &out)
 {
 
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
 
+#ifdef _FULL_VERBOSE_
   cout<<YELLOW<<"Convolution"<<RESET<<endl;
+#endif
   ULONG N=in.size();
   ULONG Nhalf=kernel.size();
+#ifdef DOUBLE
   complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -4146,7 +5026,6 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
   // Convert input field to Fouroer space
   do_fftw_r2c(N1,in,AUX);
    
-   
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -4155,12 +5034,92 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
       real_prec cor=kernel[i];
       AUX[i][REAL]*=cor;
       AUX[i][IMAG]*=cor;
-    }
+      }
 
   do_fftw_c2r(N1,AUX,out);
  
+#ifdef DOUBLE
   fftw_free(AUX);
+#else
+  fftwf_free(AUX);
+#endif
+
+#ifdef _FULL_VERBOSE_
+   cout<<BOLDGREEN<<"                                               ["<<BOLDBLUE<<"DONE"<<BOLDGREEN<<"]"<<RESET<<endl;
+#endif
+
 }
+
+
+
+
+ //##################################################################################
+ //#################################################################################
+ void give_power(real_prec Lbox, ULONG N1, vector<real_prec>&in, vector<real_prec> &out)
+{
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
+  ULONG N=in.size();
+  ULONG Nhalf=static_cast<ULONG>(N1)*static_cast<ULONG>(N1)*static_cast<ULONG>(N1/2+1);
+#ifdef DOUBLE_PREC
+  complex_prec *AUX= (complex_prec *)fftw_malloc(2*Nhalf*sizeof(real_prec));
+#else
+  complex_prec *AUX= (complex_prec *)fftwf_malloc(2*Nhalf*sizeof(real_prec));
+#endif
+
+#pragma omp parallel for
+  for(ULONG i=0;i<Nhalf;++i)
+      AUX[i][REAL]=0;
+#pragma omp parallel for
+  for(ULONG i=0;i<Nhalf;++i)
+      AUX[i][IMAG]=0;
+
+  // Convert input field to Fouroer space
+  do_fftw_r2c(N1,in,AUX);
+
+  real_prec deltak=2.*M_PI/Lbox;
+
+  vector<real_prec> coords(N1,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i<N1 ;++i)
+    coords[i]=deltak*(i<=N1/2? static_cast<real_prec>(i): -static_cast<real_prec>(N1-i));
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(ULONG i=0;i< N1 ; i++)
+    for(ULONG j=0;j< N1 ; j++)
+      for(ULONG k=0;k< N1/2+1; k++)
+        {
+          ULONG ind=index_3d(i,j,k, N1, N1/2+1);
+          real_prec kmod2=pow(coords[i],2)+pow(coords[j],2)+pow(coords[k],2);  // Get k**2
+          real_prec f_k =0.;
+          if(kmod2>0.)
+//            f_k=exp(0.5*pow(kmod2, 0.2));
+             f_k=2.*(1.0+tanh(2.*kmod2));
+
+          AUX[ind][REAL]*=f_k;
+          AUX[ind][IMAG]*=f_k;
+        }
+  coords.clear();
+  coords.shrink_to_fit();
+
+  do_fftw_c2r(N1,AUX,out);
+#ifdef DOUBLE_PREC
+  fftw_free(AUX);
+#else
+  fftwf_free(AUX);
+#endif
+
+ }
 
 
 //##################################################################################
@@ -4219,7 +5178,8 @@ real_prec calc_kz(ULONG k,real_prec L3,ULONG N3)
 
 real_prec tidal_anisotropy(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 {
-  real_prec tidal= (sqrt(0.5*(pow(lambda3-lambda1,2)+pow(lambda3-lambda2,2)+pow(lambda2-lambda1,2)))/(1.+lambda1+lambda2+lambda3));
+//  real_prec tidal= (sqrt(0.5*(pow(lambda3-lambda1,2)+pow(lambda3-lambda2,2)+pow(lambda2-lambda1,2)))/(1.+lambda1+lambda2+lambda3));
+  real_prec tidal= (sqrt(0.5*(pow(lambda3-lambda1,2)+pow(lambda3-lambda2,2)+pow(lambda2-lambda1,2)))/(1.));
   return tidal;
 
 }
@@ -4228,19 +5188,26 @@ real_prec tidal_anisotropy(real_prec lambda1, real_prec lambda2, real_prec lambd
 //##################################################################################
 real_prec invariant_field_II(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 {
-  real_prec inv= lambda1*lambda2 +lambda2*lambda3 + lambda1*lambda3;
-  return inv;
-  
-}
+#ifdef _USE_EIGENVALUES_
+    real_prec inv= lambda1;
+#else
+    real_prec inv= lambda1*lambda2 +lambda2*lambda3 + lambda1*lambda3;
+#endif
+    return inv;
+ }
 
 //##################################################################################
 //##################################################################################
 
 real_prec invariant_field_III(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 {
+#ifdef _USE_EIGENVALUES_
+    real_prec inv= lambda2;
+#else
   real_prec inv= (lambda1*lambda2)*lambda3;
+#endif
   return inv;
-  
+
 }
 
 //##################################################################################
@@ -4250,9 +5217,25 @@ real_prec invariant_field_I(real_prec lambda1, real_prec lambda2, real_prec lamb
 {
   real_prec inv= lambda1+lambda2+lambda3;
   return inv;
-  
 }
- 
+
+
+//##################################################################################
+//##################################################################################
+
+real_prec invariant_field_IV(real_prec lambda1, real_prec lambda2, real_prec lambda3)
+{
+#ifdef _USE_EIGENVALUES_
+    real_prec inv= lambda3;
+#else
+//  real_prec inv=  pow(lambda1,3) + pow(lambda2,3) + pow(lambda3,3);
+  real_prec inv=  pow(lambda1,2) + pow(lambda2,2) + pow(lambda3,2);
+//  real_prec inv=  (lambda1+lambda2+lambda3)*(lambda1*lambda2 +lambda2*lambda3 + lambda1*lambda3)  ;// pow(lambda1,2) + pow(lambda2,2) + pow(lambda3,2);
+#endif
+  return inv;
+}
+
+
 //##################################################################################
 //##################################################################################
 //##################################################################################
@@ -4268,7 +5251,7 @@ real_prec ellipticity(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 //##################################################################################
 //##################################################################################
 
-real_prec prolaticity(real_prec lambda1, real_prec lambda2, real_prec lambda3)
+real_prec prolat(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 {
   real_prec inv= (lambda1+lambda3-2.*lambda2)/(2.*(lambda1+lambda2+lambda3));
   return inv;
@@ -4278,21 +5261,28 @@ real_prec prolaticity(real_prec lambda1, real_prec lambda2, real_prec lambda3)
 //##################################################################################
 //##################################################################################
 
- void sort_2vectors(vector<vector<int> >& v1,vector< vector<int> >&v2){
+ void sort_2vectors(vector<vector<ULONG> >& v1,vector< vector<ULONG> >&v2){
    // v1 is to be sorted. The elements of the other vectors
    // are shuffled accordingly.
    
+
+#ifdef _USE_OMP_
+  int NTHREADS = _NTHREADS_;
+  omp_set_num_threads(NTHREADS);
+#endif
+
+
    ULONG i, j;
    ULONG NN=v1.size();
    ULONG n=v1[0].size();
 
    for (i=0;i<NN;++i)
      {
-       vector<long>iwksp(n,0);
+       vector<ULONG>iwksp(n,0);
        vector<float>wksp(n,0);
-       vector<int>av1(n,0);
+       vector<ULONG>av1(n,0);
        for (j=0;j<n;++j) av1[j]=v1[i][j];
-       indexx(av1,iwksp); //av1 must be int
+       indexx_ulong(av1,iwksp); //av1 must be int
        
        for (j=0;j<n;++j) wksp[j]=av1[j];
        for (j=0;j<n;++j) av1[j]=wksp[iwksp[j]];
@@ -4302,28 +5292,65 @@ real_prec prolaticity(real_prec lambda1, real_prec lambda2, real_prec lambda3)
        for (j=0;j<n;++j) v2[i][j]=wksp[iwksp[j]];
      }
  }
- 
- void sort_1dvectors(vector<int> & v1, vector<int> &v2){
+ //##################################################################################
+ //##################################################################################
+ void sort_1dvectors(vector<ULONG> & v1, vector<ULONG> &v2){
    // v1 is to be sorted. The elements of the other vectors
-   // are shuffled accordingly.
-   
+   // are shuffled accordingly. 
    ULONG i, j;
    ULONG n=v1.size();
-
-   vector<long>iwksp(n,0);
-   vector<float>wksp(n,0);
-   vector<int>av1(n,0);
+   vector<ULONG>iwksp(n,0);
+   vector<ULONG>wksp(n,0);
+   vector<ULONG>av1(n,0);
+   // Prepare working space
    for (j=0;j<n;++j) av1[j]=v1[j];
-   indexx(v1,iwksp); //av1 must be int
-   
+
+  // sort v1. iwksp contains the order of
+
+   //v1= [ 10 , 8, 25, 54, 1] -> v1=  returns the smae and
+  //        0   1   2   3  4    iwksp= [4,1,0,2,3] is the rank
+   indexx_ulong(v1,iwksp); 
+    // order av1
    for (j=0;j<n;++j) wksp[j]=av1[j];
-   for (j=0;j<n;++j) av1[j]=wksp[iwksp[j]];
-   for (j=0;j<n;++j) v1[j]=av1[j];
+   for (j=0;j<n;++j) v1[j]=wksp[iwksp[j]];
+    // order v2
    for (j=0;j<n;++j) wksp[j]=v2[j];
+    // allocate values of v2 sorted
    for (j=0;j<n;++j) v2[j]=wksp[iwksp[j]];
    
  }
 
 
+ //##################################################################################
+ void sort_1dvectors_v2(vector<ULONG> &v1, vector<ULONG> &v2, ULONG &v1cero, ULONG &v2cero){
+   // v1 is to be sorted. The elements of the other vectors
+   // are shuffled accordingly.
+   ULONG n=v1.size();
+   vector<ULONG>iwksp(n,0);
+   indexx_ulong(v1,iwksp); //av1 must be int
+   v1cero=v1[iwksp[0]];
+   v2cero=v2[iwksp[0]];
+  }
 
- 
+ //##################################################################################
+ void sort_1dvectors_iv2(vector<int> &v1, vector<int> &v2, int &v1cero, int &v2cero){
+   // v1 is to be sorted. The elements of the other vectors
+   // are shuffled accordingly.
+   ULONG n=v1.size();
+   vector<int>iwksp(n,0);
+   indexx(v1,iwksp); //av1 must be int
+   v1cero=v1[iwksp[0]];
+   v2cero=v2[iwksp[0]];
+  }
+
+
+ //##################################################################################
+ void sort_1dvectors_v3(vector<ULONG> & v1, vector<ULONG> &v2,  ULONG &v2cero){
+  // v1 is to be sorted. The elements of the other vectors
+   // are shuffled accordingly.
+  // No ordered vector is returned, only the zero element of v2 sorted according to v1
+   vector<ULONG>iwksp(v1.size(),0);
+   indexx_ulong(v1,iwksp); 
+   v2cero=v2[iwksp[0]];
+ }
+

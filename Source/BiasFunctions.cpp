@@ -113,7 +113,12 @@ real_prec MASS_BIAS_FUNCTIONS::mass_function(real_prec nu, real_prec z, void *p)
     b=gsl_inter(D,b_par,9,log10((s_cp->Delta_SO)));
     b*=pow(1+z,-pow(10, -pow(0.75/log10((s_cp->Delta_SO)/75.0),1.2)));
     c=gsl_inter(D,c_par,9,log10((s_cp->Delta_SO)));
-    ans= 0.5*AA*(pow((real_prec)(deltac)/(sqrt(nu)*b),(real_prec)-a)+1.0)*exp(-c*nu*pow((real_prec)(deltac),-2));
+    ans= 0.5*AA*(pow(deltac/(sqrt(nu)*b),-a)+1.0)*exp(-c*nu*pow(deltac,-2));
+   }
+  if("Watson"==mb)
+   {
+    b=1./1.406;
+    ans= 0.282*(pow(deltac/(sqrt(nu)*b),-2.163)+1.0)*exp(-1.2010*nu*pow(deltac,-2));
    }
   return ans;
 }

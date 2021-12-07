@@ -9,8 +9,15 @@
 // ******************************************************************************************
 
 # include "../Headers/NumericalMethods.h"
-# include "../Headers/Parameters_CosmoLib.h"
 
+
+#ifdef SINGLE_PREC
+#undef SINGLE_PREC
+#define DOUBLE_PREC
+#endif
+
+# include "../Headers/Parameters_CosmoLib.h"
+# include "../Headers/cosmo_parameters.h"
 
 
 
@@ -76,26 +83,26 @@ ParametersCosmolib::ParametersCosmolib (string &parameters_file)
 
       if (par_name == "k_min_integration") k_min_integration = static_cast<real_prec>(atof(par_value.c_str()));
       else if (par_name == "k_max_integration") k_max_integration = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_matter") om_matter = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_cdm") om_cdm = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_radiation") om_radiation = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_baryons") om_baryons = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_vac") om_vac = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "om_k") om_k = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "Hubble") Hubble = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "hubble") hubble = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "n_s") n_s = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "w_eos") w_eos = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "f_baryon")f_baryon = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "N_eff") N_eff = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "sigma8") sigma8 = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "A_s") A_s = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "alpha_s") alpha_s = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "Tcmb") Tcmb = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "RR") RR = static_cast<real_prec>(atof(par_value.c_str()));
-      else if (par_name == "use_wiggles") use_wiggles = par_value.c_str();
-      else if (par_name == "kstar") kstar =static_cast<real_prec>(atof( par_value.c_str()));
-      else if (par_name == "Amc") Amc =static_cast<real_prec>(atof( par_value.c_str()));
+      else if (par_name == "om_matter") this->om_matter = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "om_cdm") this->om_cdm = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "om_radiation") this->om_radiation = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "om_baryons") this->om_baryons = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "om_vac") this->om_vac = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "om_k") this->om_k = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "Hubble") this->Hubble = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "hubble") this->hubble = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "n_s") this->n_s = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "w_eos") this->w_eos = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "f_baryon")this->f_baryon = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "N_eff") this->N_eff = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "sigma8") this->sigma8 = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "alpha_s") this->alpha_s = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "Tcmb") this->Tcmb = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "RR") this->RR = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "A_s") this->A_s = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "use_wiggles") this->use_wiggles = par_value.c_str();
+      else if (par_name == "kstar") this->kstar =static_cast<real_prec>(atof( par_value.c_str()));
+      else if (par_name == "Amc") this->Amc =static_cast<real_prec>(atof( par_value.c_str()));
 
       else if (par_name == "GAL_BIAS") GAL_BIAS = static_cast<real_prec>(atof(par_value.c_str()));
 
@@ -105,10 +112,11 @@ ParametersCosmolib::ParametersCosmolib (string &parameters_file)
         else if(par_value=="false")fixed_redshift=false;
       }
 
-
+      else if (par_name == "file_power") file_power =par_value;
       else if (par_name == "redshift") redshift = static_cast<real_prec>(atof(par_value.c_str()));
       else if (par_name == "redshift_min") redshift_min = static_cast<real_prec>(atof(par_value.c_str()));
       else if (par_name == "redshift_max") redshift_max = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "nbins_redshift") nbins_redshift = static_cast<int>(atof(par_value.c_str()));
       else if (par_name == "Delta_SO") Delta_SO = static_cast<real_prec>(atof(par_value.c_str()));
       else if (par_name == "A_gas") A_gas = static_cast<real_prec>(atof(par_value.c_str()));
       else if (par_name == "B_gas") B_gas = static_cast<real_prec>(atof(par_value.c_str()));
@@ -142,10 +150,10 @@ ParametersCosmolib::ParametersCosmolib (string &parameters_file)
       else if (par_name == "effective_halo_mean_number_density_output_file") effective_halo_mean_number_density_output_file=par_value.c_str();
       
       else if (par_name == "compute_output_linear_correlation_function")
-	{
-	  if(par_value=="true")compute_output_linear_correlation_function=true;
-	  else if(par_value=="false")compute_output_linear_correlation_function=false;
-	}
+	   {
+	     if(par_value=="true")compute_output_linear_correlation_function=true;
+	     else if(par_value=="false")compute_output_linear_correlation_function=false;
+	   }
 
       else if (par_name == "compute_output_non_linear_correlation_function"){
         if(par_value=="true")compute_output_non_linear_correlation_function=true;
@@ -158,7 +166,10 @@ ParametersCosmolib::ParametersCosmolib (string &parameters_file)
         else if(par_value=="false")compute_output_linear_power_spectrum=false;
       }
 
-
+      else if (par_name == "use_file_power"){
+        if(par_value=="true")use_file_power=true;
+        else if(par_value=="false")use_file_power=false;
+      }
       else if (par_name == "compute_output_non_linear_power_spectrum"){
         if(par_value=="true")compute_output_non_linear_power_spectrum=true;
         else if(par_value=="false")compute_output_non_linear_power_spectrum=false;
@@ -202,6 +213,34 @@ ParametersCosmolib::ParametersCosmolib (string &parameters_file)
     }
   }
   fin_parameters.clear(); fin_parameters.close(); 
+
+#ifdef _USE_COSMO_PARS_
+  this->om_matter = COSMOPARS::Om_matter;
+  this->om_radiation = COSMOPARS::Om_radiation;
+  this->om_baryons = COSMOPARS::Om_baryons;
+  this->om_cdm = this->om_matter-this->om_baryons;
+  this->om_vac = COSMOPARS::Om_vac;
+  this->om_k   = COSMOPARS::Om_k;
+  this->Hubble = COSMOPARS::Hubble;
+  this->hubble = COSMOPARS::hubble;
+  this->n_s = COSMOPARS::n_s;
+  this->w_eos = COSMOPARS::w_eos;
+  this->N_eff =  COSMOPARS::N_eff;
+  this->sigma8 = COSMOPARS::sigma8;
+  this->Tcmb = COSMOPARS::Tcmb;
+  this->use_wiggles = true;
+  this->RR = COSMOPARS::RR;
+  this->alpha_s=COSMOPARS::alpha_s;
+  this->Delta_SO=COSMOPARS::Delta_SO;
+#endif
+
+
+
+
+
+
+
+
 
   // append directory names in front of filenames
   string dat = ".txt";

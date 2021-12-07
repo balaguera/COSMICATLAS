@@ -3,9 +3,11 @@
 
 
 real_prec top_hat(real_prec x){
-  if(fabs(x)>0.5) return 0.0;
-  else if(fabs(x)==0.5)return 0.5;
-  else if(fabs(x)<0.5)return 1.0;
+    real_prec ans=0;
+    if(fabs(x)>0.5) ans=0.0;
+  else if(fabs(x)==0.5)ans= 0.5;
+  else if(fabs(x)<0.5)ans=1.0;
+  return ans;
 }
 
 
@@ -89,8 +91,10 @@ real_prec AngularPowerSpectrum::window(real_prec z, void *p)
 {
   struct cl_params * s_p= (struct cl_params *)p;
   real_prec x = (z-s_p->zmean)/(2*s_p->width);
-  if(s_p->wtype=="tophat")return top_hat(x);
-  else if(s_p->wtype=="gaussian")return exp(-2.0*pow(x,2));
+  real_prec ans;
+  if(s_p->wtype=="tophat")ans=top_hat(x);
+  else if(s_p->wtype=="gaussian")ans= exp(-2.0*(x*x));
+  return ans;
 }
 
 // ***************************************************************
@@ -185,7 +189,7 @@ gsl_real AngularPowerSpectrum::get_cl_ilimber(void *p){
 // ***************************************************************************************
 // ***************************************************************************************
 
-real_prec AngularPowerSpectrum::set_mixingM(string file){
+void AngularPowerSpectrum::set_mixingM(string file){
 
   this->R.resize(this->nlbins+1);
 

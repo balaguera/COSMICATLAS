@@ -1,4 +1,5 @@
 #include "../Headers/Galaxy.h"
+#include "../Headers/cosmo_parameters.h"
 
 #define EPSILON_MK 1.0
 
@@ -21,7 +22,7 @@ void gal2equ(double b, double l, double *ra, double *dec){
 
 
 // ######################################################################
-// #####################################################################
+// ######################################################################
 // ######################################################################
 // ######################################################################
 // ######################################################################
@@ -80,6 +81,7 @@ void GALAXY::read_pars(string &file){
       else if (par_name == "i_color_correction Kcorr")this->i_color_correction_Kcorr = atoi(par_value.c_str());
       else if (par_name == "i_ra")this->i_ra = atoi(par_value.c_str());
       else if (par_name == "i_dec")this->i_dec = atoi(par_value.c_str());
+      else if (par_name == "i_mass")this->i_mass = atoi(par_value.c_str());
       else if (par_name == "i_lgal")this->i_lgal = atoi(par_value.c_str());
       else if (par_name == "i_bgal")this->i_bgal = atoi(par_value.c_str());
       else if (par_name == "i_mJ")this->i_mJ = atoi(par_value.c_str());
@@ -138,8 +140,11 @@ void GALAXY::read_pars(string &file){
       else if (par_name == "Healpix_resolution")Healpix_resolution = atoi(par_value.c_str());
       else if (par_name == "N_iterations")N_iterations = atoi(par_value.c_str());
 
-
       else if (par_name == "N_bin_color")N_bin_color = atoi(par_value.c_str());
+      else if (par_name == "N_bin_lmass")N_bin_lmass = atoi(par_value.c_str());
+      else if (par_name == "N_bin_lmass_lowres")N_bin_lmass_lowres = atoi(par_value.c_str());
+      else if (par_name == "lmass_min")lmass_min = atoi(par_value.c_str());
+      else if (par_name == "lmass_max")lmass_max = atoi(par_value.c_str());
 
       else if (par_name == "N_bin_Mag")N_bin_Mag = atoi(par_value.c_str());
       else if (par_name == "N_bin_Mag_low_res")N_bin_Mag_low_res = atoi(par_value.c_str());
@@ -172,6 +177,10 @@ void GALAXY::read_pars(string &file){
 
       // Get cosmological parameters from parameter file and put them in a structure
       // of type s_cosmological_parameters
+
+
+
+
       else if (par_name == "Om_matter")this->Om_matter = (double)atof(par_value.c_str());
       else if (par_name == "Om_cdm")this->Om_cdm = (double)atof(par_value.c_str());
 
@@ -255,6 +264,26 @@ void GALAXY::read_pars(string &file){
   
 
   // Cosmological parameters
+#ifdef _USE_COSMO_PARS_
+  this->Om_matter = COSMOPARS::Om_matter;
+  this->Om_radiation = COSMOPARS::Om_radiation;
+  this->Om_baryons = COSMOPARS::Om_baryons;
+  this->Om_cdm = this->Om_matter-this->Om_baryons;
+  this->Om_vac = COSMOPARS::Om_vac;
+  this->Om_k   = COSMOPARS::Om_k;
+  this->Hubble = COSMOPARS::Hubble;
+  this->hubble = COSMOPARS::hubble;
+  this->n_s = COSMOPARS::n_s;
+  this->w_eos = COSMOPARS::w_eos;
+  this->N_eff =  COSMOPARS::N_eff;
+  this->sigma8 = COSMOPARS::sigma8;
+  this->Tcmb = COSMOPARS::Tcmb;
+  this->use_wiggles = true;
+  this->RR = COSMOPARS::RR;
+  this->alpha_s=COSMOPARS::alpha_s;
+#endif
+
+
   this->scp.Om_matter=this->Om_matter;
 
   this->scp.Om_cdm=this->Om_cdm;
@@ -319,31 +348,35 @@ void GALAXY::set_file_names(){
   nmask="_JK"+to_string(this->index_mask);
 #endif
   // ********************************
+
   // DNDZ MEASURED
-  this->output_file_dndz="../DNDZ/"+this->name_cat+"_dndz_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_"+this->hemisphere+nmask+".txt";
+
+  string output_dir = this->output_dir;
+
+  this->output_file_dndz=output_dir+this->name_cat+"_dndz_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_"+this->hemisphere+nmask+".txt";
   
   // ********************************
   // DNDZ FROM LF
-  this->output_file_dndz_lf="../DNDZ/"+this->name_cat+"_dndz_LF_"+this->LF_estimator+"_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_dndz_lf=output_dir+this->name_cat+"_dndz_LF_"+this->LF_estimator+"_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // DNDZ FROM dN/dmk
-  this->output_file_dndmk="../DNDZ/"+this->name_cat+"_dndmk_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_dndmk=output_dir+this->name_cat+"_dndmk_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // SMOOTHED DNDZ
-  this->output_file_dndz_smooth ="../DNDZ/"+this->name_cat+"_dndz_smooth_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_dndz_smooth =output_dir+this->name_cat+"_dndz_smooth_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // SMOOTHED NBAR
   
-  this->output_file_nbar_smooth ="../DNDZ/"+this->name_cat+"_nbar_smooth_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_nbar_smooth =output_dir+this->name_cat+"_nbar_smooth_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // LF
-  this->output_file_LF="Luminosity_Function/"+this->name_cat+"_LF_"+this->LF_estimator+"_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_LF=output_dir+this->name_cat+"_LF_"+this->LF_estimator+"_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // mAGNITUD DISTRIBUTION
-  this->output_file_NM="Luminosity_Function/"+this->name_cat+"_NM_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
+  this->output_file_NM=output_dir+this->name_cat+"_NM_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+"_"+this->hemisphere+nmask+".txt";
   // ********************************
   // NEW CAT
-  this->output_file_new_cat="../DATA/"+this->name_cat+"_NewCat_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+nmask+".txt";
+  this->output_file_new_cat=output_dir+this->name_cat+"_NewCat_"+this->redshift_type+"_mk"+to_string(this->i_magnitude_limit)+"_zbin"+to_string(this->i_z_limit)+nmask+".txt";
   
   So.DONE();
 
@@ -364,6 +397,8 @@ void GALAXY::get_cosmo(int nz, bool silence){
   time(&start_all);
   time_t end;
   if(silence)So.message_screen("Getting cosmological functions...");
+
+  omp_set_num_threads(_NTHREADS_);
 
   // Default values for E-correction  e(z)=a*z*z + b*z+c
   this->scp.K_index_a= 0;
@@ -394,12 +429,15 @@ void GALAXY::get_cosmo(int nz, bool silence){
   double g_today = Cf.growth_factor(0.0,(void *)&this->scp);
 
 
-  double zmin_inter=0.00001;
-  double zmax_inter=10.00;
-  for(int i=0;i<nz;++i)this->zv[i]=zmin_inter+(zmax_inter-zmin_inter)*((double)i)/((double)nz-1);
+  double zmin_inter=0.00000001;
+  double zmax_inter=1.5;
+ #pragma omp parallel for
+  for(int i=0;i<nz;++i)
+      this->zv[i]=zmin_inter+i*(zmax_inter-zmin_inter)/static_cast<double>(nz-1);
   
-  omp_set_num_threads(omp_get_max_threads());
-#pragma omp parallel for
+
+
+ #pragma omp parallel for
   for(int i=0;i<nz;++i)
     {
       this->Hv[i]=Cf.Hubble_function(this->zv[i],(void *)&this->scp);
@@ -408,7 +446,8 @@ void GALAXY::get_cosmo(int nz, bool silence){
       this->bias_zv[i]=this->scp.GAL_BIAS*pow(1+this->zv[i], this->scp.alpha_BIAS);
       this->gfv[i]=Cf.growth_index(this->zv[i],(void *)&this->scp);
       this->Dm[i]=Cf.Distance_Modulus(this->zv[i],(void *)&this->scp);
-    }
+ //       cout<<rv[i]<<"  "<<zv[i]<<endl;
+      }
   
   // ALLOCATE VECTORS TO STRUCTURE cosmological parameters TO USE THEM IN OTHER OPERATIONS
   this->scp.zv=this->zv;
@@ -441,20 +480,23 @@ void GALAXY::get_cosmo(int nz, bool silence){
 void GALAXY::get_mask(){
 
   this->mask.clear();
-  if(this->hemisphere=="all")NMASK=this->Fo.read_file(name_file_mask,this->mask, omp_get_max_threads());
-  else if(this->hemisphere=="south")NMASK=this->Fo.read_file(name_file_mask_south_gal,this->mask,omp_get_max_threads());
-  else if(this->hemisphere=="north")NMASK=this->Fo.read_file(name_file_mask_north_gal,this->mask,omp_get_max_threads());
+  if(this->hemisphere=="all")
+      this->NMASK=this->File.read_file(name_file_mask,this->mask, omp_get_max_threads());
+  else if(this->hemisphere=="south")
+      this->NMASK=this->File.read_file(name_file_mask_south_gal,this->mask,omp_get_max_threads());
+  else if(this->hemisphere=="north")
+      this->NMASK=this->File.read_file(name_file_mask_north_gal,this->mask,omp_get_max_threads());
 
   this->NCOLS_MASK=static_cast<unsigned long>(this->mask.size()/NMASK);
   
   unsigned int pix_count=0;
 
 #pragma omp parallel for reduction(+:pix_count)
-  for(int i=0;i<NMASK;++i)
+  for(int i=0;i<this->NMASK;++i)
     if(this->mask[this->i_mask_flag+i*NCOLS_MASK]==this->observed_pixels_in_mask)
       pix_count++;
   
-  this->n_pixels=NMASK;
+  this->n_pixels=this->NMASK;
   this->nside=static_cast<int>(sqrt((n_pixels/12)));
   this->area_pixel=4.*M_PI/n_pixels;
 
@@ -522,24 +564,27 @@ void GALAXY::get_mask_fits(string file){
 void GALAXY::read_input_cats(string cat)
 {
 
-  int NTHREADS = omp_get_max_threads();
   
   this->prop.clear();
+  this->prop.shrink_to_fit();
+
   if(cat=="g")
     {
-      this->NGAL=this->Fo.read_file(this->name_input_file_cat, this->prop,NTHREADS);
+      this->NGAL=this->File.read_file(this->name_input_file_cat, this->prop,_NTHREADS_);
       this->NCOLS=this->prop.size()/this->NGAL;
     }
   else
     if(cat=="r"){
       this->prop_r.clear();
-      this->NRAN=this->Fo.read_file(this->name_input_file_cat, this->prop_r,NTHREADS);
+      this->NRAN=this->File.read_file(this->name_input_file_cat, this->prop_r,_NTHREADS_);
       this->NCOLS_R=this->prop_r.size()/this->NRAN;
     }
 
-  
+#ifdef _USE_HEALPIX_
   this->set_catalog(cat);
+#endif
 }
+
 
 
 // ######################################################################
@@ -548,7 +593,8 @@ void GALAXY::read_input_cats(string cat)
 
 void GALAXY::set_catalog(string cat){
 
-  omp_set_num_threads(omp_get_max_threads());
+  omp_set_num_threads(_NTHREADS_);
+
 
   if(cat=="g")
     {
@@ -589,7 +635,7 @@ void GALAXY::set_catalog(string cat){
 
 }
 
-
+// ######################################################################
 // ######################################################################
 // ######################################################################
 // ######################################################################
@@ -598,8 +644,6 @@ void GALAXY::set_pars(int izvls){
   this->i_z = (this->redshift_type == "s" ? this->i_zs : this->i_zp);
 
   this->iz_vls=izvls;
-
-
   switch(iz_vls)
     {
     case(0):this->z_min_vls = 0.0001;break;
@@ -611,11 +655,11 @@ void GALAXY::set_pars(int izvls){
 
   this->mK_max=this->mK_limits[this->i_magnitude_limit];
   
-  // this->deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z;
-  // this->deltaz_low_res=(this->z_max_low_res-this->z_min_low_res)/(double)this->N_bin_z_low_res;
+  this->deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z;
+  this->deltaz_low_res=(this->z_max_low_res-this->z_min_low_res)/(double)this->N_bin_z_low_res;
 
-  this->deltaz=(0.4-0.001)/(double)this->N_bin_z;
-  this->deltaz_low_res=(0.4-0.001)/(double)this->N_bin_z_low_res;
+//  this->deltaz=(0.4-0.001)/(double)this->N_bin_z;
+//  this->deltaz_low_res=(0.4-0.001)/(double)this->N_bin_z_low_res;
 
   
 }
@@ -633,8 +677,8 @@ void GALAXY::set_vec(){
   So.message_screen("Initializing vectors");
 
 
-  double zz_min=0.001; // this->z_min
-  double zz_min_low_res=0.001; // this->z_min
+  real_prec zz_min=this->z_min;
+  real_prec zz_min_low_res=this->z_min;
 
   zn.clear();
   zn.resize(this->N_bin_z,0);
@@ -670,6 +714,18 @@ void GALAXY::set_vec(){
       real_prec distance=gsl_inter_new(this->zv,this->rv,zn[i]);
       this->Vshell[i]=this->total_area*deltaz*pow(distance,2)*dr_dz;
     }
+
+
+  Vshell_lowres.clear();
+  Vshell_lowres.resize(this->N_bin_z_low_res,0);
+#pragma omp parallel for
+  for(int i=0;i<this->N_bin_z_low_res;i++)
+    {
+      real_prec dr_dz=Constants::speed_light/Cf.Hubble_function(zn_low_res[i],(void *)&(this->scp));
+      real_prec distance=gsl_inter_new(this->zv,this->rv,zn_low_res[i]);
+      this->Vshell_lowres[i]=this->total_area*deltaz*pow(distance,2)*dr_dz;
+    }
+
   //  this->Pc.resize(this->N_bin_color,0);  
   //  this->number_c.resize(this->N_bin_color,0);
   //this->number_cm.resize(this->N_bin_color);
@@ -719,7 +775,7 @@ void GALAXY::read_get_Kcorr()
    */
   
   vector<double> propK;
-  int nlinesK=this->Fo.read_file(this->name_file_Kcorr, propK,omp_get_max_threads());
+  int nlinesK=this->File.read_file(this->name_file_Kcorr, propK,omp_get_max_threads());
   int ncolsK=propK.size()/nlinesK;
   this->v_z_Kcorr.resize(nlinesK,0);
   this->v_color_correction_Kcorr.resize(nlinesK,0);
@@ -739,7 +795,7 @@ void GALAXY::read_get_Kcorr()
 // ######################################################################
 // ######################################################################  
 // ######################################################################  
-double GALAXY::get_min(int ii){
+double GALAXY::get_mina(int ii){
   double ZX=10000;
   double zmx;
   for(int i=0;i<this->NGAL;i++){
@@ -761,7 +817,7 @@ double GALAXY::get_min_r(int ii){
 }
 // ######################################################################  
 // ######################################################################
-double GALAXY::get_max(int ii ){
+double GALAXY::get_maxa(int ii ){
   double ZX=-100;
   double zmx;
   for(int i=0;i<this->NGAL;i++){
@@ -843,12 +899,17 @@ void GALAXY::get_dndz(){
 
   this->dNdz.clear();
   this->dNdz.resize(this->N_bin_z,0);
+  this->dNdz.shrink_to_fit();
   this->edNdz.clear();
+  this->edNdz.shrink_to_fit();
   this->edNdz.resize(this->N_bin_z,0);
   
   this->dNdz_low_res.clear();
+  this->dNdz_low_res.shrink_to_fit();
+
   this->dNdz_low_res.resize(this->N_bin_z_low_res,0);
   this->edNdz_low_res.clear();
+  this->edNdz_low_res.shrink_to_fit();
   this->edNdz_low_res.resize(this->N_bin_z_low_res,0);
   
   // ***************************************************************
@@ -856,47 +917,73 @@ void GALAXY::get_dndz(){
   // The mask cuts includes the cts in EBV and log_stellar_den, 
   // so no need to make them here again.
   // ***************************************************************
-  omp_set_num_threads(omp_get_max_threads());
-  
+#ifdef _USE_OMP_
+    omp_set_num_threads(_NTHREADS_);
+#endif
+
   time_t start;
   time(&start);
   
   So.message_screen("Measuring P(z) (Number of objects in z bins)");
 
+#ifdef _USE_COLOR_
   this->Gal_inside_intervals_z_m_c.resize(this->NGAL,0);
+#endif
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(int i=0;i<this->NGAL;i++)
     {
-      if(this->gal_mask[i]==this->observed_pixels_in_mask) 
+#ifdef _USE_MASK_
+      if(this->gal_mask[i]==this->observed_pixels_in_mask)
 	{
-	  if(this->prop[this->i_mK+i*this->NCOLS]>=this->mK_min && this->prop[this->i_mK+i*this->NCOLS]<=this->mK_max)
+#endif
+#ifdef _USE_MK_
+              if(this->prop[this->i_mK+i*this->NCOLS]>=this->mK_min && this->prop[this->i_mK+i*this->NCOLS]<=this->mK_max)
 	    {
-	      if(this->prop[i_zs+i*this->NCOLS]>=zzns)
+#endif
+              if(this->prop[i_zs+i*this->NCOLS]>=zzns)
 		{
+#ifdef _USE_COLOR_
                    real_prec JKcolor = this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
                    if(JKcolor>=this->color_min && JKcolor<this->color_max)
                      {
-                      real_prec zgal=this->prop[i_z+i*this->NCOLS];
+#endif
+                       real_prec zgal=this->prop[i_z+i*this->NCOLS];
                        if(zgal>=this->z_min && zgal<this->z_max)
                          {
+#ifdef _USE_COLOR_
                           this->Gal_inside_intervals_z_m_c[i]=num_1;
-                          int iz=get_bin(this->prop[i_z+i*this->NCOLS],this->z_min,this->N_bin_z,deltaz,true);
-# pragma omp atomic update
+#endif
+
+                               int iz=get_bin(this->prop[i_z+i*this->NCOLS],this->z_min,this->N_bin_z,deltaz,true);
+#ifdef _USE_OMP_
+#pragma omp atomic update
+#endif
+
                           dNdz[iz]++;
                          }
 
                       if((this->prop[i_z+i*this->NCOLS]>=this->z_min_low_res && prop[this->i_z+i*this->NCOLS]<this->z_max_low_res))
                          {
                           int iz_low_res=get_bin(this->prop[i_z+i*this->NCOLS],this->z_min,this->N_bin_z,deltaz_low_res,true);
+#ifdef _USE_OMP_
 #pragma omp atomic update
+#endif
                           dNdz_low_res[iz_low_res]++;
                          }
                      }
+#ifdef _USE_COLOR_
                }
+#endif
+#ifdef _USE_MK_
           }
+#endif
+#ifdef _USE_MASK_
+              }
+#endif
       }
-  }
  So.DONE();
     
     
@@ -914,31 +1001,49 @@ void GALAXY::get_dndz(){
 
   //cout<<RED<<dNdz[50]<<RESET<<"  "<<this->prop[i_z+160*this->NCOLS]<<"   "<<this->z_min<<"   "<<zzns<<endl;
   
-  
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(auto i=0;i<dNdz.size();i++)
-      this->dNdz[i]=static_cast<double>(this->dNdz[i])/this->deltaz;
+    this->dNdz[i]/=this->deltaz;
 
-    
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(auto i=0;i<dNdz_low_res.size();i++)
-      this->dNdz_low_res[i]/=this->deltaz_low_res;
+      this->dNdz_low_res[i]/=(this->deltaz_low_res*static_cast<real_prec>(count));
 
+
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(auto i=0;i<dNdz.size();i++){
     auto Nk=(double)this->dNdz[i];
     this->edNdz[i]= Nk==0? 0 : sqrt(Nk);
   }
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(auto i=0;i<dNdz_low_res.size();i++){
     auto Nk=(double)this->dNdz_low_res[i];
     this->edNdz_low_res[i]= Nk==0? 0 : sqrt(Nk);
   }
 
-  Fm.write_to_file(this->output_file_dndz,zn_low_res,dNdz_low_res, edNdz_low_res);
+  this->File.write_to_file(this->output_dir+"dndz.txt",zn_low_res, dNdz_low_res, edNdz_low_res);
   So.message_screen("Number of objects in requested (redshift, mK,color) interval =",this->count);
   cout<<endl;
+
+
+ // bring dNdz low res to dN/dz
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(auto i=0;i<dNdz_low_res.size();i++)
+      this->dNdz_low_res[i]*=static_cast<real_prec>(count);
+
   
 }
 
@@ -971,7 +1076,9 @@ void GALAXY::get_dndmk(){
   std::cout<<CYAN<<"Measuring dN/dK";
 
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(int i=0;i<this->NGAL;i++)
     {
       if(this->gal_mask[i]==this->observed_pixels_in_mask)
@@ -983,8 +1090,10 @@ void GALAXY::get_dndmk(){
 		  if((this->prop[i_z+i*this->NCOLS]>=this->z_min && prop[this->i_z+i*this->NCOLS]<=this->z_max))
 		    {
                       int im=get_bin(this->prop[i_mK+i*this->NCOLS],this->mK_min,this->N_bin_mag,delta_mk,true);
+#ifdef _USE_OMP_
 #pragma omp atomic update
-		      this->dNdmk[im]++;
+#endif
+                      this->dNdmk[im]++;
 		    }
 		}
 	    }
@@ -992,7 +1101,9 @@ void GALAXY::get_dndmk(){
     }
   
   int ngal_mk=0;
+#ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:ngal_mk)
+#endif
   for(int i=0;i<dNdmk.size();++i)
     {
       double Nk=static_cast<double>(this->dNdmk[i]);
@@ -1002,13 +1113,14 @@ void GALAXY::get_dndmk(){
   
   // Normalize the counts in app magnitude
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
   for(int i=0;i<dNdmk.size();++i)
     this->dNdmk[i]/=static_cast<double>(ngal_mk);
   
   
-  
-  Fm.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
+  this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
   std::cout<<BLUE<<count<<" objects in N(z), in file"<<this->output_file_dndz<<RESET<<endl ;
 
   So.DONE();
@@ -1121,7 +1233,8 @@ void GALAXY::get_z_pdf(){
   string filezs2="2d_grid_zp_zs_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
 
   ofstream sal, sal2;
-  sal.open(filezs);sal2.open(filezs2);
+  sal.open(filezs);
+  sal2.open(filezs2);
   double maxx=-1000.,maxi;
   for(int i=0;i<this->N_bin_z;++i)
     {
@@ -1146,25 +1259,33 @@ void GALAXY::get_z_pdf(){
   sal2.close();
 
   vector<double> meanz(Nbins_z_new,0);
-  for(int i=0;i<Nbins_z_new;++i)for(int j=0;j<z_ps[i].size();++j)meanz[i]+=z_ps[i][j]/(z_ps[i].size());
+  for(int i=0;i<Nbins_z_new;++i)
+      for(int j=0;j<z_ps[i].size();++j)
+          meanz[i]+=z_ps[i][j]/(z_ps[i].size());
+
   vector<double> varz(Nbins_z_new,0);
-  for(int i=0;i<Nbins_z_new;++i)for(int j=0;j<z_ps[i].size();++j)varz[i]+=pow(meanz[i]-z_ps[i][j],2)/(z_ps[i].size()-1);
+  for(int i=0;i<Nbins_z_new;++i)
+      for(int j=0;j<z_ps[i].size();++j)
+          varz[i]+=pow(meanz[i]-z_ps[i][j],2)/(z_ps[i].size()-1);
 
   filezs="zs_zp_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
   sal.open(filezs);
-  for(int i=0;i<Nbins_z_new;++i)sal<<this->z_min+(i+0.5)*deltaz_new<<"\t"<<0.5*deltaz_new<<"\t"<<"\t"<<meanz[i]<<"\t"<<sqrt(varz[i])<<"  "<<varz[i]*sqrt((20.0/(z_ps[i].size()-1)))<<endl;
+  for(int i=0;i<Nbins_z_new;++i)
+      sal<<this->z_min+(i+0.5)*deltaz_new<<"\t"<<0.5*deltaz_new<<"\t"<<"\t"<<meanz[i]<<"\t"<<sqrt(varz[i])<<"  "<<varz[i]*sqrt((20.0/(z_ps[i].size()-1)))<<endl;
   sal.close();
 
 
-  // Hwew we write for each zp bin the difference between zs and <zs|zp> to be shown in supermongo, power.sm, dzs
+if(this->redshift_type=="p")
+    {
   for(int i=0;i<Nbins_z_new;++i)
     {
       filezs="zs_zpbin"+to_string(i)+".txt";
-      sal.open(filezs);
+      sal.open(filezs.c_str());
       for(int j=0;j<z_ps[i].size();++j)
 	sal<<z_ps[i][j]-meanz[i]<<endl;
       sal.close();
     }
+}
   
 }
 
@@ -1267,18 +1388,26 @@ void GALAXY::get_ipix_from_mask(int i, Healpix_Map<double>map_aux, long & ipix){
 // ######################################################################
 
 void GALAXY::get_nbar(){
+
+
+  this->nbar.clear();
+  this->nbar.shrink_to_fit();
+
   this->nbar.resize(this->N_bin_z,0);
-  So.message_screen("Creating nbar...");
+  So.message_screen("Computing Mean number density");
   
   for(int i=0;i<dNdz.size();i++)
-      this->nbar[i]=dNdz[i]*this->deltaz/Vshell[i];
-  ofstream sal;
-  string filezs="DNDZ/"+this->name_cat+"_nbar_p_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
-  sal.open(filezs);
-  for(int i=0;i<this->zn_low_res.size();++i)
-      sal<<this->zn_low_res[i]<<"\t"<<this->nbar[i]<<endl;
+    this->nbar[i]=dNdz[i]*this->deltaz/Vshell[i];
 
-  So.DONE();
+ // string filezs=this->output_dir+this->name_cat+"_nbar_p_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
+  string filezs=this->output_dir+"nbar.txt";
+
+ this->So.message_screen("Writting to file ", filezs);
+ ofstream sal(filezs);
+ for(int i=0;i<this->N_bin_z;++i)
+      sal<<this->z_min+(i+0.5)*(this->z_max-z_min)/static_cast<real_prec>(this->N_bin_z)<<"\t"<<this->nbar[i]<<endl;
+ sal.close();
+ So.DONE();
   
 }
 
@@ -1662,9 +1791,94 @@ void GALAXY::get_PzMK(){
           acount+=this->PzM[i][j];
   So.message_screen("Number of ojects from P(z,M) = ", acount);
   So.DONE();
+  zn.clear(); zn.shrink_to_fit();
 
 }
 
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+
+void GALAXY::get_P_X_Y(s_bins_info *bx, s_bins_info *by, string type){
+  So.message_screen("Measuring  P(z,M)");
+
+  this->PXY.clear(); // let us recyclye this
+  this->PXY.resize(bx->Nbins*by->Nbins,0);
+  this->NXY.clear(); // let us recyclye this
+  this->NXY.resize(bx->Nbins*by->Nbins,0);
+  this->nbarXY.clear();
+  this->nbarXY.resize(bx->Nbins*by->Nbins,0);
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(int i=0;i<this->NGAL;++i)
+    {
+      int lix,liy;
+      if(bx->type=="log")
+        lix=get_bin(log10(this->prop[bx->index+i*this->NCOLS]),bx->min,bx->Nbins, bx->delta,true);
+      else
+        lix=get_bin(this->prop[bx->index+i*this->NCOLS],bx->min,bx->Nbins, bx->delta,true);
+      if(by->type=="log")
+        liy=get_bin(log10(this->prop[by->index+i*this->NCOLS]),by->min,by->Nbins, by->delta,true);
+      else
+        liy=get_bin(this->prop[by->index+i*this->NCOLS],by->min,by->Nbins, by->delta,true);
+
+#ifdef _USE_OMP_
+#pragma omp atomic
+      this->NXY[index_2d(liy,lix,bx->Nbins)]++;
+#endif
+      }
+
+
+
+
+  ofstream te;
+  te.open(this->output_dir+"PzMass_"+type+".txt");
+  for(int i=0;i<bx->Nbins;++i)
+    for(int j=0;j<by->Nbins;++j)
+       te<< bx->min+(i+0.5)*bx->delta <<"\t"<<by->min+(j+0.5)*by->delta<<"\t"<<NXY[index_2d(j,i,bx->Nbins)]<<endl;
+  te.close();
+
+
+ // Divide by the volume of the z shell to get nbar
+  for(int i=0;i<bx->Nbins;++i)
+    for(int j=0;j<by->Nbins;++j)
+        this->nbarXY[index_2d(j,i,bx->Nbins)]/=this->Vshell_lowres[i];
+
+
+  // normalization for every bin in z
+  for(int i=0;i<bx->Nbins;++i)
+    {
+    real_prec aux_a;
+    real_prec aux_b=-1000.0;
+    for(int j=0;j<by->Nbins;++j)
+      {
+        ULONG ind=index_2d(j,i,bx->Nbins);
+        aux_a=max(aux_b,nbar[ind]);
+        aux_b=aux_a;
+     }
+
+    for(int j=0;j<by->Nbins;++j)
+        {
+        ULONG ind=index_2d(j,i,bx->Nbins);
+        PXY[ind]= aux_a==0 ? 0 : nbar[ind]/static_cast<real_prec>(aux_a);
+        }
+      }
+
+
+
+
+  //PXY must be smoothed
+
+
+
+  So.DONE();
+
+
+}
 
 
 // ######################################################################
@@ -1719,7 +1933,7 @@ void GALAXY::get_Pzc_from_PcMk(){
          this->Pm[k]+=this->PcMk[j][k];
 
    So.DONE();
-   this->Fm.write_to_file(this->output_file_LF,this->v_Magnitude,this->Pm);
+   this->File.write_to_file(this->output_file_LF,this->v_Magnitude,this->Pm);
 
   So.message_screen("Computing N(z) from P(z,c)");
 
@@ -1942,7 +2156,7 @@ void GALAXY::get_NS(){
   }
 
 
-  Fo.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
+  this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
 
 
   time(&end);
@@ -2119,7 +2333,7 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
       te.close();
       So.message_screen("Writting output file ",this->output_file_LF);
       So.DONE();
-      Fm.write_to_file(this->output_file_NM,this->v_Magnitude_low_res,this->number_m_low_res);
+      this->File.write_to_file(this->output_file_NM,this->v_Magnitude_low_res,this->number_m_low_res);
 
     }
   
@@ -2632,7 +2846,7 @@ void GALAXY::get_dndz_LF_bins(){
   // Divide to be written in a file and plotted
   //  for(int i=0;i<this->dNdz_lf_low_res.size();i++)this->dNdz_lf_low_res[i]/=deltaz_low_res;
 
-  this->Fo.write_to_file(this->output_file_dndz_lf,this->zn_low_res,this->dNdz_lf_low_res);
+  this->File.write_to_file(this->output_file_dndz_lf,this->zn_low_res,this->dNdz_lf_low_res);
 
 
 }
@@ -2645,8 +2859,8 @@ void GALAXY::get_dndz_LF_bins(){
 void GALAXY::get_new_mask(string coord){
 
 
-  vector<vector<double> > mask_temp;
-  Fo.read_file(this->name_file_mask, mask_temp);
+  vector<vector<real_prec> > mask_temp;
+  this->File.read_file(this->name_file_mask, mask_temp);
   
   ofstream mnorth, msouth;
   
@@ -2727,14 +2941,17 @@ void GALAXY::get_new_cat(){
 
   //  this->output_file_new_cat="2mpz_NewCat_p_AND_s_mk0_SLICE.dat";
 
-  std::cout<<BLUE<<"Writing new catalogue in file  "<<this->output_file_new_cat<<RESET<<endl;
+  So.message_screen("New cat with tabulated nbar");
   ofstream vdina;
   vdina.precision(12);
   vdina.setf(ios::showpoint);
   vdina.setf(ios::scientific);
   vdina.width(6);
-  vdina.open(this->output_file_new_cat.c_str());
+  vdina.open(this->output_dir+"pinocchio.Miriam_040.plc_new.txt");
   int count=0;
+
+
+/*
   
   // This uses the K-correction used by Enzo
   //  double DMl_kc=gsl_inter_new(this->zv, this->Dm, z_min_vls)+Cf.K_correction(z_min_vls,(void *)&(this->scp))+Cf.e_correction(z_min_vls,(void *)&(this->scp));
@@ -2768,17 +2985,16 @@ void GALAXY::get_new_cat(){
 		    double zzm = this->prop[i_z+i*this->NCOLS]<zn[0] ? zn[0]: this->prop[i_z+i*this->NCOLS];
 		    double nb=gsl_inter_new(zn,nbar,zzm);
 		    
-		    /*
-		      if((this->prop[i][this->i_dec]<=10 && this->prop[i][this->i_dec]>=-10) && (this->prop[i][this->i_ra]<=225 && this->prop[i][this->i_ra]>=150)){
-		      if(prop[i][i_zs]>=0){
-		      double x,y,z,xp,yp,zp;
-		      GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zp],xp,yp,zp);
-		      GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zs],x,y,z);
-		      if(x*x+y*y<=pow(0.2,2))vdina<<x<<"\t"<<y<<"\t"<<xp<<"\t"<<yp<<"\t"<<prop[i][i_zs]<<"\t"<<prop[i][i_zp]<<"\t"<<nb<<endl;
-		      }
-		      }
-		    */
-		    
+
+                    //  if((this->prop[i][this->i_dec]<=10 && this->prop[i][this->i_dec]>=-10) && (this->prop[i][this->i_ra]<=225 && this->prop[i][this->i_ra]>=150)){
+                    //  if(prop[i][i_zs]>=0){
+                    //  double x,y,z,xp,yp,zp;
+                    //  GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zp],xp,yp,zp);
+                    //  GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zs],x,y,z);
+                    //  if(x*x+y*y<=pow(0.2,2))vdina<<x<<"\t"<<y<<"\t"<<xp<<"\t"<<yp<<"\t"<<prop[i][i_zs]<<"\t"<<prop[i][i_zp]<<"\t"<<nb<<endl;
+                    //  }
+                    //  }
+
 		    
 		    vdina<<this->prop[this->i_lgal+i*this->NCOLS]<<"\t"<<this->prop[this->i_bgal+i*this->NCOLS]<<"\t"<<prop[i_zp+i*this->NCOLS]<<"\t"<<prop[i_zs+i*this->NCOLS]<<"\t"<<prop[this->i_mK+i*this->NCOLS]<<"\t"<<MKs<<"\t"<<JKcolor<<"\t"<<nb<<endl;
 		    
@@ -2798,7 +3014,72 @@ void GALAXY::get_new_cat(){
       }
     
   }  
+
+*/
+
+
+ gsl_interp_accel *acc;
+ acc = gsl_interp_accel_alloc ();
+ gsl_spline *spline    = gsl_spline_alloc (gsl_interp_linear, nbar_new.size());
+ gsl_spline_init (spline, &(zn_new[0]), &(nbar_new[0]), nbar_new.size());
+
+
+ this->dNdM.clear();
+ this->dNdM.shrink_to_fit();
+ this->dNdM.resize(this->N_bin_lmass,0);
+
+ real_prec deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
+
+  for(int i=0;i<this->NGAL;i++)
+      {
+        real_prec zr= this->prop[this->i_z+i*this->NCOLS];
+        real_prec nb=0;
+        int iz_low=get_bin(zr,z_min_low_res,N_bin_z_low_res,deltaz_low_res,true);
+        if(zr<=this->z_max && zr>=this->z_min)
+            {
+                if(zr>this->zn_new[zn_new.size()-1])
+                     nb = this->nbar_new[zn_new.size()-1];
+                else if(zr<=this->zn_new[0])
+                    nb = this->nbar_new[0];
+                else
+                   nb=  static_cast<real_prec>(gsl_spline_eval (spline, zr, acc));
+#ifdef _USE_MASS_
+                int indexm=get_bin(log10(this->prop[this->i_mass+i*this->NCOLS]),lmass_min,N_bin_lmass, deltam, true);
+           //    real_prec DeltaM= pow(10, lmass_min+(indexm+1)*deltam)-pow(10, lmass_min+(indexm)*deltam);
+
+
+                dNdM[indexm]++;
+                ULONG idmz=index_2d(indexm,iz_low,N_bin_z_low_res);
+                real_prec alpha=this->NXY[idmz]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb sim nbar(z,M)
+                vdina<<static_cast<float>(prop[i_z+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_ra+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_dec+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_mass+i*this->NCOLS])<<"\t"<<static_cast<float>(nb)<<"\t"<<static_cast<float>(nb*alpha)<<endl;
+
+#else
+                vdina<<prop[i_z+i*this->NCOLS]<<"\t"<<this->prop[this->i_ra+i*this->NCOLS]<<"\t"<<this->prop[this->i_dec+i*this->NCOLS]<<"\t"<<nb<<endl;
+
+#endif
+
+
+            count++;
+            }
+            }
   vdina.close();
+
+
+  vector<real_prec>mass_aux(N_bin_lmass,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+
+  for(auto i=0;i<dNdz_low_res.size();i++)
+      this->dNdM[i]/=(deltam*static_cast<real_prec>(count));
+
+  for(auto i=0;i<dNdz_low_res.size();i++)
+        mass_aux[i]=lmass_min+(i+0.5)*deltam;
+  this->File.write_to_file(this->output_dir+"dndM.txt",mass_aux,dNdM);
+
+
+
+
   std::cout<<"with "<<count<<" objects"<<endl;
 }
 
@@ -2891,108 +3172,271 @@ void GALAXY::get_new_cat(){
 void GALAXY::get_random_cat(string file, long n_random){
   
   ofstream vdina;
+  cout<<file<<endl;
   vdina.open(file.c_str());
-  vdina.precision(12);
   vdina.precision(12);
   vdina.setf(ios::showpoint);
   vdina.setf(ios::scientific);
   vdina.width(6);
 
   const gsl_rng_type * T;
-  gsl_rng * r;
+  gsl_rng * ral;
   gsl_rng_env_setup();
+  gsl_rng_default_seed=224;
   T = gsl_rng_ranlux;
-  r = gsl_rng_alloc (T);
+  ral = gsl_rng_alloc (T);
 
-  
-  double rmax=gsl_inter_new(zv,rv,this->z_max);
-  double rmin=gsl_inter_new(zv,rv,this->z_min);
-  int count=0;  
 
-  std::cout<<"Building random catalogue with "<<n_random<<" objects"<<endl;  
-  std::cout<<"rmin = "<<rmin<<endl;
-  std::cout<<"rmax = "<<rmax<<endl;
-  time_t start;
-  time(&start);
+  this->prop.clear(); prob.shrink_to_fit();
+  this->NCOLS=5;
+  this->prop.resize(n_random*this->NCOLS);
 
-  Healpix_Map<double>map_aux(log2(nside), RING); 
 
-  do{
+  this->prob.clear(); prob.shrink_to_fit();
+  this->prob.resize(this->zn_new.size(),0);
 
-    double rd  = rmax*pow(gsl_rng_uniform(r), 1./3.);
+  real_prec lka=-100.;
+  real_prec lkb=0.;
+  for(ULONG i=0;i<this->nbar_new.size();++i)
+     {
+        lkb=max(static_cast<real_prec>(this->nbar_new[i]), lka);
+        lka=lkb;
+     }
+
+   std::cout<<"max = "<<lka<<endl;
+
+#pragma omp parallel for
+   for(ULONG i=0;i<this->nbar_new.size();++i)
+        this->prob[i]=this->nbar_new[i]/lka;
+
+
+  std::cout<<"zmin = "<<z_min<<endl;
+  std::cout<<"zmax = "<<z_max<<endl;
+
+
+  gsl_interp_accel *acc;
+
+  acc = gsl_interp_accel_alloc ();
+  gsl_spline *spline_zr  = gsl_spline_alloc (gsl_interp_linear, zv.size());
+  gsl_spline_init (spline_zr, &(zv[0]), &(rv[0]), zv.size());
+
+  real_prec rmax=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_max, acc)); // gsl_inter_new(zv,rv,this->z_max);
+  real_prec rmin=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_min, acc));//  gsl_inter_new(zv,rv,this->z_min);
+  gsl_spline_free(spline_zr);
+//  gsl_interp_accel_free(acc);
+
+
+  ULONG count=0;
+
+  std::cout<<"Generating random catalog with "<<n_random<<" objects"<<endl;
+
+  // get z(r) given r
+  gsl_interp_accel *acc_rz;
+  acc_rz = gsl_interp_accel_alloc ();
+  gsl_spline *spline    = gsl_spline_alloc (gsl_interp_linear, rv.size());
+  gsl_spline_init (spline, &(this->rv[0]), &(this->zv[0]), this->rv.size());
+
+
+// get P(z) given z
+  gsl_interp_accel *acc_zp;
+  acc_zp = gsl_interp_accel_alloc ();
+  gsl_spline *spline_p    = gsl_spline_alloc (gsl_interp_linear, this->prob.size());
+  gsl_spline_init (spline_p, &(this->zn_new[0]), &(this->prob[0]), this->prob.size());
+
+
+  // get nbar(z) given z
+  gsl_interp_accel *acc_zn;
+  acc_zn = gsl_interp_accel_alloc ();
+  gsl_spline *spline_n    = gsl_spline_alloc (gsl_interp_linear, this->nbar_new.size());
+  gsl_spline_init (spline_n, &(this->zn_new[0]), &(this->nbar_new[0]), this->nbar_new.size());
+
+
+  std::cout<<"r min = "<<rmin<<endl;
+  std::cout<<"r max = "<<rmax<<endl;
+
+
+  vector<real_prec>dNdz_random(this->dNdz_low_res.size(),0);
+//  this->dNdz_low_res.clear();
+//  this->dNdz_low_res.shrink_to_fit();
+//  this->dNdz_low_res.resize(this->N_bin_z_low_res,0);
+  this->dNdM.clear();
+  this->dNdM.shrink_to_fit();
+  this->dNdM.resize(this->N_bin_lmass,0);
+
+
+#ifdef _USE_MASS_
+  real_prec deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
+#endif
+
+#ifdef _USE_MASK_
+  Healpix_Map<double>map_aux(log2(nside), RING);
+#endif
+
+ real_prec factor=M_PI/180.0;
+  while(count<n_random){
+
+    real_prec rd  = rmax*pow(gsl_rng_uniform(ral), 1./3.);
     if(rd >=rmin){
-      double lg = (2.*M_PI)*gsl_rng_uniform(r);       // l
-      double bg= asin(-1.0+2.0*gsl_rng_uniform(r));     // b   
+      real_prec ra = (2.*M_PI)*gsl_rng_uniform(ral);       // ra
+      real_prec theta= acos(-1.0+2.0*gsl_rng_uniform(ral));     // theta
+      real_prec dec= 0.5*M_PI-theta;                          //delta
+#ifdef _USE_MASK_
       long ipix;
       point.phi=lg;
       point.theta=0.5*M_PI-bg;
       ipix=map_aux.ang2pix(point);
-      if(mask[this->i_mask_flag+ipix*NCOLS_MASK]==1){
-	double xr   = gsl_rng_uniform (r);
-	double zr   = gsl_inter_new(rv,zv,rd); 
-	double proba = gsl_inter_new(zn_new,prob,zr);
-	if(proba>=xr){
-	  double nb = gsl_inter_new(zn_new,nbar_new,zr);
-	  vdina<<180*lg/M_PI<<"\t"<<180.*bg/M_PI<<"\t"<<zr<<"\t"<<nb<<endl;
-	  ++count;
-	  //	  Me.comp_time(start,n_random,count);      
-	}
+      if(mask[this->i_mask_flag+ipix*NCOLS_MASK]==1)
+          {
+#else
+       if((ra<=this->phi_max*factor && ra>= this->phi_min*factor) && (dec<=this->dec_max*factor && dec>=this->dec_min*factor) )
+            {
+#endif
+        real_prec zr   =  static_cast<real_prec>(gsl_spline_eval (spline, rd, acc_rz)); //
+        real_prec proba=0;
+        if(zr>this->zn_new[zn_new.size()-1])
+            proba = this->prob[zn_new.size()-1];
+        else if(zr<=this->zn_new[0])
+           proba = this->prob[0];
+        else
+           proba =  static_cast<real_prec>(gsl_spline_eval (spline_p, zr, acc_zp)) ;
+
+        real_prec xr   = gsl_rng_uniform (ral);
+        if(proba>=xr)
+          {
+           real_prec nb = 0;
+           if(zr>this->zn_new[zn_new.size()-1])
+                nb = this->nbar_new[zn_new.size()-1];
+           else if(zr<=this->zn_new[0])
+               nb = this->nbar_new[0];
+           else
+               nb= static_cast<real_prec>(gsl_spline_eval (spline_n, zr, acc_zn));
+
+
+           int iz_low=get_bin(zr,z_min,N_bin_z_low_res,deltaz_low_res, true);
+           int iz=    get_bin(zr,z_min,N_bin_z,deltaz, true);
+           dNdz_random[iz_low]++;
+
+#ifdef _USE_MASS_
+           bool accept=false;
+           while(false==accept)
+            {
+              real_prec lmass=lmass_min+(lmass_max-lmass_min)*gsl_rng_uniform(ral);
+              int indexm=get_bin(lmass,lmass_min,N_bin_lmass, deltam, true);
+              ULONG id=index_2d(indexm,iz_low,N_bin_z_low_res);
+              real_prec proba_mz=this->PXY[id];
+              real_prec xm   = gsl_rng_uniform (ral);
+
+              if(proba_mz>=xm)
+              {
+                accept=true;
+                prop[i_zs+count*this->NCOLS]=static_cast<float>(zr);
+                prop[i_ra+count*this->NCOLS]=static_cast<float>(180*ra/M_PI);
+                prop[i_dec+count*this->NCOLS]=static_cast<float>(180*dec/M_PI);
+                prop[i_mass+count*this->NCOLS]=static_cast<float>(pow(10,lmass));
+                real_prec alpha=this->NXY[id]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb \sim nbar(z,M)
+                vdina<<static_cast<float>(zr)<<"\t"<<static_cast<float>(180*ra/M_PI)<<"\t"<<static_cast<float>(180.*dec/M_PI)<<"\t"<<static_cast<float>(pow(10,lmass))<<"\t"<<"\t"<<static_cast<float>(nb)<<"\t"<<static_cast<float>(alpha*nb)<<endl;
+                dNdM[indexm]++;
+
+              }
+            }
+#else
+           vdina<<zr<<"\t"<<180*ra/M_PI<<"\t"<<180.*dec/M_PI<<"\t"<<nb<<endl;
+#endif
+
+           count++;
+            }
+          }
+        }
+    So.message_screen_flush("Number of random objects = ",static_cast<int>(count));
+
       }
-    }
-  }while(count<n_random);
   vdina.close();
-  std::cout<<"Random catalogue written in file "<<file<<endl;
-  std::cout<<"with "<<count<<" objects"<<endl;
-  std::cout<<"  "<<endl;
+
+
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for(auto i=0;i<dNdz_random.size();i++)
+     dNdz_random[i]/=(this->deltaz_low_res*static_cast<real_prec>(count));
+  this->File.write_to_file(this->output_dir+"dndz_random.txt", zn_low_res,dNdz_random);
+
+
+  vector<real_prec>mass_aux(N_bin_lmass,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+
+  for(auto i=0;i<dNdz_low_res.size();i++)
+      this->dNdM[i]/=(deltam*static_cast<real_prec>(count));
+
+  for(auto i=0;i<dNdz_low_res.size();i++)
+        mass_aux[i]=lmass_min+(i+0.5)*deltam;
+  this->File.write_to_file(this->output_dir+"dndM_random.txt",mass_aux,dNdM);
+
+
+
+  gsl_spline_free(spline);
+  gsl_spline_free(spline_p);
+  gsl_spline_free(spline_n);
+  gsl_interp_accel_free(acc_rz);
+  gsl_interp_accel_free(acc_zp);
+  gsl_interp_accel_free(acc_zn);
+
+
+this->So.message_screen("Random catalogue written in file ", file);
+  this->So.message_screen("with ",count," objects");
+  this->So.DONE();
+  gsl_rng_free (ral);
+
   
 }
 // ######################################################################
 // ######################################################################
 
 void GALAXY::bspline(int u,int n){
-
   std::cout<<CYAN<<"Smoothing dNdz and nbar  ... "<<RESET<<endl;
 
   int nn0=n;
 
-  vector<double> new_zn0;
-  vector<double> new_nb0;
+  vector<gsl_real> new_zn0;
+  vector<gsl_real> new_nb0;
 
-  vector<double>nv(zn.size(),0);
-  vector<double>za(zn.size(),0);
+  vector<gsl_real>nv(zn.size(),0);
+  vector<gsl_real>za(zn.size(),0);
   za=zn;
   nv=(u == 1 ? this->nbar : this->dNdz);
-  
-  for(int i=0;i<this->nbar.size();++i)
-    {
-      if(u==1)nv[i]=(double)this->nbar[i];
-      else nv[i]=(double)this->dNdz[i];
-    }
-  
-  //  for(int i=0;i<nv.size();i++)std::cout<<dNdz[i]<<"  "<<nbar[i]<<"   "<<nv[i]<<endl;
+
+  cout<<zn.size()<<endl;
+
   for(int i=0;i<1;i++)
     {
       new_zn0.resize(nn0);
       new_nb0.resize(nn0);
       gsl_bspline(za,nv, new_zn0, new_nb0);// smooth dndz
-      za.resize(nn0);
-      nv.resize(nn0);
-      fill(za.begin(), za.end(),0);
-      fill(nv.begin(), nv.end(),0);
+      za.clear();za.shrink_to_fit();
+      za.resize(nn0,0);
+      nv.clear();nv.shrink_to_fit();
+      nv.resize(nn0,0);
       za=new_zn0;
       nv=new_nb0;
       nn0-=2;
     }
   
-  for(int i=0;i<nv.size();i++)nv[i]=fabs(nv[i]);
+  for(int i=0;i<nv.size();i++)
+      nv[i]=fabs(nv[i]);
 
   if(u==1)
     {
-      nbar_new.resize(new_nb0.size());
-      zn_new.resize(new_nb0.size());
-      for(int i=0;i<nv.size();i++)this->nbar_new[i]=fabs(new_nb0[i]);
-      this->Fm.write_to_file(this->output_file_nbar_smooth,zn,this->nbar_new);
+      nbar_new.clear();
+      nbar_new.shrink_to_fit();
+      zn_new.clear();
+      zn_new.shrink_to_fit();
+      nbar_new.resize(new_nb0.size(),0);
+      zn_new.resize(za.size(),0);
       zn_new=za;
+      for(int i=0;i<nv.size();i++)
+          this->nbar_new[i]=fabs(new_nb0[i]);
+      this->File.write_to_file(this->output_dir+"nbar_smooth.txt",za,this->nbar_new);
     }
   
   if(u==2)
@@ -3000,7 +3444,7 @@ void GALAXY::bspline(int u,int n){
       dNdz_new.resize(zn.size());
       zn_new.resize(zn.size());
       for(int i=0;i<zn.size();i++)this->dNdz_new[i]=gsl_inter_new(za,new_nb0,this->zn[i]);
-      this->Fm.write_to_file(this->output_file_dndz_smooth,zn,dNdz_new);
+      this->File.write_to_file(this->output_dir+"dNdz_smooth.txt",zn,dNdz_new);
       zn_new=za;
     }
 }
