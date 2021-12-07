@@ -91,7 +91,6 @@ using namespace std;
 
 # include <iostream>
 # include <fstream>
-# include <iostream>
 # include <vector>
 # include <algorithm>
 # include <math.h>
@@ -110,14 +109,71 @@ using namespace std;
 using namespace std;
 
 
-class Bam {
+class Bam{
   
  private:
 
-
-  /* const gsl_rng_type *  T;   */
-  /* gsl_rng *r;  */
-  
+  //////////////////////////////////////////////////////////
+  /**
+   *  @brief ScreenOutput obejct
+   */
+  ScreenOutput So;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Patchy object to be used in Bam
+   */
+  PATCHY patchy;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of class Cwclass, for Cosmic web analysis. 
+   */
+  Cwclass cwclass;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of class Cwclass, for Cosmic web analysis. 
+   */
+  Cwclass cwclass_ref;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of class Params
+   */
+  Params params;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of class FileOutput
+   */
+  FileOutput File;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of class Cosmology
+   */
+  Cosmology Cosmo;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Used to compute different statistical quantities ina  likelihood context. Used in _BIAS_MODE_
+   */
+  McmcFunctions mcmc;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Object of type Catalog used to allocate info of BAM mocks
+   */
+  Catalog tracer;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Object of type Catalog used to allocate info of reeference catalog
+   */
+  Catalog tracer_ref;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
+  s_CosmoInfo s_cosmo_info;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Boolean type variable to specify whether we are in bam mode (mock or bias) or something else (e.g, running bam with the -c option)
+   * false
+   */
+  bool bam_mode;
     //////////////////////////////////////////////////////////
   /**
    * @brief Use to solve the behavior of under-biased tracers. 
@@ -129,7 +185,6 @@ class Bam {
    * @brief Use to solve the behavior of under-biased tracers
    */
   bool used_once;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief outoput object
@@ -140,13 +195,6 @@ class Bam {
    * @brief outoput object
    */
   ofstream output_res;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Used to compute different statistical quantities ina  likelihood context. Used in _BIAS_MODE_
-   */
-  MCMC_FUNCTIONS mcmc;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief Mean gas density
@@ -166,13 +214,11 @@ class Bam {
    */
   real_prec Mean_density_Y;
   //////////////////////////////////////////////////////////
-
   /**
    * @brief Mean mass-weighted density of dark mattr tracer
    */
   real_prec Mean_density_Y_MASS;
   //////////////////////////////////////////////////////////
-
   /**
    * @brief Mean f-weighted trcer density. f  is the fraction of satelites
    */
@@ -184,53 +230,34 @@ class Bam {
   real_prec mean_aux;
   //////////////////////////////////////////////////////////
   /**
+   * @brief  Poisson shot noise of the halo field generated at each iteration
+   */
+  real_prec shot_noise_new;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Poisson shot noise of the reference halo field
+   */
+  real_prec shot_noise_ref;
+  //////////////////////////////////////////////////////////
+  /**
    * @brief Number of properties used to characterize the halo bias
    */
   int N_bias_properties;
   //////////////////////////////////////////////////////////
-  /**
-   * @brief  Used to compute 1p statistics of the density fields
-   */
-  string Name_redshift_mask;
+ /**
+  * @brief
+  */
+  real_prec minimum_multiscale_property;
   //////////////////////////////////////////////////////////
-  /**
-   * @brief  Used to compute 1p statistics of the density fields
-   */
-  string Name_binary_mask;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Object of class Params
-   */
-  Params params;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Object of class FileOutput
-   */
-  FileOutput File;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Object of class Cosmology
-   */
-  Cosmology Cosmo;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Container specifying iterations at which some outputs are produced
-   */
-  vector<int> output_at_iteration;
-  
- //////////////////////////////////////////////////////////
-  /**
-   * @brief function of class BAM. Load the class BAM with parameters
-   */
-  void set_params_bam();
-
+   /**
+    * @brief function of class BAM. Load the class BAM with parameters
+    */
+   void warnings();
   //////////////////////////////////////////////////////////
   /**
    * @brief Load cosmological information at the input redshift
    */
   void get_cosmo();
-  
    //////////////////////////////////////////////////////////
   /**
    * @brief Computes the DM density field at each iteration
@@ -242,8 +269,13 @@ class Bam {
   * @brief Computes the DM density field at eacfh iteration
   * by convolviong the initial DM field with the Kernel
   */
-
   void get_new_DM_field();
+  //////////////////////////////////////////////////////////
+ /**
+  * @brief Computes the DM density field at eacfh iteration
+  * by convolviong the initial DM field with the Kernel
+  */
+  void get_minimum_multiscale_property();
 
   //////////////////////////////////////////////////////////
 #ifdef MOCK_MODE
@@ -273,6 +305,12 @@ class Bam {
    * @returns This function loads the class member container Bam::CWT_X_Y_hist
    */
     void get_X_function();
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Same goal as get_X_function, used when two or more references are used to learn the distribution of properties from  
+  */
+    void get_X_function_two(int );
+
 
     //////////////////////////////////////////////////////////
   /**
@@ -285,7 +323,7 @@ class Bam {
    * @returns This function loads the class member container Bam::CWT_X_Y_hist
    */
 
-  void get_X_function_complement();
+  void get_X_function_complement(string);
 
 #endif
   //////////////////////////////////////////////////////////
@@ -303,17 +341,26 @@ class Bam {
    
    */
   void get_mock_grid(string property);
+
+
+#ifdef _USE_TWO_REFS_MOCKS_
+  void get_mock_grid_two(string property);
 #endif
 
 
+#endif
+
+
+#ifdef _GET_BAM_CAT_
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   /**
    * @brief This function is used if _USE_NEW_MASS_ASSIGNMENT_ is defined
   */
-  void assign_tracer_property_new_new(bool initial_assignment);
+  void assign_tracer_property_new_new(bool initial_assignment, string h_prop);
   //////////////////////////////////////////////////////////
+#endif
   //////////////////////////////////////////////////////////
   /**
    * @brief This function is used if _USE_NEW_MASS_ASSIGNMENT_ is undefined
@@ -431,6 +478,16 @@ class Bam {
    */
 
   vector<s_mass_members> dm_properties_bins;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
+
+  vector<s_mass_members> dm_properties_for_randoms_bins;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
 
   vector<s_mass_members> dm_properties_bins_mock;
 
@@ -445,10 +502,21 @@ class Bam {
    * During running time it is converted to overdensity
    */
   vector<real_prec>delta_X;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
 
-
+  vector<real_prec>Displacement_inicial;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
   vector<real_prec>delta_dm_aux; // this is used for mass assignmet
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
   vector<real_prec>delta_dm_aux_mem; // this is used for mass assignmet
 
   //////////////////////////////////////////////////////////
@@ -485,15 +553,16 @@ class Bam {
    */
   vector<real_prec>delta_X_REF_PDF;
   //////////////////////////////////////////////////////////
-
-
+  /**
+   * @brief Vector of structures. Contains the values of the masses that belongs to a ginven bin in the DM properties
+   */
+//  real_prec kmin;
   //////////////////////////////////////////////////////////
   /**
    * @brief Container for the X (generally DM) density field. This is used for the calibration procedure, 
    * in which the DM density field is convolved with a kernel to match the TR P(k). In that procedure, the 
    * container Bam::delta_X is modified, so we always use the original Bam::delta_X_ini to do the convolution.
    */
-
   vector<real_prec>delta_X_ini;
   
   //////////////////////////////////////////////////////////
@@ -515,7 +584,10 @@ class Bam {
    */
 
   vector<real_prec>delta_Y_MASS;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>delta_Y_SAT_FRAC;
 
   //////////////////////////////////////////////////////////
@@ -528,10 +600,12 @@ class Bam {
    * @brief Container for the REFERENCE TR power spectrum
    */
   vector<real_prec>Power_REF;
-
-
   //////////////////////////////////////////////////////////
-
+  /**
+   * @brief 
+   */
+  vector<real_prec>weight_mh;
+  //////////////////////////////////////////////////////////
   /**
    * @brief Container for the REFERENCE mass weighted power spectrum
    */
@@ -563,19 +637,12 @@ class Bam {
    * @brief Container for the wave vectors
    */
   vector<real_prec>kvec;
-
-
-
-
   //////////////////////////////////////////////////////////
   /**
    * @brief Number of grid cells 
    * @details computed inside Bam::Bam(params _par) as (Bam::Nft)*(Bam::Nft)*(Bam::Nft)
    */
-  ULONG NGRID;
-
   ULONG NGRID_low_mass_assignment;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief Number of Grid cells N*N*(N/2+1). Computed inside BAM (constructor)
@@ -606,7 +673,6 @@ class Bam {
    * @brief Maximum value of y=, delta_t or log10(num_in_log+delta_y). Computed inside BAM
    */
   real_prec Ymax;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief Number of bins in X for BIAS. Computed inside BAM
@@ -639,8 +705,20 @@ class Bam {
    * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
    */
   vector<ULONG>  BIAS_NCOUNTS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
+   */
   vector<ULONG>  BIAS_SAT_FRACTION;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
+   */
   vector<ULONG>  ABUNDANCE;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
+   */
   vector<ULONG>  NCELLSperDMBIN;
 
   //////////////////////////////////////////////////////////
@@ -648,7 +726,15 @@ class Bam {
    * @brief Joint distribution normalized within each bin of DM density
    */
   vector<real_prec>  BIAS_NCOUNTS_normalized;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
+   */
   vector<real_prec>  BIAS_SAT_FRACTION_normalized;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Container for the BIAS in the form o Number counts, mass, and satellite fraction 
+   */
   vector<real_prec>  ABUNDANCE_normalized;
   //////////////////////////////////////////////////////////
   /**
@@ -682,6 +768,11 @@ class Bam {
    * @brief Container for the PDF of DM particles
    */
   vector<ULONG> PDF_NC_X;
+ //////////////////////////////////////////////////////////
+  /**
+   * @brief Number of objects in mock 
+   */ 
+  ULONG Nobjects;
 
   //////////////////////////////////////////////////////////
   /**
@@ -692,7 +783,16 @@ class Bam {
   /**
    * @brief Maximum number of Y particles in one cell
    */
+  int mean_number_y_onecell;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Maximum number of Y particles in one cell
+   */
   int nmax_y_onecell;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Maximum number of Y particles in one cell
+   */
   int nmax_y_sat_onecell;
 
   //////////////////////////////////////////////////////////
@@ -742,7 +842,10 @@ class Bam {
    * @details Used to identify output files
    */
   int step;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
 
   int step_mass_assignemt;
   //////////////////////////////////////////////////////////
@@ -751,6 +854,10 @@ class Bam {
    * @details Computed as the ratio between the reference power and the mock power, with size Bam::Nft/Bam::ndel
    */
   vector<real_prec>Kernel;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>Kernel_mass;
   //////////////////////////////////////////////////////////
   /**
@@ -790,10 +897,15 @@ class Bam {
   /**
    * @brief Convolution of the initial DM field with the BAM Kernel
    * @params in: original DM density field
-   * @params type: deprecated in current implementation
+   * @params out: convolved with kernel
    * @returns convolved DM with Kernel, to be used in the determination of the bias inside the BAM iterative process
    */
-  void Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type);
+  void Konvolve(vector<real_prec> &in, vector<real_prec>&out);
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
+  void v_konvolve(vector<real_prec> &);
   //////////////////////////////////////////////////////////
   /**
    * @brief
@@ -809,128 +921,11 @@ class Bam {
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Number of bins in X to construct BIAS
-   */
-
-  int NX;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of bins in Y to construct BIAS
-   * If the Y- density field is NGP, this values is transformed
-   * to the maximum number of TR in one cell.
-   */
-  int NY;
-
-
-  int NY_MASS;
-
-  int NY_SAT_FRAC;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Size of bins in Foureir space
-   * @details The size of k-bins is ndel times the fundamental mode
-   */
-  int ndel_data;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Path to output directory
-   */
-  string Output_directory;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Path to input directory of Y
-   */
-  string Input_Directory_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_Catalog_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Tracer DENSITY FIELD with high resolution
-   */
-  string Name_Catalog_Y_HR;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_Catalog_Y_MWEIGHTED;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Path to input directory of DM
-   */
-  string Input_Directory_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief ath to input directory of DM_REF
-   */
-  string Input_Directory_X_REF;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string XNAME;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_Catalog_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_VelFieldx_X;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_VelFieldy_X;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_VelFieldz_X;
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_Catalog_X_REF_PDF;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  string Name_Catalog_X_NEW;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  string Name_Property_X;
-  //////////////////////////////////////////////////////////
-  /**
    * @brief
    * @brief Read from parameter file
    
    */
   string new_Name_Property_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   * @brief Read from parameter file
-   */
-  string YNAME;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  string Name_Property_Y;
   //////////////////////////////////////////////////////////
   /**
    * @brief
@@ -946,295 +941,17 @@ class Bam {
    * @brief
    */
   string Type_of_File_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief  Mass assigment scheme for the DM
-   * Only use in file names
-   */
-  int iMAS_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Mass assigment scheme for the DM-REF
-   */
-  int iMAS_X_REF_PDF;
+
   //////////////////////////////////////////////////////////
   /**
    * @brief 
-   */
-  int iMAS_X_NEW;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Mass assigment scheme for the TR field
-   * Only use in file names
-   */
-  int iMAS_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum value of the TR overdensity
-   * @details If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec delta_Y_max;
-  //////////////////////////////////////////////////////////
-
-  /**
-   * @brief Minimum value of the TR overdensity
-   * @details If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec delta_Y_min;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum value of the DM overdensity
-   * @details If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec delta_X_max;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Minimum value of the DM overdensity
-   * @details If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec delta_X_min;
-  /////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum value of the log(1+overdensity) for TR
-   * @detail If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec ldelta_Y_max;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Minimum value of the log(1+overdensity) for TR
-   * @detail If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec ldelta_Y_min;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum value of the log(1+overdensity) for DM
-   * @detail If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec ldelta_X_max;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Minimum value of the log(1+overdensity) for DM
-   * @detail If requiested from parameter filw, this value is overloaded
-   * by computing it from the input fields
-   */
-  real_prec ldelta_X_min;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Identification of the input density field (density, delta)
-   * @brief Read from parameter file
-   */
-  string Quantity;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of bins in Halos Mass, to be deprecated
-   * @brief Read from parameter file
-   */
-  int NMASSbins;
-  int NMASSbins_mf;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Cosmological redshift
-   * @brief Read from parameter file
-   */
-  real_prec redshift;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Smoothing scale. No practical porpose. To be deprecated
-   * @brief Read from parameter file
-   */
-  real_prec smscale;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Identification for a realization
-   * @brief Read from parameter file
-   */
-  int realization;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number if cells per dimention in the mesh. 
-   * @brief Read from parameter file
-   */
-  int Nft;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number if cells per dimention in the mesh. 
-   * @brief Read from parameter file
-   */
-  int Nft_low;
-
-
-  int Nft_HR;
-
-
-  int Nft_random_collapse;
-
-
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Fraction of distance to clsoest dm particle used to collapse randoms
-   **/
-  real_prec Distance_fraction;
-  
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  bool Comp_conditional_PDF;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  bool Comp_joint_PDF;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  bool write_files_for_histograms;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Read from parameter file
-   */
-  bool Redefine_limits;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief 
-   */
-  bool Convert_Density_to_Delta_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  bool Convert_Density_to_Delta_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Value of Lambda threshold for T-CWC
-   * @brief Read from parameter file
-   */
-  real_prec lambdath;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Value of Lambda threshold for V-CWC
-   * @brief Read from parameter file
-   */
-  real_prec lambdath_v;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   */
-  bool Write_PDF_number_counts;  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Specify whether the histograms are done in log or linear scale for Y
-   * @brief Read from parameter file
-   */
-  string Scale_Y;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Specify whether the histograms are done in log or linear scale for X
-   * @brief Read from parameter file
-   */
-  string Scale_X;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of bins in the Mk info to build BIAS.
-   * @brief Read from parameter file
-   */
-  int n_sknot_massbin;
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of bins in the Veldisp info to build BIAS.
-   * @brief Read from parameter file
-   */
-  int n_vknot_massbin;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Size of the box in Mpc/h
-   * @brief Read from parameter file
-
-   */
-  real_prec Lbox;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Size of the smaller box used to calibrate and to extrapolate to a box with sizde Lbox
-   */
-  real_prec Lbox_low;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of BAM iterations
-   * @brief Read from parameter file
-   */
-  int N_iterations_Kernel;
-
-    //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of BAM iterations
-   * @brief Read from parameter file
-   */
-  int iteration_ini;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of DM that will be created by the approximated gravity solver
-   * @ and on which the Kernel will act to create a halo mock density field.
-   */
-  int N_dm_realizations;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Initial label of the DM realizations
-   */
-  int N_dm_initial;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of iterations for the pre-processing of DM
-   * Parameter set in the parameter file.
-   * Default 0
-   */
-  int N_iterations_dm;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Apply or not rank ordering to the iterative process of BAM
-   * Default false
-   */
-  bool Apply_Rankordering;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of CWT used, computed as the size of the
-   * Bam::cwt_used container
-   */
-  int n_cwt;
-
-  int n_cwv;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of CWT used, computed as the size of the
-   * Bam::cwt_used container
    */
   s_CosmologicalParameters s_cosmo_pars;
 
-  
   //////////////////////////////////////////////////////////
   /**
-   * @brief 
+   * @brief  
    */
-  int seed;
-
-
-
   bool bin_accumulate_borders;
   //////////////////////////////////////////////////////////
   /**
@@ -1243,36 +960,242 @@ class Bam {
   bool use_iteration_ini;
   //////////////////////////////////////////////////////////
 
+#ifdef _USE_GNUPLOT_
+  /**
+   * @brief Objects of Gnuplot type, yused to plot @running time.
+   */
+  Gnuplot gp_kernel;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_power;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_ratio;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_pdf;
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_abundance;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_abundance_v;
+
+#endif
+
+// *****************************************************************************************************************************************
+// *****************************************************************************************************************************************
+// *****************************************************************************************************************************************
+// *****************************************************************************************************************************************
   
 
  public:
   //////////////////////////////////////////////////////////
   /**
-   *  @brief default constructor
+   *  @brief default Class Constructor
    *  @return object of class Bam
    */
-  Bam(){}
+  Bam(){
+      if(true==WARNING_MODELS){
+      So.message_warning("More than one model for properties of DM has been allowed. Please check def.h. Cosmicatlass stops here");
+      exit(1);
+    }
+
+  }
   
   //////////////////////////////////////////////////////////
   /**
-   *  @brief Use this constructor to pass a Params object
-   *  @brief This constructor initializes the value of NTT and NGRID
+   *  @brief Use this constructor to pass an object of type Params
+   *  @brief This constructor initializes the value of BAM parameters
    *  @return object of class Bam
    */
   
-  Bam(Params _par):params (_par)
+  Bam(Params _par, bool _bam_mode):params (_par), bam_mode (_bam_mode)
   {
-    std::cout.precision(6);
     sal.precision(8);
     sal.setf(ios::showpoint); 
     sal.setf(ios::scientific); 
-    this->set_params_bam();
-    this->NGRID=params._NGRID();
+    this->s_cosmo_pars=this->params.s_cosmo_pars;
+    if(true==WARNING_MODELS){
+      So.message_warning("More than one model for properties of DM has been allowed. Please check def.h. Cosmicatlass stops here");
+      exit(1);
+    }
+
 #ifdef _USE_MULTISCALE_LEVEL_4_
-    this->NGRID_low_mass_assignment=(NFT_LOW_4)*(NFT_LOW_4)*(NFT_LOW_4);
+    this->NGRID_low_mass_assignment=(params._Nft_low_l4())*(params._Nft_low_l4())*(params._Nft_low_l4());
 #endif
-    this->NTT=static_cast<ULONG>(this->Nft*this->Nft*(this->Nft/2+1));
+    this->NTT=this->params._NGRID_h();
+
+#ifdef _GET_BAM_REALIZATIONS_
+#ifdef _MULTISCALE_
+    this->get_minimum_multiscale_property();
+#endif
+#endif
+
+#ifdef USE_GNUPLOT_
+    this->gp_power<<"set border linewidth 1.5\n";
+    this->gp_kernel<<"set border linewidth 1.5\n";
+    this->gp_pdf<<"set border linewidth 1.5\n";
+#endif
+
+
+
+  this->So.enter(__PRETTY_FUNCTION__);
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Loading parameters for BAM. THIS HAS TO BE UPDATED> USE THEM DIRECTLY FROM THE PARAMS CLASS");
+#endif
+
+  this->used_once = true;
+
+
+  // --------------------------------------------------------------------------------------------
+  if(true==this->bam_mode)
+  {
+#ifdef _GET_BAM_REALIZATIONS_
+    ifstream nxo;
+    nxo.open(file_one_cell);
+#ifdef _FULL_VERBOSE_
+    if(nxo.is_open())
+      So.message_screen("Reading maximum number of reference tracers in cells from file ",file_one_cell);
+    else
+     {
+        So.message_screen("File with max number of tracers in one cell does not exist",file_one_cell);
+        So.message_screen("BAM stops here");
+        exit(0);
+      }
+#endif
+  int iaux; int iaux2;
+  nxo>>iaux>>iaux2;
+  this->nmax_y_onecell=iaux;
+  this->mean_number_y_onecell=iaux2;
+  nxo.close();
+
+#ifdef _FULL_VERBOSE_
+  if(iaux==0)
+    So.message_warning("Maximum number of cells = 0. End");
+  else
+    So.message_screen("maximum number of reference tracers in cells =",iaux);
+  So.message_screen("mean number of reference tracers in cells =",iaux2);
+#endif
+#endif
   }
+
+  if(true==this->bam_mode)
+
+  this->dm_already_done=false;
+  // Feed the structure for cosmological parameters
+  // This is also done in patchy, so verify that these lines are also in its init par member
+   
+
+
+#ifdef _BIN_ACCUMULATE_
+  this->bin_accumulate_borders = true;
+#else
+  this->bin_accumulate_borders = false;
+#endif
+  So.DONE();
+  // Determine the number of properties used to characterize the halo bias
+  this->N_bias_properties=1;  // This accounts for the dark amtter density.
+  vector<string> bias_properties;
+  bias_properties.push_back("Local density");
+#ifdef _USE_MASS_KNOTS_
+  this->N_bias_properties++;
+  bias_properties.push_back("Knot-Mass");
+#endif
+#ifdef _USE_CWC_
+  this->N_bias_properties++;
+  bias_properties.push_back("T-WEB");
+#endif
+
+#ifdef _USE_VEL_KNOTS_V_
+  this->N_bias_properties++;
+  bias_properties.push_back("V-dispersion in knots");
+#endif
+#ifdef _USE_CWEB_V_
+  this->N_bias_properties++;
+  bias_properties.push_back("V-WEB");
+#endif
+#if defined (_USE_INVARIANT_TIDAL_FIELD_II_) || defined (_USE_DELTA2_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_TIDAL_FIELD_II_
+  bias_properties.push_back("I-2");
+#else
+  bias_properties.push_back("ð²");
+#endif
+#endif
+#if defined (_USE_INVARIANT_TIDAL_FIELD_III_) || defined (_USE_DELTA3_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_TIDAL_FIELD_III_
+  bias_properties.push_back("I-3");
+#else
+  bias_properties.push_back("ð³");
+#endif
+#endif
+#if defined (_USE_INVARIANT_TIDAL_FIELD_IV_) || defined (_USE_TIDAL_ANISOTROPY_) || defined (_USE_ELLIPTICITY_)|| defined (_USE_PROLATNESS_)|| defined (_USE_S2_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_TIDAL_FIELD_IV_
+  bias_properties.push_back("I-4");
+#elif defined (_USE_TIDAL_ANISOTROPY_)
+  bias_properties.push_back("Tidal anisotropy");
+#elif defined (_USE_ELLIPTICITY_)
+  bias_properties.push_back("Ellipticity");
+#elif defined (_PROLATNESS_)
+    bias_properties.push_back("Prolatness");
+#else
+  bias_properties.push_back("S²");
+#endif
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_I_) || defined(_USE_NABLA2DELTA_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_I_
+  bias_properties.push_back("IV-1");
+#else
+  bias_properties.push_back("Nabla² ð");
+#endif
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_II_) || defined (_USE_S2DELTA_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_II_
+  bias_properties.push_back("IV-2");
+#else
+  bias_properties.push_back("s²ð");
+#endif
+#endif
+#if defined (_USE_INVARIANT_SHEAR_VFIELD_III_) || defined (_USE_S3_)
+  this->N_bias_properties++;
+#ifdef _USE_INVARIANT_SHEAR_VFIELD_III_
+  bias_properties.push_back("IV-3");
+#else
+  bias_properties.push_back("s²");
+#endif
+#endif
+#ifdef _FULL_VERBOSE_
+#ifndef _ONLY_PATCHY_
+#ifdef _DO_BAM_CALIBRATION_
+  So.message_screen("****************************************************************************");
+  So.message_screen("BAM is using", this->N_bias_properties,"properties to characterise the bias:");
+  for(int i=0;i<bias_properties.size();++i)std::cout<<YELLOW<<bias_properties[i]<<RESET<<endl;
+  So.message_screen("****************************************************************************");
+  std::cout<<endl;
+#endif
+#endif
+#endif
+  this->step_mass_assignemt=0; //initialize it
+  }
+// *****************************************************************************************************************************************
+// *****************************************************************************************************************************************
+// *****************************************************************************************************************************************
 
   //////////////////////////////////////////////////////////
   /**
@@ -1283,125 +1206,59 @@ class Bam {
 
   //////////////////////////////////////////////////////////
   /**
-   *  @brief ScreenOutput obejct
-   */
-  ScreenOutput So;
- 
-  //////////////////////////////////////////////////////////
-  /**
    * @brief Runs BAMS. Called from main function
    */
   void bamrunner();
-
-
-  
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Write on the screen, under the execution command ./runbam.o -p parafile
-   * the inputn parameters as well as those defined as pre-processor directive.
-   */
-  void show_params();
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Public Access private variable
-   */
-
-  ULONG _NGRID(){return this->NGRID;}
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Public Access private variable
-   */
-  int _Nft(){return this->Nft;}
-
-  int _Nft_low(){return this->Nft_low;}
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Public Access private variable
-   */
-  
-  int _seed(){return this->seed;}
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Public Access private variable
-   */
-
-  real_prec _Lbox(){return this->Lbox;}
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Public Access private variable
-   */
-
-  real_prec _Lbox_low(){return this->Lbox_low;}
-  //////////////////////////////////////////////////////////
-
-  /**
-   * @brief 
-   */
-  s_CosmoInfo s_cosmo_info;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Object of class Cwclass, for Cosmic web analysis. 
-   */
-  Cwclass cwclass;
-
-  Cwclass cwclass_ref;
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Patchy object to be used in Bam
-   */
-  PATCHY patchy;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of objects in mock 
-   */
-  
-  ULONG Nobjects;
-
-    //////////////////////////////////////////////////////////
-
-  /**
-   * @brief  Used to compute 1p statistics of the density fields
-   */
-  Catalog tracer;
-
-  Catalog tracer_ref;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief Name of the file with mock number density field
    */
   string fnameMOCK;
-
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   string file_residuals;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  vector<real_prec>residuals_power;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+
+  vector<real_prec>residuals_power_unsigned;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  vector<int>it_power;
+
   //////////////////////////////////////////////////////////
   /**
    * @brief
    * In this function we asign coordinates from DM + random particles based on the mock number counts
-   * Masses are also assigned and the collapse of randoms towards dm (to correct small scale clusterin) is also performed after that
-   * Rnadoms are decided to be collapsed after having assigned mass, for the information on the mass can be used to model the
+   * @details Masses are also assigned and the collapse of randoms towards dm (to correct small scale clusterin) is also performed after that
+   * Randoms are decided to be collapsed after having assigned mass, for the information on the mass can be used to model the
    * fraction of distance to aproach teh rans to their closest DM particle.
-   * Catalog is then written with posiotions, velocities and masses.
+   * Catalog is then written with positions, velocities and masses.
   */
 
 #ifdef MOCK_MODE
-  void makecat(string stradd,string fnameMOCK,gsl_rng ** gBaseRand,int ir);
+#ifdef _USE_OMP_
+ void makecat(string stradd,string fnameMOCK,gsl_rng ** gBaseRand,int ir);
+#else
+  void makecat(string stradd,string fnameMOCK,gsl_rng * gBaseRand,int ir);
+#endif
+
 #endif
   //////////////////////////////////////////////////////////
 #ifdef MOCK_MODE
   /**
    * @brief
   */
-
-
   void collapse_randoms();
 #endif
   //////////////////////////////////////////////////////////
@@ -1425,8 +1282,6 @@ class Bam {
   */
   void move_particles_lpt();
 #endif
-
-
   //////////////////////////////////////////////////////////
 #ifdef MOCK_MODE
   /**
@@ -1435,24 +1290,40 @@ class Bam {
   void correct_for_exclusion(ULONG lenght_dm_bin);
 #endif
   //////////////////////////////////////////////////////////
-
+  /**
+   * @brief  
+   */
   vector<s_nearest_cells> ncells_info;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   vector<gsl_real>mass_bins;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   vector<gsl_real>mfunc;
-
-  real_prec Mass_threshold;
-
-  real_prec Mass_threshold_multi_scale_1;
-  real_prec Mass_threshold_multi_scale_2;
-  real_prec Mass_threshold_multi_scale_3;
-  real_prec Mass_threshold_multi_scale_4;
-
-
-  real_prec mass_min;
-  real_prec mass_max;
-
+   //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec prop_min;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec prop_max;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   real_prec min_halo_separation;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  void set_So(ScreenOutput new_So){this->So=new_So;}
   
 };
   

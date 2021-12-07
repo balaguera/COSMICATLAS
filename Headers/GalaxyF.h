@@ -9,8 +9,8 @@
  *  (e.g.Halo mass, Halpha-flux, etc.)
  */
 
-#ifndef __GALAXY__
-#define __GALAXY__
+#ifndef __AGALAXY__
+#define __AGALAXY__
 
 #include "Params.h"
 #include "CoordinateSystem.h"

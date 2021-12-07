@@ -5,6 +5,15 @@
 #ifndef __PARAMETERS__
 #define __PARAMETERS__
 
+
+#define _USE_COSMO_PARS_
+
+#ifdef _USE_SLICS_COSMOLOGY_
+#undef _USE_SLICS_COSMOLOGY_
+#define _USE_PLANCK_COSMOLOGY_
+#endif
+
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -50,7 +59,7 @@ class ParametersCosmolib
   real_prec redshift;
   real_prec redshift_min;
   real_prec redshift_max;
-
+  int nbins_redshift;
   string mass_function_fit;
   
   real_prec M_min_effective;
@@ -85,12 +94,10 @@ class ParametersCosmolib
   bool compute_output_linear_power_spectrum;
   bool compute_output_non_linear_power_spectrum;
   string scale_ps;
-  real_prec k_min_ps;
-  real_prec k_max_ps;
   real_prec kstar;
   real_prec GAL_BIAS;
   real_prec Amc;
-  int n_points_ps;
+
   string linear_matter_ps_output_file;
   string non_linear_matter_ps_halo_fit_output_file;
   string non_linear_matter_ps_pt_output_file;
@@ -121,11 +128,14 @@ class ParametersCosmolib
   string scale_dp_k;
   int n_points_dp_k;
   string density_profile_k_output_file ;
-
+  bool use_file_power;
+  string file_power;
 
 
 
  public:
+
+
 
   // Default constructor
   ParametersCosmolib () {}
@@ -135,17 +145,18 @@ class ParametersCosmolib
   ~ParametersCosmolib () {}
 
   // function to get private variables
-  real_prec _k_max_integration () {return k_max_integration;}
-  real_prec _k_min_integration () {return k_min_integration;}
-  real_prec _om_matter () {return om_matter;}
-  real_prec _om_cdm () {return om_cdm;}
-  real_prec _om_radiation () {return om_radiation;}
-  real_prec _om_baryons () {return om_baryons;}
-  real_prec _om_vac () {return om_vac;}
-  real_prec _om_k () {return om_k;}
-  real_prec _f_baryon () {return f_baryon;}
-  real_prec _Hubble () {return Hubble;}
-  real_prec _hubble () {return hubble;}
+  real_prec _k_max_integration () {return this->k_max_integration;}
+  real_prec _k_min_integration () {return this->k_min_integration;}
+  real_prec _om_matter () {return this->om_matter;}
+  real_prec _om_cdm () {return this->om_cdm;}
+  real_prec _om_radiation () {return this->om_radiation;}
+  real_prec _om_baryons () {return this->om_baryons;}
+
+  real_prec _om_vac () {return this->om_vac;}
+  real_prec _om_k () {return this->om_k;}
+  real_prec _f_baryon () {return this->f_baryon;}
+  real_prec _Hubble () {return this->Hubble;}
+  real_prec _hubble () {return this->hubble;}
   real_prec _n_s () {return n_s;}
   real_prec _w_eos () {return w_eos;}
   real_prec _N_eff () {return N_eff;}
@@ -159,6 +170,8 @@ class ParametersCosmolib
   bool _fixed_redshift() {return fixed_redshift;}
   real_prec _redshift() {return redshift;}
   real_prec _redshift_min() {return redshift_min;}
+  real_prec _redshift_max() {return redshift_max;}
+  int _nbins_redshift() {return nbins_redshift;}
   real_prec _A_gas() {return A_gas;}
   real_prec _B_gas() {return B_gas;}
   real_prec _mstar() {return mstar;}
@@ -227,7 +240,12 @@ class ParametersCosmolib
   string _density_profile_k_output_file(){return density_profile_k_output_file ;}
   bool _compute_output_linear_correlation_function(){return compute_output_linear_correlation_function;}
   bool _compute_output_non_linear_correlation_function(){return compute_output_non_linear_correlation_function;}
+  bool _use_file_power(){return this->use_file_power;}
+  string _file_power(){return this->file_power;}
 
+  real_prec k_min_ps;
+  real_prec k_max_ps;
+  int n_points_ps;
 
 };
 

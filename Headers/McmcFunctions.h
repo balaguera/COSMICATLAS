@@ -1,5 +1,5 @@
-#ifndef _MCMC_FUNCTIONS_
-#define _MCMC_FUNCTIONS_
+#ifndef _McmcFunctions_
+#define _McmcFunctions_
 
 
 # include <gsl/gsl_blas.h>
@@ -28,7 +28,7 @@
 using namespace std;
 
 
-class MCMC_FUNCTIONS{
+class McmcFunctions{
 
 private:
 
@@ -50,9 +50,9 @@ private:
 
  public:
 
-  MCMC_FUNCTIONS(){}
+  McmcFunctions(){}
 
-  ~MCMC_FUNCTIONS(){}
+  ~McmcFunctions(){}
   //////////////////////////////////////////////////////////
 
 
@@ -62,176 +62,432 @@ private:
   int seed;
   ofstream lpout;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int n_steps;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int n_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int n_priors;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int nchains;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int chain_ini;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int chain_fin;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int chain;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   bool use_distance_priors;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string sampling;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   bool  diagonal_covariance_matrix;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   bool  analytic_marginalization_wrt_amplitude;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int Id;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int Jd;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int nbin_1D;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int nbin_2D;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string MAS;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   int msteps;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string experiment;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string model;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string observable;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string fit_type;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string input_par_file_model;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string file_oo;
   //////////////////////////////////////////////////////////
   string output_file;
+  /**
+   * @brief 
+   */
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector < vector<real_prec> > acc_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> weight;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> chiss;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> error_fixed_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_max;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_max_2dplot;
-
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_min;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_min_2dplot;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   string output_dir;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_fid;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> delta_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec> parameters_ini;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<int>    fixed_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>    mean_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>    stdev_parameters;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>    d_min;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>    d_max;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<real_prec>    R;
   //////////////////////////////////////////////////////////
   //Container with all steps of merged chains
+  /**
+   * @brief 
+   */
   vector<vector <vector <real_prec> > > acc_parameters_all;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<int> mark;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<int> acca;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<vector<real_prec> > weight_r;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector<vector<real_prec> > chi_models;
   //////////////////////////////////////////////////////////
   //Containers for HMC
+  /**
+   * @brief 
+   */
   vector<real_prec> grad_U;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector< vector<real_prec> >dCmod_dp;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <real_prec> momentum;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <real_prec> masses;
     //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <real_prec> epsilon;
     //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <real_prec> mean_pars;
     //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <vector<real_prec> > cov_masses;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   vector <vector<real_prec> > icov_masses;
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void read_parameters(string parameters_file,string);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void set_mcmc_vectors();
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void set_mcmc_read_vectors();
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void mass_asg2d(string, real_prec,real_prec,real_prec,real_prec,real_prec,vector< vector<real_prec> >&);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_mean(vector<real_prec>  &, int, vector< vector<real_prec> > &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void gelman_rubbin_diag(int,vector<int> &,vector<int> &, vector<vector<vector<real_prec> > > &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void likelihood_full(int lmin, int lmax, vector<matrices>&VM,real_prec &chis_one);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_det_matrix(vector<vector<real_prec> >&mat, real_prec &determinant);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared(vector<real_prec>&,vector<real_prec>&, vector< vector <real_prec> > &, real_prec &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared(const vector<real_prec>&,const vector<real_prec>&, vector<real_prec> &, real_prec &);
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared_poisson(vector<real_prec>&,vector<real_prec>&, real_prec &); //change names to loglikelihood
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_loglikelihood_Poisson(vector<vector<real_prec> >&,vector<vector<real_prec>>&, real_prec &);
 
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared(vector<real_prec>&, vector<real_prec> &,vector<real_prec> &, vector<real_prec>&, real_prec, real_prec, real_prec &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared_marginalized_amplitude(vector<real_prec> &, vector<real_prec> &, vector< vector<real_prec> > &, real_prec &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void chi_squared_marginalized_amplitude(vector<real_prec> &, vector<real_prec> &, vector<real_prec> &, vector<real_prec>&, real_prec, real_prec, real_prec &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_cova_pars(int acc);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void jump();
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void MHalgorithm(real_prec&, real_prec&, int&, int&);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void write_accepted_models(int step, int acc, int weight_here, string);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   real_prec kinetic(int);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_gradU(vector<real_prec>&model, vector<real_prec>&meas, vector<vector<real_prec> >&Step,vector<vector<real_prec> >&R,vector<vector<real_prec> >&V,vector<vector<real_prec> >&icov);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_gradU_full(int lmin, int lmax, vector<matrices> VM,vector<real_prec>&Cmodel,vector<real_prec>&gradU_full);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_model_FB(vector<vector<real_prec> >&Step,vector<vector<real_prec> >&R,vector<vector<real_prec> >&V,vector<real_prec>&Cm);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_cova_FB_delta(vector<matrices>&,int, vector<vector<real_prec> >&Cmodel);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void auto_correlation_mcmc(vector<int>&,vector< vector<real_prec> > &,vector< vector<real_prec> > &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void entropy_mcmc(vector< vector<real_prec> > &,vector<real_prec>&);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void posterior1d(string, string, vector<real_prec>  &, vector<vector<real_prec> > &,int);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void posterior2d(string,string, vector<real_prec> &, vector<vector<real_prec> > &);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void get_contour_levels(string,vector<vector<real_prec> > &);
 
   //////////////////////////////////////////////////////////
@@ -249,14 +505,19 @@ private:
   void posterior1d_combined_experiments(string,string, experiments ex);
   //////////////////////////////////////////////////////////
   /**
-   * @brief This function builds the kernel from the ratio
-   * @returns Container Bam::Kernel
+   * @brief 
    */
 
   void set_distance_priors(int I, int J);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   void distance_priors_cmb_model(int I, int J, s_CosmologicalParameters *scp);
   //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
   real_prec chi_squared_distance_priors();
   //////////////////////////////////////////////////////////
 };

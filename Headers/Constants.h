@@ -1,3 +1,5 @@
+
+
 /**
 * @namespace<Constants>
 * @file Constants.h
@@ -5,8 +7,12 @@
 * @author Andres Balaguera-Antolínez
 * @version 1.0
 * @date    2020
-* @details: This is an example of a main function to call bam. A file called cosmicatlas.cpp
 */
+
+
+
+#ifndef __CONTANTS__
+#define __CONSTANTS__
 
 
 namespace Constants
@@ -31,3 +37,6 @@ namespace Constants
   const double M_reference       = 1e12;
   const double z_mean_sdss       = 0.3;
 }
+
+
+#endif

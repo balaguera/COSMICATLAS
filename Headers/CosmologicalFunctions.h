@@ -20,8 +20,8 @@
 
 
 
-#ifndef _COSMOLOGY_
-#define _COSMOLOGY_
+#ifndef __COSMOLOGY__
+#define __COSMOLOGY__
 
 # include <cmath>
 # include <cctype>
@@ -35,6 +35,9 @@
 # include "Constants.h"
 using namespace std;
 using namespace Constants;
+
+
+
 
 
 #define ERROR_LIMIT_NR 0.01
@@ -238,6 +241,13 @@ class Cosmology{
    * @param *p_structure void pointer to s_CosmologicalParameters structure
    */
   real_prec growth_index(real_prec z, void *p_structure);
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @param z Cosmological Redshift
+   * @param *p_structure void pointer to s_CosmologicalParameters structure
+   */
+  real_prec growth_index2(real_prec z, void *p_structure);
   //////////////////////////////////////////////////////////
   /** 
    * @public

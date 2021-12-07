@@ -146,6 +146,92 @@ class PowerSpectrum{
   /**
    * @brief
   */
+  real_prec omhh; /* Omega_matter*h^2 */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec obhh;   /* Omega_baryon*h^2 */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec theta_cmb;  /* Tcmb in units of 2.7 K */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec z_equality; /* Redshift of matter-radiation equality, really 1+z */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec k_equality; /* Scale of equality, in Mpc^-1 */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec z_drag;   /* Redshift of drag epoch */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec R_drag;   /* Photon-baryon ratio at drag epoch */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec R_equality; /* Photon-baryon ratio at equality epoch */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec sound_horizon;  /* Sound horizon at drag epoch, in Mpc */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec k_silk;   /* Silk damping scale, in Mpc^-1 */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec alpha_c;  /* CDM suppression */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec beta_c;   /* CDM log shift */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec alpha_b;  /* Baryon suppression */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec beta_b;   /* Baryon envelope shift */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec beta_node;  /* Sound horizon shift */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec k_peak;   /* Fit to wavenumber of first peak, in Mpc^-1 */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec sound_horizon_fit;  /* Fit to sound horizon, in Mpc */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  real_prec alpha_gamma;  /* Gamma suppression in approximate TF */
 
   //////////////////////////////////////////////////////////
   /**
@@ -300,7 +386,7 @@ class PowerSpectrum{
   /**
    * @brief
   */
-  real_prec TFfit_onek(real_prec , real_prec *, real_prec *);
+  real_prec TFfit_onek(real_prec , real_prec &, real_prec &);
   //////////////////////////////////////////////////////////
   /**
    * @brief
@@ -462,6 +548,20 @@ class PowerSpectrum{
    * @brief
   */
   vector<gsl_real> WW_mu;
+
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  vector<gsl_real> kvector_external;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+  */
+  vector<gsl_real> power_external;
+
+  bool use_external_power;
 
 };
 

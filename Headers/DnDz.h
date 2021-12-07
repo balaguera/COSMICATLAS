@@ -4,12 +4,11 @@
 #ifndef __DNDZ__
 #define __DNDZ__
 
-//#define HEALPIX
-#undef HEALPIX
 
 # include "CoordinateSystem.h"
 # include "NumericalMethods.h"
 # include "FileOutput.h"
+# include "Catalog.h"
 
 
 
@@ -24,7 +23,7 @@
 
 struct s_dndz{
   /// Container with the galaxy catalogue
-  vector< real_prec > properties;
+  vector<s_Halo > properties;
   
   /// the number of columns in the galaxy catalogue
   int n_columns;

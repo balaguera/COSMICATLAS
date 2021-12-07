@@ -31,10 +31,9 @@
 # include <sstream>
 # include <cassert>
 # include <vector>
-# include "def.h"
 # include "fftw_array.h" 
 # include "ScreenOutput.h"
-# include "bstream.h" 
+# include <bstream.h> 
 
 
 using namespace std;
@@ -144,7 +143,14 @@ class FileOutput{
   /**
    * @brief 
    */
-  unsigned long read_file(string fname, vector<real_prec> &prop_ob, int NTHREADS);
+  ULONG read_file(string fname, vector<real_prec> &prop_ob, int NTHREADS);
+
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
+   */
+  ULONG read_binary_file(string fname, vector<real_prec> &prop_ob);
   //////////////////////////////////////////////////////////
   /**
    * @brief 
@@ -181,6 +187,12 @@ class FileOutput{
    *@brief Write output
    */
   void write_to_file(string fname, vector<real_prec>& kve, vector<real_prec> &pk, vector<real_prec> &pkk,vector<real_prec> &pkkk, vector<real_prec> &si, vector<int>& nmod);
+  
+  //////////////////////////////////////////////////////////
+  /**
+   *@brief Write output
+   */
+  void write_to_file(string fname, vector<real_prec>& kve, vector<real_prec> &pk, vector<real_prec> &pkk,vector<real_prec> &pkkk, vector<int>& nmod);
   
   //////////////////////////////////////////////////////////
   /** 
@@ -224,6 +236,7 @@ class FileOutput{
    *@brief   Write output
    */
   void write_to_file2(string, vector<real_prec>&, vector<real_prec> &, vector<int> &);
+  void write_to_file2(string, vector<real_prec>&, vector<real_prec> &, vector<int> &, bool);
   //////////////////////////////////////////////////////////
   /** 
    *@brief   Write output
@@ -262,6 +275,7 @@ class FileOutput{
    *@brief   Write output
    */
   void write_array(string fname, vector<ULONG>&out);
+  void write_array(string fname, vector<int>&out);
   //////////////////////////////////////////////////////////
   /**
    *@brief   Write output
@@ -273,8 +287,18 @@ template<class Type> void read_array_t(string fname, vector<real_prec>&OUT){
 
       ULONG N=OUT.size();
       fftw_array<Type> dummy(N);
+#ifdef _FULL_VERBOSE_
       this->So.message_screen("Reading binary file", fname);
+#endif
       this->inStream.open(fname.data(),file_is_natural);
+      if(!this->inStream.is_open())
+        {
+          cout<<RED<<"File not found!."<<RESET<<endl;
+          cout<<RED<<"Check input parameter file."<<RESET<<endl;
+          cout<<RED<<"Code exits here."<<RESET<<endl;
+          cout<<endl;
+          exit(0);
+        }
       assert(this->inStream.is_open());
       this->inStream.get(dummy.data,N);
       this->inStream.close();
@@ -286,6 +310,41 @@ template<class Type> void read_array_t(string fname, vector<real_prec>&OUT){
   }
 
 //////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////
+template<class Type> void read_array_t(string fname, vector<Type>&OUT){
+
+
+#ifdef _USE_OMP_
+     int NTHREADS=_NTHREADS_;
+ omp_set_num_threads(NTHREADS);
+#endif
+
+      ULONG N=OUT.size();
+      fftw_array<Type> dummy(N);
+#ifdef _FULL_VERBOSE_
+      this->So.message_screen("Reading binary file", fname);
+#endif
+      this->inStream.open(fname.data(),file_is_natural);
+      if(!this->inStream.is_open())
+        {
+          cout<<RED<<"File not found!."<<RESET<<endl;
+          cout<<RED<<"Check input parameter file."<<RESET<<endl;
+          cout<<RED<<"Code exits here."<<RESET<<endl;
+          cout<<endl;
+          exit(0);
+        }
+      assert(this->inStream.is_open());
+      this->inStream.get(dummy.data,N);
+      this->inStream.close();
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+      for(ULONG i=0;i<N;i++)
+        OUT[i]=static_cast<real_prec>(dummy[i]);
+      So.DONE();
+     return ;
+  }
+
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
@@ -373,6 +432,7 @@ template<class Type> void read_array_t(string fname, vector<real_prec>&OUT){
   void write_to_file(string fname, vector<gsl_real> &kve, vector< gsl_real> &bis, vector< gsl_real> &sn_bis, vector<int> &mod);
   //////////////////////////////////////////////////////////
 
+  bifstream inStreamp;
 
 #endif
 

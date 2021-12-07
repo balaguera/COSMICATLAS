@@ -1,4 +1,6 @@
 // *****************************************************************************************************
+// *****************************************************************************************************
+// *****************************************************************************************************
 /**
  * @class <FftwFuntions>
  * @brief    Header file for the class FftwFunctions::
@@ -79,14 +81,13 @@
  The index need in the function ijk() is fabs( q_i / k_f ).
 */
 
-
-//#define HEALPIX
-#undef HEALPIX
-
+// *****************************************************************************************************
+// *****************************************************************************************************
+// *****************************************************************************************************
+// *****************************************************************************************************
 
 #ifndef __FFTW_FUNCTIONS__
 #define __FFTW_FUNCTIONS__
-
 
 
 # include <ctime>
@@ -100,68 +101,53 @@
 # include <cassert>
 # include <vector>
 # include <algorithm>
-
-
 # include <alm.h>
 # include <alm_fitsio.h>
 # include <healpix_map.h>
 # include <healpix_map_fitsio.h>
 # include <healpix_data_io.h>
 # include <healpix_base.h>
-# include <healpix_base2.h>
 # include <healpix_data_io.h>
 # include <alm_powspec_tools.h>
 # include <alm_healpix_tools.h>
-# include <cxxutils.h>
 # include <omp.h>
 # include <complex>
-# include "fftw_array.h" 
+# include "fftw_array.h"
 # include "NumericalMethods.h"
-# include "CoordinateSystem.h" 
-# include "ScreenOutput.h" 
+# include "CosmologicalFunctions.h"
+# include "FileOutput.h"
+# include "CoordinateSystem.h"
+# include "ScreenOutput.h"
 # include "Params.h"
-
-
-
 using namespace std;
 
 
 
-
-
-// *****************************************************************************************************
-
-class CosmologicalFunctions;
-
-class Parameters;
-
-
-
-/**
- *  @class Parameters FftwFunctions.h "Lib/Headers/FftwFunctions.h"
- *
- *  @brief The class FFtwFunctions
- *
- *  This class is used to measure 3D power spectrum
- */
-
-
 class FftwFunctions{
-  
+
  private:
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief 
+   */
+
+  FileOutput File;
 
   //////////////////////////////////////////////////////////
   /**
-   *  @brief Obejct of type GalaxyOperations 
+   *  @brief Obejct of type GalaxyOperations
    */
   CoordinateSystem Go;
-  
   //////////////////////////////////////////////////////////
   /**
-   * @brief Obejct of type ScreenOutput 
+   * @brief Obejct of type ScreenOutput
    */
   ScreenOutput So;
-  
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Obejct of type ScreenOutput
+   */
+  Cosmology CosmoF;
   //////////////////////////////////////////////////////////
   /**
    *  @brief Minimum X-coordinate of the sample
@@ -169,265 +155,158 @@ class FftwFunctions{
   real_prec Xmin;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    *  @brief Maximim X-coordinate of the sample
    */
   real_prec Xmax;
- 
-  ////////////////////////////////////////////////////////// 
-  /** 
+
+  //////////////////////////////////////////////////////////
+  /**
    *  @brief Minimum Y-coordinate of the sample
   */
   real_prec Ymin;
 
-  ////////////////////////////////////////////////////////// 
-  /** 
+  //////////////////////////////////////////////////////////
+  /**
    *  @brief Maximum Y-coordinate of the sample
   */
   real_prec Ymax;
-
-
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    *  @brief Minimum Z-coordinate of the sample
    */
   real_prec Zmin;
-
-  //////////////////////////////////////////////////////////
-  /** 
+  /////////////////////////////////////////////////////////
+  /**
    *  @brief Maximum Z-coordinate of the sample
    */
   real_prec Zmax;
   //////////////////////////////////////////////////////////
-
-
-
-  /* /\** */
-  /*  * @brief Vector used in FFTW routines */
-  /*  *\/ */
-  /* int *n ;//= (int *)malloc(ic_rank*sizeof(float)); */
-  /* ////////////////////////////////////////////////////////// */
-  /* /\** */
-  /*  * @brief Vector used in FFTW routines for the Bispectrum */
-  /*  *\/ */
-  /* int *n2; */
-
-
-  
-//////////////////////////////////////////////////////////
-  /** 
-   * @brief get the value of private member Number of  FftwFunctions::n_gal  
-   * @return FftwFunctions::n_gal  
-  */
-  real_prec _n_gal(){return n_gal; }
-
-
-
-  //////////////////////////////////////////////////////////
-  /** 
+  /**
+   * @brief 
+   */
+  real_prec Lbox_data;  
+ //////////////////////////////////////////////////////////
+  /**
    * @brief  Vectors used in the estimator of the FKP variance of pwoer spectrum
    */
   vector<real_prec> SN;
-
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the estimator of the FKP variance of pwoer spectrum
    */
   vector<real_prec> Q;
-
-
-
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Number of random objects
    */
-  int n_ran;   
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief get the value of private member Number of FftwFunctions::n_ran  
-   * @return FftwFunctions::n_ran
-   */
-  real_prec _n_ran(){return n_ran; }
-
-//////////////////////////////////////////////////////////
-  /** 
+  ULONG n_ran;
+ //////////////////////////////////////////////////////////
+  /**
    * @brief Weighted number of galaxies
    */
   real_prec w_g;
-  
-//////////////////////////////////////////////////////////
-  /** 
-   * @brief get the value of private member Number of FftwFunctions::w_g
-   * @return FftwFunctions::w_g
-   */
-  real_prec _w_g(){return w_g; }
-  
-//////////////////////////////////////////////////////////
-  /** 
+  //////////////////////////////////////////////////////////
+  /**
    * @brief Weighted number of random objects
-   */
+     */
   real_prec w_r;
-
 //////////////////////////////////////////////////////////
-  /** 
-   * @brief get the value of private member Number of FftwFunctions::w_r
-   * @return FftwFunctions::w_r
-   */
-  real_prec _w_r(){return w_r; }
-
-//////////////////////////////////////////////////////////
-  /** 
-   * @brief Parameter alpha, the ratio between the weighted number of galaxies and the weighted number of randoms 
+  /**
+   * @brief Parameter alpha, the ratio between the weighted number of galaxies and the weighted number of randoms
    */
   real_prec alpha;
 
   //////////////////////////////////////////////////////////
-    /** 
-   * @brief get the value of private member Number of FftwFunctions::alpha
-   * @return FftwFunctions::alpha
-   */
-  /** Return alpha*/
-  real_prec _alpha(){return alpha; }
-
-  //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Parameter used to compute shot nnoise in power spectrum
    */
   real_prec s_g;
-
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Parameter used to compute shot nnoise in power spectrum
    */
   real_prec s_r;
-
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Parameter used to compute shot noise in bispectrum
    */
   real_prec sr1;
-
   //////////////////////////////////////////////////////////
-  /** 
+  /**
       @brief Parameter used to compute shot noise in bispectrum
   */
   real_prec sr2;
-
 //////////////////////////////////////////////////////////
-  /** 
+  /**
       @brief Parameter used to compute shot noise in bispectrum
   */
   real_prec sg1;
-
 //////////////////////////////////////////////////////////
-  /** 
+  /**
       @brief Parameter used to compute shot noise in bispectrum
   */
   real_prec sg2;
-
-
-  
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief get the value of private member Number of FftwFunctions::normal_power
-   * @return FftwFunctions::normal_power
-   */
-  real_prec _normal_power(){return normal_power; }
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Used in the normalization in bispectrum 
+  /**
+   * @brief Used in the normalization in bispectrum
    */
   real_prec normal_p;
-  
 //////////////////////////////////////////////////////////
-  /** 
-   *    @brief  Normalization of window function 
+  /**
+   *    @brief  Normalization of window function
    */
   real_prec normal_window;
-  
-//////////////////////////////////////////////////////////
-  /** 
-   *    @brief  Return normalization of window function 
-   */
-  real_prec _normal_window(){return normal_window; }
-  
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief  Used in the normalization in bispectrum 
+  /**
+   * @brief  Used in the normalization in bispectrum
    */
   real_prec normal_b;
-  
 //////////////////////////////////////////////////////////
-  /** 
-   *   @brief  Normalization in bispectrum 
+  /**
+   *   @brief  Normalization in bispectrum
    */
   real_prec normal_bispectrum;
-  
 //////////////////////////////////////////////////////////
-  /** 
-   *  @brief  Normalization in power spectrum 
+  /**
+   *  @brief  Normalization in power spectrum
    */
   real_prec normal;
-  
-
 //////////////////////////////////////////////////////////
-  /** 
-   * @brief Return Poisson Shot noise 
-   */
-  real_prec _shot_noise(){return shot_noise; }
-  
-//////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Poisson Shot noise for window function
    */
   real_prec shot_noise_window;
-
 //////////////////////////////////////////////////////////
-  /** 
-   * @brief Poisson Shot noise for bispectrum 
+  /**
+   * @brief Poisson Shot noise for bispectrum
    */
   real_prec shot_noise_b1;
-
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Poisson Shot noise for bispectrum
    */
   real_prec shot_noise_b2;
-  
 //////////////////////////////////////////////////////////
-  /** 
-   * @brief Correct for mass assignment scheme 
-   */
-  bool MAS_correction;
-
-//////////////////////////////////////////////////////////  
   /** used to avoid if blocks in correction_MAS */
   real_prec correction_MAS_exp;
-  
+
 //////////////////////////////////////////////////////////
   /**
   * \brief pointer to different Mass assignmetn scheme.
   * \details Three different MAS
-  * are available for interpolation of the density  
+  * are available for interpolation of the density
   * field. Insted of having "if" blocks inside a massively called function, we preset
   * three different functions; this pointer shall point to the correct one at runtime.
   */
   real_prec (FftwFunctions::*MAS_ptr)(real_prec);
-  
-//////////////////////////////////////////////////////////
-  /** 
-   * @brief Mass assignment scheme 
-   */
-  string MASS;
 
 //////////////////////////////////////////////////////////
   /**
   * \brief NGP Mass assignment scheme.
   */
   real_prec MAS_NGP(real_prec);
-  
+
 //////////////////////////////////////////////////////////
   /**
   * \brief CIC Mass assignment scheme.
@@ -440,356 +319,360 @@ class FftwFunctions{
   */
   real_prec MAS_TSC(real_prec);
 
-  //////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
     /**
     * @brief PSC Mass assignment scheme.
     */
-    real_prec MAS_PCS(real_prec);
+  real_prec MAS_PCS(real_prec);
+
+
 //////////////////////////////////////////////////////////
   /**
-   * @brief Statistics measured in this class. Can be Pk_fkp, Pk_ys, Pk_yb, Pk_y_ds 
+   * @brief  Number of grid cells in each direction for Bispectrum fast
    */
-  string statistics;
-  
-
-//////////////////////////////////////////////////////////
-  /**
-   * @brief  Number of grid cells in each direction for Bispectrum fast 
-   */  
   int sgrid;
-
 
 //////////////////////////////////////////////////////////
   /**
    * @brief  Total number of grid cells used in arrays defined for the Bispectrum fast
-   */  
+   */
   int new_sgrid;
 
 
+  //////////////////////////////////////////////////////////
+   /**
+     * @brief Offset in X direction
+     */
+  real_prec Xoffset;
+  //////////////////////////////////////////////////////////
+    /**
+     * @brief Offset in Y direction
+     */
+  real_prec Yoffset;
+
+  //////////////////////////////////////////////////////////
+    /**
+     * @brief Offset in Z direction
+     */
+  real_prec Zoffset;
+
 //////////////////////////////////////////////////////////
   /**
-   * @brief  inverse of the number of grid cells in each direction for the DFT 
-   */  
+   * @brief  inverse of the number of grid cells in each direction for the DFT
+   */
   real_prec rNft;
 
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief  Vectors for the galaxy catalogue 
+  /**
+   * @brief  Vectors for the galaxy catalogue
    */
   vector <real_prec> cell_x;
 
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief  Vectors for the galaxy catalogue 
+  /**
+   * @brief  Vectors for the galaxy catalogue
    */
   vector <real_prec> cell_y;
-
-
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief  Vectors for the galaxy catalogue 
+  /**
+   * @brief  Vectors for the galaxy catalogue
    */
   vector <real_prec> cell_z;
 
-
-  
-
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_xx;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_yy;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_zz;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_xy;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_xz;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_g_yz;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xxx;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_yyy;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_zzz;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xxy;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xxz;
 
 //////////////////////////////////////////////////////////
-    /** 
+    /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_yyx;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_yyz;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_zzx;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_zzy;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xyy;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xzz;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_yzz;
 
 //////////////////////////////////////////////////////////
-    /** 
+    /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_xyz;
 
 //////////////////////////////////////////////////////////
-    /** 
+    /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_yxz;
 
 //////////////////////////////////////////////////////////
-   /** 
+   /**
    * @brief  Vectors for the galaxy catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_g_zxy;
 
 //////////////////////////////////////////////////////////
-    /** 
+    /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r;
-  
+
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_xx;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_yy;
-  
+
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_zz;
-  
+
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_xy;
-  
+
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_xz;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector <real_prec> data_r_yz;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xxx;
 
 //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_yyy;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_zzz;
 
   //////////////////////////////////////////////////////////
 
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xxy;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xxz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_yyx;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_yyz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_zzx;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_zzy;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xyy;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xzz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_yzz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_xyz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_yxz;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief  Vectors for the random catalogue used by the Yamamoto-Blake (fftw-based) estimator
    */
   vector<real_prec> data_r_zxy;
-  
-
   //////////////////////////////////////////////////////////
-  
+
   /**
    * @brief  Vectors used in the Bispectrum
    */
-  vector<int> Arraykx;
-  
+  vector<ULONG> Arraykx;
+
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum. Contains the MAS correction for each mode
    */
   vector<real_prec> Array_corr;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief  Vectors used in the Bispectrum
-   */
-  vector<int> Arrayky;
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
    */
-  vector<int> Arraykz;
+  vector<ULONG> Arrayky;
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
    */
-  vector<int> Arraykk;
+  vector<ULONG> Arraykz;
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
    */
-  vector<int> VecArray;
+  vector<ULONG> Arraykk;
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Vectors used in the Bispectrum
+   */
+  vector<ULONG> VecArray;
 
   //////////////////////////////////////////////////////////
   /**
@@ -806,8 +689,6 @@ class FftwFunctions{
    */
 
   vector<int> kkminID;
-
-
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
@@ -815,58 +696,98 @@ class FftwFunctions{
 
   vector<real_prec> kbins_bk;
 
-
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
    */
-
   vector<int> Ngrids_bk;
 
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief inverse of deltax/y/z, used in grid_assignment
+   */
+  real_prec rdeltax;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief inverse of deltax/y/z, used in grid_assignment
+   */
 
+  real_prec rdeltay;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief inverse of deltax/y/z, used in grid_assignment
+   */
+  real_prec  rdeltaz;
 
   //////////////////////////////////////////////////////////
+  /**
+   * @brief Number of galaxies
+   */
+  ULONG n_gal;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Product of NFT^2
+   */
+  int Nft2;
+  //////////////////////////////////////////////////////////
+  /**
+      @brief Parameter used to compute the normalization in power spectrum
+  */
+  real_prec normal_power;
+  //////////////////////////////////////////////////////////
+  /**
+      @brief Parameter used to compute the normalization in power spectrum
+  */
+  real_prec normal_power_two;
+
+    //////////////////////////////////////////////////////////
   /**
    * @brief  Vector used in Bispectrum
    */
 
-  vector<int> ArrayID;
+  vector<ULONG> ArrayID;
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vector used in Bispectrum
    */
   vector<vector<real_prec>> iFT_output_delta_full;
-  
-  
+
+
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vector used in Bispectrum
    */
   vector<vector<real_prec>> iFT_output_triangles_full;
-  
+
   //////////////////////////////////////////////////////////
   /**
-   * @brief  Vector used in Bispectrum. 
+   * @brief  Vector used in Bispectrum.
    */
   vector<vector<real_prec>> iFT_shot_noise_p1_cyc_sum_full;
-    
 
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int imcut;
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors used in the Bispectrum
    * Assigns to each vector in K-space the shell in which it's found
    */
-  vector<int> Kbin;
-
-
+  vector<ULONG> Kbin;
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief Complex vector for the output of the FFTW for the fluctuation 
+  /**
+   * @brief Complex vector for the output of the FFTW for the fluctuation
    */
   complex_prec *data_out_g;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Complex vector for the output of the FFTW for the fluctuation
+   */
+  complex_prec *data_out_g_rss;
 
   //////////////////////////////////////////////////////////
   /**
@@ -876,157 +797,157 @@ class FftwFunctions{
 
 
   //////////////////////////////////////////////////////////
-  /** 
-      @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+  /**
+      @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xx;
 
   //////////////////////////////////////////////////////////
-  /** 
-   *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+  /**
+   *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yy;
 
   //////////////////////////////////////////////////////////
- /** 
-      @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+      @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_zz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xy;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xxx;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yyy;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_zzz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *  @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *  @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xxy;
-  
+
   //////////////////////////////////////////////////////////
-  /** 
-   *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+  /**
+   *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
    */
   complex_prec *data_out_g_xxz;
-  
+
   //////////////////////////////////////////////////////////
-  /** 
-   *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+  /**
+   *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yyx;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yyz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_zzx;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_zzy;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xyy;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xzz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yzz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_xyz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *   @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_yxz;
 
   //////////////////////////////////////////////////////////
- /** 
-  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator 
+ /**
+  *    @brief Complex vector for the output of the FFTW used by the Yamamoto-Blake estimator
   */
   complex_prec *data_out_g_zxy;
 
   //////////////////////////////////////////////////////////
-  /** 
-   *   @brief Complex vector for the output of the FFTW 
+  /**
+   *   @brief Complex vector for the output of the FFTW
    */
   complex_prec *data_out_r;
-  
+
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    *  @brief Complex vector for the output of the FFTW used in the FKP estimation of the variance
    */
   complex_prec *data_out_SN;
 
   //////////////////////////////////////////////////////////
-    /** 
+    /**
    *  @brief Complex vector for the output of the FFTW used in the FKP estimation of the variance
    */
   complex_prec *data_out_Q;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector< complex<real_prec> > data_g_out_y0;
 
   //////////////////////////////////////////////////////////
-  /** 
+  /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector< complex<real_prec> > data_g_out_y2;
@@ -1060,7 +981,7 @@ class FftwFunctions{
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector<real_prec> SN_g_out_y2;
-  
+
   //////////////////////////////////////////////////////////
    /**
    * @brief Vector for moments in Yamamoto direct sum approach
@@ -1073,32 +994,32 @@ class FftwFunctions{
    */
   vector<real_prec> SN_r_out_y2;
 
-  //////////////////////////////////////////////////////////  
+  //////////////////////////////////////////////////////////
    /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector<real_prec> SN_r_out_y4;
-  
+
   //////////////////////////////////////////////////////////
    /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector<real_prec> data_g_y0;
-  
+
   //////////////////////////////////////////////////////////
    /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector<real_prec> data_g_y2;
-  
+
   //////////////////////////////////////////////////////////
    /**
    * @brief Vector for moments in Yamamoto direct sum approach
    */
   vector<real_prec> data_g_y4;
-  
+
   //////////////////////////////////////////////////////////
-    /** 
+    /**
    * @brief Healpix object used when nbar is not tabulated
    */
 
@@ -1107,97 +1028,135 @@ class FftwFunctions{
 #endif
   //////////////////////////////////////////////////////////
   /**
-  * @brief Mass assignment scheme. 
-  * @details Three different MAS     
-  * are available for interpolation of the density  
-  * field. 
-  * @params x Cartesian coordinate 
+  * @brief Mass assignment scheme.
+  * @details Three different MAS
+  * are available for interpolation of the density
+  * field.
+  * @params x Cartesian coordinate
   * @returns Value of the kernel function according to the MAS selected
   */
   real_prec MAS(real_prec x);
   //////////////////////////////////////////////////////////
   /**
-   * @brief Estimation of the variance of the power spectrum 
-   * @details using  the FKP estimator with the exact expression, equation 
+   * @brief Estimation of the variance of the power spectrum
+   * @details using  the FKP estimator with the exact expression, equation
    * 2.4.6  of FKP paper
    */
-  void do_fkp_error_bars_exact(s_parameters_box *, vector<real_prec> &, vector<real_prec> &, vector<real_prec> &,vector<real_prec> &);
+  void do_fkp_error_bars_exact(vector<real_prec> &, vector<real_prec> &, vector<real_prec> &,vector<real_prec> &);
   //////////////////////////////////////////////////////////
   /**
-   * @brief Computes the variance in the power spectrum 
-   * @details as an approximation to the original FKP  estimation, introducing 
-   * the definition of the effective volume. This is computed 
+   * @brief Computes the variance in the power spectrum
+   * @details as an approximation to the original FKP  estimation, introducing
+   * the definition of the effective volume. This is computed
    * using the random catalogue.
-   * @return Effective volume as a function of k:      
+   * @return Effective volume as a function of k:
    */
-  void do_fkp_error_bars_veff(s_parameters_box *, s_data_structure *, vector<real_prec> &,vector<real_prec> &);
+  void do_fkp_error_bars_veff(s_data_structure *, vector<real_prec> &,vector<real_prec> &);
   //////////////////////////////////////////////////////////
-
-  bool measure_cross;
-  //////////////////////////////////////////////////////////
+  /**
+   * @brief Object of type Params
+   */
 
   Params params;
 
   //////////////////////////////////////////////////////////
 
-
  public:
+  //////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////
 
-  /** 
+  // THREE TYPES OF CONSTRUCTORS, FOR DIFFERET TYPES OF DEFINITIONS
+
+  /**
    * @brief Constructor
   *  @param Inizialization of private variables
    */
-  FftwFunctions():n_ran(0),w_g(0),w_r(0),alpha(0),s_g(0),s_r(0),sr1(0), sr2(0),sg1(0),sg2(0),normal_p(0),normal_window(0.),normal_b(0),normal(0),shot_noise(0),shot_noise2(0),shot_noise_b1(0),shot_noise_b2(0),MAS_correction(false),correction_MAS_exp(0), statistics("FKP"),Nft(128),sgrid(0),new_sgrid(0),rNft(128),Lside(0),Lside_data(0),deltak_0(0),deltak_x(0),deltak_y(0),deltak_z(0),deltax(0),deltay(0),deltaz(0),DeltaK_Bis(0), DeltaK_data(0),DeltaK_window(0),kmax(0),kmin(0), kmax_bk(0),kmax_y_ds(0),ndel_data(1), ndel_window(1),Deltamu(0), Zmin(0),Zmax(0), Ymin(0),Ymax(0),Xmin(0),Xmax(0), N_mu_bins(0),N_log_bins(0),nside(1), Nshells_bk(1), npixels(1),area_pixel(0),imcut(0),measure_cross(false),rdeltax(0),rdeltay(0),rdeltaz(0),n_gal(0),use_random_catalog(false),FKP_error_bars_exact(false),NTT(0),Nnp_data(0),Nnp_window(0)
-  {}
-  
-  /** 
-   * @brief Constructor: 
-   * @param _statistics statistics to be measured
-   * @param _NFT number of grid cells of mesh
-   */
+  FftwFunctions(){}
 
-  //////////////////////////////////////////////////////////
-
-  FftwFunctions(string _statistics, int _Nft, bool _measure_cross):n_ran(0),w_g(0),w_r(0),alpha(0),s_g(0),s_r(0),sr1(0), sr2(0),sg1(0),sg2(0),normal_p(0),normal_window(0.),normal_b(0),normal(0),shot_noise(0),shot_noise2(0),shot_noise_b1(0),shot_noise_b2(0),MAS_correction(false),correction_MAS_exp(0), statistics(_statistics),Nft(_Nft),sgrid(0),new_sgrid(0),rNft(128),Lside(0),Lside_data(0),deltak_0(0),deltak_x(0),deltak_y(0),deltak_z(0),deltax(0),deltay(0),deltaz(0),DeltaK_Bis(0), DeltaK_data(0),DeltaK_window(0),kmax(0),kmin(0),kmax_bk(0),kmax_y_ds(0),ndel_data(1), ndel_window(1),Deltamu(0), Zmin(0),Zmax(0), Ymin(0),Ymax(0),Xmin(0),Xmax(0), N_mu_bins(0),N_log_bins(0),nside(1), Nshells_bk(1), npixels(1),area_pixel(0),imcut(0),measure_cross(_measure_cross),rdeltax(0),rdeltay(0),rdeltaz(0),use_random_catalog(false),FKP_error_bars_exact(false),NTT(0),Nnp_data(0),Nnp_window(0)
-  {}
-
-  //////////////////////////////////////////////////////////
-
-  FftwFunctions(Params _params)
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+  FftwFunctions(Params _params):params(_params), n_ran(0),w_g(0),w_r(0),alpha(0),s_g(0),s_r(0),sr1(0), sr2(0),sg1(0),sg2(0),normal_p(0),normal_window(0.),normal_b(0),normal(0),shot_noise(0),shot_noise2(0),shot_noise_b1(0),shot_noise_b2(0),correction_MAS_exp(0), sgrid(0),new_sgrid(0),rNft(128),Lside_data(0),DeltaK_Bis(0), Zmin(0),Zmax(0), Ymin(0),Ymax(0),Xmin(0),Xmax(0),nside(1), Nshells_bk(1), npixels(1),area_pixel(0),imcut(0),rdeltax(0),rdeltay(0),rdeltaz(0),n_gal(0),Xoffset(0), Yoffset(0), Zoffset(0)
   {
+    this->rdeltax = static_cast<real_prec> (1.0/this->params._d_delta_x());
+    this->rdeltay = this->rdeltax;
+    this->rdeltaz = this->rdeltax;
+    
+    this->DeltaK_Bis    = this->params._d_DeltaK_data();// (this->params._kmax_bk()-this->params._kmin_bk())/((real_prec)this->Nshells_bk)
+    this->Nshells_bk    = static_cast<int>(this->params._kmax_bk()/this->DeltaK_Bis); 
 
-      this->params=_params;
-      this->statistics=this->params._statistics();
-      this->Nft=this->params._Nft();
-      this->use_random_catalog=this->params._use_random_catalog();
-      this->measure_cross=this->params._measure_cross();
-      this->FKP_error_bars_exact=  this->params._FKP_error_bars_exact();
-      this->Lside = this->params._Lbox();
-      this->binning = this->params._type_of_binning();
-      this->deltak_x      = 2.*M_PI/this->Lside;
-      this->deltak_y      = 2.*M_PI/this->Lside;
-      this->deltak_z      = 2.*M_PI/this->Lside;
-      this->ndel_data     =  this->params._ndel_data();
-      this->ndel_window   = this->params._ndel_window();
-      this->N_log_bins    = this->params._N_log_bins();
-      this->N_mu_bins     = this->params._N_mu_bins();
-      this->deltak_0      = sqrt(pow(this->deltak_x,2)+pow(this->deltak_y,2)+pow(this->deltak_z,2))/sqrt(3.0);
-      this->DeltaK_data   = this->ndel_data*this->deltak_0;
-      this->DeltaK_window = this->ndel_window*this->deltak_0;
-      this->kmax_y_ds     = this->params._kmax_y_ds();
-      this->kmin          = 0.5*this->deltak_0;
-      this->kmax          = sqrt(pow(0.5*this->Nft*this->deltak_x,2)+pow(0.5*this->Nft*this->deltak_y,2)+pow(0.5*this->Nft*this->deltak_z,2))/sqrt(3.0);
-      this->kmax_bk       = this->params._kmax_bk();
-      this->kmin_bk       = this->params._kmin_bk();
-      this->Deltal        = log10(this->kmax/this->kmin)/this->N_log_bins;
-      this->Deltamu       = 2.0/(static_cast<real_prec>(this->N_mu_bins));
-      this->Nnp_data      = (this->binning=="log" ? this->N_log_bins : this->Nft/this->ndel_data/2);
-      this->Nnp_window    = (this->binning=="log" ? this->N_log_bins : this->Nft/this->ndel_window/2);
-      this->DeltaK_Bis    = this->DeltaK_data;// (this->kmax_bk-this->kmin_bk)/((real_prec)this->Nshells_bk)
-      this->Nshells_bk =   static_cast<int>(this->kmax_bk/this->DeltaK_Bis);
+  ULONG nff;
+  if(this->params._statistics()!="Pk_y_ds")
+    nff=this->params._Nft();
+  // Get the number of grid-cells for the direct sum DFT as a function of kmax
+  else if(this->params._statistics()=="Pk_y_ds")
+    {
+      nff=(int)(this->params._kmax_y_ds()*this->params._Lbox()/M_PI); 
+      if(nff%2!=0)nff++;
+      this->params.set_Nft(nff);
+      this->sgrid=nff;
+    }
+    
+  // Get number of grid cells per dimension used for the bispectrum_fast given kmax
+  int n_sgrid= static_cast<int>(this->params._kmax_bk()*this->params._Lbox()/M_PI);
+  if(this->params._statistics()=="Bk_fkp_fast")
+    {
+      if(n_sgrid>this->params._Nft())
+        {
+         So.message_warning("Warning: kmax greater than Nyquist frequency");
+         So.message_screen("Setting kmax to the Nyquist");
+         n_sgrid=this->params._Nft();
+         this->params.set_kmax_bk(this->params._Nft()*M_PI/this->params._Lbox() );
+       }
+     if(n_sgrid%2!=0)n_sgrid++;
+     this->sgrid=n_sgrid;
+     if(this->params._kmin_bk()<2.*M_PI/this->params._Lbox() )
+      {
+        So.message_warning("Warning: kmin smaller than fundamental mode");
+        So.message_screen("Setting kmin as fundamental mode");
+        this->params.set_kmin_bk(2.*M_PI/this->params._Lbox()) ;     
+      }
+    }
+  
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  if(this->params._statistics()=="Bk_fkp_fast")
+    {
+      // Get effective number of grid cells 
+      // resulting from looping over half of the positive quadrant.
+      // The result will be used to allocate memory for the arrays
+      // used in the Bispectrum as performed by Jennifer.
+      int new_sd=0;
+      for(int i=0;i<this->sgrid;++i)
+        for(int j=i;j<this->sgrid;++j)
+          for(int k=j;k<this->sgrid;++k)
+            if(i*i+j*j+k*k>0)
+              new_sd++;    
+      this->new_sgrid=new_sd;
+    }
+  // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Initialize other private variables for the Pk
+  this->Nft2=(int)(nff*nff);
+  this->rNft =1.0 / this->params._Nft();
+
+  this->params.set_NGRID(nff*nff*nff);
+  this->params.set_NGRID_h(nff*nff*(nff+2));
+
+
+
+    time_t time_bam;
+    time(&time_bam);
+    this->So.initial_time=time_bam;
   }
-
-  //////////////////////////////////////////////////////////
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
   /**
    * @brief Destructor
    * @details Free fftw vector
@@ -1206,13 +1165,28 @@ class FftwFunctions{
     free_fftw_vectors();
   }
 
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
+// *****************************************************************************************************************************************************************
 
   //////////////////////////////////////////////////////////
   /**
    * @brief  Vectors for the galaxy catalogue
    */
   vector <real_prec> data_g;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Vectors for the galaxy catalogue
+   */
 
+  vector <real_prec> data_g_rss;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  Vectors for the galaxy catalogue
+   */
   vector <real_prec> data_g_mw;
 
   //////////////////////////////////////////////////////////
@@ -1221,181 +1195,31 @@ class FftwFunctions{
    */
   vector <real_prec> data_gp;
 
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Number of galaxies  
-   */
-  int n_gal;   
 
-  bool use_random_catalog;
-  bool FKP_error_bars_exact;
 
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Product of NFT^2 
-   */
-  int Nft2;
-
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Product of NFT^3 
-   */
-  int NT;
   //////////////////////////////////////////////////////////
   /**
-      @brief Parameter used to compute the normalization in power spectrum
-  */
-  real_prec normal_power;
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Product of N1*N2*(N3/2+1) 
-   */
-  int NTT;
-
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief inverse of deltax/y/z, used in grid_assignment
-   */
-  real_prec deltax, deltay, deltaz;
-  real_prec rdeltax, rdeltay, rdeltaz;
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Number of Fourier shells in the final output of P(k) 
-   */  int Nnp_data;
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Number of Fourier shells in the final output of W(k) 
-   */
-  int Nnp_window;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Type of binning in Fourier space
-   */
-  string binning;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Lengh (in Mpc/h) of each side the box in configuration space 
-   */
-  real_prec Lside;
-
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Lengh (in Mpc/h) of each side the box in configuration space 
+   * @brief Lengh (in Mpc/h) of each side the box in configuration space
    computed from the catalog
   */
   real_prec Lside_data;
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Size (in h/Mpc) of fundamental mode in the z-direction 
-   */
-  real_prec deltak_x;
 
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Size (in h/Mpc) of fundamental mode in the z-direction 
-   */
-  real_prec deltak_y;
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Size (in h/Mpc) of fundamental mode in the z-direction 
-   */
-  real_prec deltak_z;
-
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Size (in h/Mpc) of fundamental mode in the radial direction 
-   */
-  real_prec deltak_0;
-  
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Width of the spherical shell (in h/Mpc) for the power spectrum 
-   */
-  real_prec DeltaK_data;
-  
   //////////////////////////////////////////////////////////
   /**
-   * @brief Width of the spherical shell (in h/Mpc) for the window function 
+   * @brief Width of the spherical shell (in h/Mpc) for the window function
    */
   real_prec DeltaK_window;
 
-
-
   //////////////////////////////////////////////////////////
     /**
      * @brief  Poisson Shot noise
      */
-    real_prec shot_noise;
-
-    
-    /**
+  real_prec shot_noise;
+  //////////////////////////////////////////////////////////
+   /**
      * @brief  Poisson Shot noise
      */
-    real_prec shot_noise2;
-
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Minimum wavenumber (in h/Mpc) for log binnig 
-   */
-  real_prec kmin;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum wavenumber (in h/Mpc) for log binnig 
-   */
-  real_prec kmax;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Maximum wavenumber (in h/Mpc) for Yamamoto estimator direct sum 
-   */  
-  real_prec kmax_y_ds;
-  
-    //////////////////////////////////////////////////////////
-  /** 
-   * @brief Multiples of the fundamental mode for the power spectrum
-   */
-  int ndel_data;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief
-   Multiples of the fundamental mode for the window function
-  */
-  int ndel_window;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Width of the spherical shell (in h/Mpc) for log-binning 
-   */
-  real_prec Deltal;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Width of mu bins
-   */
-  real_prec Deltamu;
-
-  //////////////////////////////////////////////////////////
-  /** 
-   * @brief Number of bins in mu
-   */
-  real_prec N_mu_bins;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief  Number of log bins
-   */
-  int N_log_bins;
-
+  real_prec shot_noise2;
   //////////////////////////////////////////////////////////
   /**
    * @brief Nside for Healpix
@@ -1410,18 +1234,7 @@ class FftwFunctions{
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Number of shells for the estimation of Bk as done by Jennifer
-   */
-  real_prec kmax_bk;
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of shells for the estimation of Bk as done by Jennifer
-   */
-  real_prec kmin_bk;
-  
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of pixels according to the Nside value 
+   * @brief Number of pixels according to the Nside value
    */
   long npixels;
 
@@ -1438,31 +1251,6 @@ class FftwFunctions{
   real_prec DeltaK_Bis;
 
 
-
-  //////////////////////////////////////////////////////////
-    /**
-     * @brief  Number of grid cells in each direction for the DFT
-     */
-    int Nft;
-    //////////////////////////////////////////////////////////
-    /**
-     * @brief Offset in X direction
-     */
-    real_prec Xoffset;
-
-  //////////////////////////////////////////////////////////
-    /**
-     * @brief Offset in Y direction
-     */
-    real_prec Yoffset;
-
-  //////////////////////////////////////////////////////////
-    /**
-     * @brief Offset in Z direction
-     */
-    real_prec Zoffset;
-
-  
   ///////////////////////////////////////////////////////
   /**
    * @brief Transform the coordinates of the input catalogues to cartessian coordinates
@@ -1472,87 +1260,50 @@ class FftwFunctions{
    *
    * @param s_b: structure containing parametrs of the Fourier box
    * @param s_d structure containing information related to the catalogue
-   * @param cat: 2d container with the catalog 
+   * @param cat: 2d container with the catalog
    * @result Catalogue with position in cartesian coordinates and mean number density
    * tabulated in the corresponding column as stated in the parameter file
    */
-//  void cart_coordinates(s_parameters_box *s_b, s_data_structure *s_d, vector< real_prec >&cat);
-  void cart_coordinates(s_parameters_box *s_b, s_data_structure *s_d, vector<s_Halo >&prop);
-  ///////////////////////////////////////////////////////
-  /**
-   * @brief Pass the parameters associated to the DFT
-   */
-  
-  void set_pars(real_prec lside,real_prec kmaxys, int ndeld, int ndelw, int Nlogbins, int Nmubins, bool mas_cor,string mas, real_prec kmin_bk,real_prec kmax_bk);
-  
-  
+  void cart_coordinates(s_parameters_box *s_b, s_data_structure *s_d);
   ///////////////////////////////////////////////////////
   /**
    * @brief Assign the Healpix resolution to the private variable of this class
    */
-  
+
   void set_healpix_pars(int Nres);
 
-  ///////////////////////////////////////////////////////
-  /**
-   * @brief Computes the parameters of the k-bins
-   * @details such as width, kmin, kmax, etc according to the type of binning
-   * @param type_of_binning: set the type of binning in k-space (linear, log)
-   * @result Computes the bin-width:
-   * deltak_x, 
-   * deltak_y, 
-   * deltak_z, 
-   */
-  void set_bins(string type_of_binning);
-  
-  ///////////////////////////////////////////////////////
-  /**
-   *@brief Row-major (or c) ordering of the FFTW output
-   * @details Based on the indices i, j, k (in 0<i<n1-1)
-   * this function returns the label corresponding
-   * to a row-major (or c) ordering of the FFTW output
-   * @param i x-grid coordinate
-   * @param j y-grid coordinate
-   * @param k z-grid coordinate
-   * @param n1 number of cells in the x-direction
-   * @param n2 number of cells in the y-direction
-   * @param n3 number of cells in the z-direction
-   * @result Row-major index in the grid
-   */
-  // try: define it as a macro
-  // int ijk(int i, int j, int k, int n1, int n2, int n3);
   //////////////////////////////////////////////////////////
   /**
    *@brief Compute the total statistical weight of a given galaxy
-   * @details Compute the total weight from the available statistical     
-   * weights present in the catalogs.    
-   * @param uw: bool vector indicating whether a weight is used or not. 
+   * @details Compute the total weight from the available statistical
+   * weights present in the catalogs.
+   * @param uw: bool vector indicating whether a weight is used or not.
    * @param ow: real_prec vector with the value of the weight
    * @param t_weight: total weight computed as the product of weights chosen to be used
    * @result Total statistical weight for a particular galaxy
    * @note The code accepts four (4) different weights (per galaxy)
    * plus the FKP weights. See input parameter file.
-   */  
+   */
   void get_total_weight(vector<bool>&uw, vector<real_prec> &ow, real_prec*t_weight);
 
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief Resizes and initializes the input and 
-   * output vectors for the FFTW 
+  /**
+   * @brief Resizes and initializes the input and
+   * output vectors for the FFTW
    */
-  void fftw_vectors(bool use_randoms);
+  void resize_fftw_vectors();
   //////////////////////////////////////////////////////////
   /**
    * @brief Interpolation of the object density field into a grid.
-   * @details  Interpolation of the galaxy overdensity field.                    
-   * Periodic bounday conditions are applie to remap objects 
-   * with coords. outside the range [0,Lx] within the box  
+   * @details  Interpolation of the galaxy overdensity field.
+   * Periodic bounday conditions are applie to remap objects
+   * with coords. outside the range [0,Lx] within the box
    * @param x  x-coordinate of galaxy
    * @param y y-coordinate of galaxy
    * @param z z-coordinate of galaxy
-   * @param weight weight 
+   * @param weight weight
    * @param dat vector containing the interpolated galaxy distribution
-   */                          
+   */
 #ifdef _USE_VECTORIZED_GRID_ASSIGNMENT_
     void grid_assignment_old(real_prec x, real_prec y, real_prec z, real_prec *weight, pic_storage **data, int, int);
 #endif
@@ -1563,6 +1314,10 @@ class FftwFunctions{
     void grid_assignment(real_prec x, real_prec y, real_prec z, real_prec weight, vector<real_prec>&field);
 #endif
 
+    void grid_assignment_NGP(real_prec x, real_prec y, real_prec z, real_prec weight, vector<real_prec>&field);
+    void grid_assignment_CIC(real_prec x, real_prec y, real_prec z, real_prec weight, vector<real_prec>&field);
+    void grid_assignment_TSC(real_prec x, real_prec y, real_prec z, real_prec weight, vector<real_prec>&field);
+    void grid_assignment_PCS(real_prec x, real_prec y, real_prec z, real_prec weight, vector<real_prec>&field);
     //////////////////////////////////////////////////////////
   /**
    * @brief Sampling of galaxy catalogue
@@ -1571,9 +1326,10 @@ class FftwFunctions{
    * @param s_d structure of type s_data_structure
    * @result Generates private class members: vectors ready to be Fourier transformed
    */
-  void get_interpolated_density_field(s_parameters_box *s_b, s_data_structure *s_d);
+  void get_interpolated_density_field(s_data_structure *s_d);
+  void get_interpolated_density_field_real_space(s_data_structure *s_d);
 #ifdef _USE_VECTORIZED_GRID_ASSIGNMENT_
-  void get_interpolated_density_field_old(s_parameters_box *s_b, s_data_structure *s_d);
+  void get_interpolated_density_field_old(s_data_structure *s_d);
 #endif
   //////////////////////////////////////////////////////////
   /**
@@ -1582,8 +1338,8 @@ class FftwFunctions{
    * A vector is filled with the mean number density of
    * the simulation. Such mean number density is computed
    * from the information if the size of the box
-   * as given in the parameter file, together with the 
-   * number of objects. 
+   * as given in the parameter file, together with the
+   * number of objects.
    * @param vol Volumen of the sample if known
    * @result Private class member containing the galaxy fluctuation interpolated in the mesh of size NFT.
    */
@@ -1591,12 +1347,12 @@ class FftwFunctions{
   //////////////////////////////////////////////////////////
   /**
    * @brief Build FKP fluctuation
-   * @details Build the galaxy fluctuation by subtracting data 
+   * @details Build the galaxy fluctuation by subtracting data
    * and random catalogue with factor alpha
    * @params vol Volume of the box
    */
-  void get_fluctuation(bool use_randoms);
-  //////////////////////////////////////////////////////////  
+  void get_fluctuation();
+  //////////////////////////////////////////////////////////
   /**
    * @brief Computes the parameters associated to the
    * FKP estimator
@@ -1604,7 +1360,7 @@ class FftwFunctions{
    * and assign them to public/or private variables of this class.
    * @ parameter ur Use random catalogue (true/false)
    */
-  void get_parameters_estimator(bool ur, bool verbose);
+  void get_parameters_estimator(bool verbose);
 
   //////////////////////////////////////////////////////////
   /**
@@ -1619,27 +1375,27 @@ class FftwFunctions{
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Shell average in Fourier space. 
-   * @details This function returns the spherical average estimate 
-   * of the monopole, quadrupole, hexadecapole, and the 
+   * @brief Shell average in Fourier space.
+   * @details This function returns the spherical average estimate
+   * of the monopole, quadrupole, hexadecapole, and the
    * window function of based on the FKP estiamtor.
-   * For the spherical averages, we only use a quarter of the full FOURIER box,   
-   * using Hermitian symmetry F(kx, ky, -kz)=F(-kx, -ky, kz)* to      
+   * For the spherical averages, we only use a quarter of the full FOURIER box,
+   * using Hermitian symmetry F(kx, ky, -kz)=F(-kx, -ky, kz)* to
    * recover the  information in the negative frequencies explicitely.
-   * When counting modes and power, we weight by a factor 2           
-   * order to account for the negative z-quadrant. Although           
+   * When counting modes and power, we weight by a factor 2
+   * order to account for the negative z-quadrant. Although
    * the factor 2 cancels out when computing the average power in each
-   * shell this allows comparisons with codes using the full box.     
-   * This subroutine is ideal also for the multipole decomposition    
-   * in the modes l=0, 2 and 4. For other moments, the full excusrion   
+   * shell this allows comparisons with codes using the full box.
+   * This subroutine is ideal also for the multipole decomposition
+   * in the modes l=0, 2 and 4. For other moments, the full excusrion
    * through Fourier space has to be done.
-   * BINNING: the floor function ensures that we are using intervals          
-   * of the form [). The spherical shells are such that the first bin 
-   * starts at the zero frequency (althought that mode is exlcuded    
-   * for the power spectrum, not for the window function),            
-   * Note therefore that in the case ndel=1, the fist bin             
-   * will contain ONLY one Fourier mode, is the zero frequency.       
-   * Therefore, it is convinient to start with ndel=2                 
+   * BINNING: the floor function ensures that we are using intervals
+   * of the form [). The spherical shells are such that the first bin
+   * starts at the zero frequency (althought that mode is exlcuded
+   * for the power spectrum, not for the window function),
+   * Note therefore that in the case ndel=1, the fist bin
+   * will contain ONLY one Fourier mode, is the zero frequency.
+   * Therefore, it is convinient to start with ndel=2
    * This function is called by get_power_spectrum_fkp().
    * @param s_b structure of type s_parameters_box
    * @return p_g0 monopole power spectrum
@@ -1648,13 +1404,13 @@ class FftwFunctions{
    * @return p_r power spectrum of the window function
    * @return p_2d 2d power spectrum in cartesian coordinates
    * @return p_2s 2d power spectrum in polar coordinates
-   * @return nm Number of modes in spherical shells 
+   * @return nm Number of modes in spherical shells
    */
   void power_spectrum_fkp(s_parameters_box *s_b, vector<real_prec>&p_g0, vector<real_prec>&p_g2, vector<real_prec>&p_g4,vector<real_prec>&p_r, vector< vector<real_prec> >&p_2c, vector< vector<real_prec> >&p_2s, vector<int>&nm);
 
   void power_spectrum_fkp(s_parameters_box *s_b, vector<real_prec>&p_g0,vector<int>&nm);
 
-  
+
   //////////////////////////////////////////////////////////
   /**
    * @brief Shell average in Fourier space for Bispectrum
@@ -1669,30 +1425,30 @@ class FftwFunctions{
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Shell average in Fourier space. 
-   * @details This function returns the spherical average estimate 
+   * @brief Shell average in Fourier space.
+   * @details This function returns the spherical average estimate
    * of the monopole, quadrupole, hexadecapole, based on the Yamamoto estimator.
-   * For the spherical averages, we only use a quarter of the full FOURIER box,   
-   * using Hermitian symmetry F(kx, ky, -kz)=F(-kx, -ky, kz)* to      
+   * For the spherical averages, we only use a quarter of the full FOURIER box,
+   * using Hermitian symmetry F(kx, ky, -kz)=F(-kx, -ky, kz)* to
    *  recover the  information in the negative frequencies explicitely.
-   *  When counting modes and power, we weight by a factor 2           
-   *  order to account for the negative z-quadrant. Although           
+   *  When counting modes and power, we weight by a factor 2
+   *  order to account for the negative z-quadrant. Although
    *  the factor 2 cancels out when computing the average power in each
-   *  shell this allows comparisons with codes using the full box.     
-   *  This subroutine is ideal also for the multipole decomposition    
-   *  in the modes l=0, 2 and 4. For other moments, the full excurion   
+   *  shell this allows comparisons with codes using the full box.
+   *  This subroutine is ideal also for the multipole decomposition
+   *  in the modes l=0, 2 and 4. For other moments, the full excurion
    *  through Fourier space has to be done.
    *  This function is called by get_power_spectrum_yamammoto().
    * @param s_b structure of type s_parameters_box
    * @return p_g0 monopole power spectrum
    * @return p_g2 quadrupole power spectrum
    * @return p_g4 hexadecapole power spectrum
-   * @return mod Number of modes in spherical shells 
+   * @return mod Number of modes in spherical shells
    */
   void power_spectrum_yamamoto(s_parameters_box *s_b, vector<real_prec>&p0, vector<real_prec>&p2, vector<real_prec>&p4,vector<int>&mod);
   void _power_spectrum_yamamoto(s_parameters_box *s_b, vector<real_prec>&p0, vector<real_prec>&p2, vector<real_prec>&p4,vector<int>&mod);
-  
-  
+
+
 
   //////////////////////////////////////////////////////////
   /**
@@ -1703,8 +1459,8 @@ class FftwFunctions{
    * @return p4 hexadecapole power spectrum
    * @return pr power spectrum of the window function
    * @return p2d TwoD power spectrum in cartesian coordinates
-   * @return p2s TwoD power spectrum in polar coordinates 
-   * @return nm Number of modes in spherical shells 
+   * @return p2s TwoD power spectrum in polar coordinates
+   * @return nm Number of modes in spherical shells
   */
   void get_power_spectrum_for_bispectrum(s_parameters_box *s_b,vector<real_prec>&p0);
 
@@ -1717,14 +1473,15 @@ class FftwFunctions{
    * @return p4 hexadecapole power spectrum
    * @return pr power spectrum of the window function
    * @return p2d TwoD power spectrum in cartesian coordinates
-   * @return p2s TwoD power spectrum in polar coordinates 
-   * @return nm Number of modes in spherical shells 
+   * @return p2s TwoD power spectrum in polar coordinates
+   * @return nm Number of modes in spherical shells
   */
  void get_power_spectrum_fkp(s_parameters_box *s_b,vector<real_prec>&p0,vector<real_prec>&p2,vector<real_prec>&p4, vector<real_prec>&pr, vector<vector<real_prec> >&p2d,  vector<vector<real_prec> >&p2s,vector<int>&nm);
 
  void get_power_spectrum_fkp(s_parameters_box *s_b,vector<real_prec>&p0,vector<int>&nm);
 
- 
+ void cross_power_spectrum_fkp(s_parameters_box *s_b,vector<real_prec>&p0,vector<int>&nm);
+
  //////////////////////////////////////////////////////////
  /**
   *@brief  Compute the multipole decomposition using Yamamoto estimator
@@ -1734,14 +1491,14 @@ class FftwFunctions{
   * @result p2 quadrupole power spectrum
   * @result p4 hexadecapole power spectrum
   * @result p_r power spectrum of the window function
-  * @result nm Number of modes in spherical shells 
+  * @result nm Number of modes in spherical shells
   */
  void get_power_spectrum_yamamoto(s_parameters_box * s_b,vector<real_prec>&p0,vector<real_prec>&p2,vector<real_prec>&p4,vector<int>&nm);
- 
+
  //////////////////////////////////////////////////////////
   /**
    * @brief Estimates of the variance for the power spectrum
-   * @details based on the FKP estimator. Selects between the 
+   * @details based on the FKP estimator. Selects between the
    * exact and the approximate expression for the var(P)
    * @param s_b structure of type s_params_box
    * @param s_d structure of type s_data_structure
@@ -1750,18 +1507,18 @@ class FftwFunctions{
    * @param nm number of modes in k-spherical shells
    * @result sig FKP variance of the power spectrum
    */
-  void get_fkp_error_bars(s_parameters_box *s_b,  s_data_structure *s_d, vector<real_prec> &kv, vector<real_prec> &pk, vector<int>&nm, vector<real_prec> &sig);
-  
+  void get_fkp_error_bars(s_data_structure *s_d, vector<real_prec> &kv, vector<real_prec> &pk, vector<int>&nm, vector<real_prec> &sig);
+
   //////////////////////////////////////////////////////////
   /**
-   * @brief Generate an interpolated value of the mean number density           
-   * @details given the position in the sky of the object, when the depth        
-   * varies with the angular position. This interpolates the matrix     
-   * computed on the method dndz          
+   * @brief Generate an interpolated value of the mean number density
+   * @details given the position in the sky of the object, when the depth
+   * varies with the angular position. This interpolates the matrix
+   * computed on the method dndz
    * @param s_b structure of type s_parameters_box
    * @param zmin Minimum redshift of the sample
    * @param zmax Maximum redshift of the sample
-   * @param ra Right ascencion of the galaxy   
+   * @param ra Right ascencion of the galaxy
    * @param ra Declination of the galaxy
    * @param zg Redshift of the galaxy
    * @param dndz_m container with the vaues of the mean number density in redshift bins and Healpix pixels tabulated.
@@ -1770,61 +1527,61 @@ class FftwFunctions{
   void get_mean_density_interpolated(real_prec zmin, real_prec zmax, real_prec ra, real_prec dec, real_prec zg, vector< vector<real_prec> >&dndz_m, real_prec *nbar);
 
 
-  
+
   //////////////////////////////////////////////////////////
   /**
-   * @brief Count of triangles in Fourier space 
-   * @details 
+   * @brief Count of triangles in Fourier space
+   * @details
    */
   void bispectrum_fkp(char, s_parameters_box *s_p, vector<real_prec> &, vector<real_prec> &, vector<real_prec> &, vector<int> &);
-  
+
   //////////////////////////////////////////////////////////
   /**
    * @brief Map indices between different DFT output schemes
-   * @details This auxiliary function returns the indices that are 
-   * arguments of the function ijk(), used to retrieve the 
-   * amplitudes of the DTF as given by the FFTW. This takes into account   
-   * the fact that we are adding one more frequency, 
-   * the -Nyquist to the outpu and that we use Hermitian 
-   * symmetry to retrieve the negative section       
-   * of the third component, i.e, 
-   * delta(kx, ky, -kz)=delta(-kx, -ky, kz)*    
+   * @details This auxiliary function returns the indices that are
+   * arguments of the function ijk(), used to retrieve the
+   * amplitudes of the DTF as given by the FFTW. This takes into account
+   * the fact that we are adding one more frequency,
+   * the -Nyquist to the outpu and that we use Hermitian
+   * symmetry to retrieve the negative section
+   * of the third component, i.e,
+   * delta(kx, ky, -kz)=delta(-kx, -ky, kz)*
    * @param s_b structure of type s_parameters_box
    */
   void remap(int, int, int, int , int , int , int *, int *, int *, real_prec *);
-  
+
   //////////////////////////////////////////////////////////
   /**
-   * @brief Estimates of Bispectrum   
-   * @details  based on the counts of triangles                      
+   * @brief Estimates of Bispectrum
+   * @details  based on the counts of triangles
    * the normalization and the shot-noise corrections.
    * @param s_b structure of type s_parameters_box
-   */  
+   */
   void get_bispectrum_fkp(char, s_parameters_box *s_p, vector<real_prec> &, vector<real_prec> &, vector< int > &);
 
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Estimates of Bispectrum   
-   * @details  based on trick by Scoccimarro and Jennifer                      
+   * @brief Estimates of Bispectrum
+   * @details  based on trick by Scoccimarro and Jennifer
    * @param s_b structure of type s_parameters_box
-   */  
+   */
   void get_bispectrum_fkp_fast(s_parameters_box *s_p, vector<real_prec> &, vector<real_prec> &, vector< int > &, string file);
-  
-  
+
+
   //////////////////////////////////////////////////////////
   /**
    * @brief Define k-shells for the estimation of bispectrum
    * @param s_b structure of type s_parameters_box
-   */  
+   */
   void define_kshells(s_parameters_box *s_box);
 
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Get the inverse Fourier transform in each Fourier shell 
+   * @brief Get the inverse Fourier transform in each Fourier shell
    * @param Pass the definition of binning
-   */  
+   */
   void get_ift_shells_bispectrum(s_parameters_box *s_box);
 
 
@@ -1832,7 +1589,7 @@ class FftwFunctions{
   /**
    * @brief Define k-shells for the estimation of bispectrum
    * @param s_b structure of type s_parameters_box
-   */  
+   */
   void loop_shells_bispectrum(s_parameters_box *s_box, vector<real_prec> &pk, vector<real_prec> &bispect, vector< int > &mod, string file);
 
 
@@ -1841,50 +1598,50 @@ class FftwFunctions{
   /**
    * @brief Define k-shells for the estimation of bispectrum
    * @param s_b structure of type s_parameters_box
-   */  
+   */
   void construct_shells(int ngrid, int kmnid, int kmxid, vector<real_prec> &iFT_output_delta, vector<real_prec> &iFT_output_triangles,vector<real_prec> &iFT_output_p1_cyc_sum);
 
 
   //////////////////////////////////////////////////////////
   /**
-   * @brief Mapping of vectos from one octant to the octants in the kz>0 sub-volume of Fourier space 
+   * @brief Mapping of vectos from one octant to the octants in the kz>0 sub-volume of Fourier space
    * @param s_b structure of type s_parameters_box
-   */  
- 
+   */
+
   void cellsym(int id, int ngrid,complex_prec *data_ks, complex_prec *data_dk,complex_prec *data_pk_sn);
-  
-  
+
+
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief Evaluates the DFT required for the estimates of 
-   * multipole decomposition 
-   * @details of the power spectrum using the Yamamoto-Blake estimator 
+  /**
+   * @brief Evaluates the DFT required for the estimates of
+   * multipole decomposition
+   * @details of the power spectrum using the Yamamoto-Blake estimator
    * obtained from a direct-sum approach
    * @param s_b structure of type s_parameters_box
    * @param s_d structure of type s_data_structure
    */
-  void get_power_moments_fourier_grid_ds_yam(s_parameters_box *d_b, s_data_structure *s_d);
-  
+  void get_power_moments_fourier_grid_ds_yam(s_data_structure *s_d);
+
   //////////////////////////////////////////////////////////
-  /** 
-   * @brief Compute shell-averaged multipole decomposition of the 
-   * power spectrum obtained from the  Yamamoto-Blake estimator 
-   * implemening a a direct-sum approach. 
+  /**
+   * @brief Compute shell-averaged multipole decomposition of the
+   * power spectrum obtained from the  Yamamoto-Blake estimator
+   * implemening a a direct-sum approach.
    * @param s_b structure of type s_parameters_box
    * @result p0 monopole
    * @result p2 quadrupole
    * @result p4 hexadecapole
    * @result nm number of modes in spherical shell
    */
-  
-  
-  void power_yam_1d_ds(s_parameters_box *s_box, vector<real_prec>&p0 ,vector<real_prec>&p2 ,vector<real_prec>&p4, vector<int> &nm);
+
+
+  void power_yam_1d_ds(vector<real_prec>&p0 ,vector<real_prec>&p2 ,vector<real_prec>&p4, vector<int> &nm);
 
 
   //////////////////////////////////////////////////////////
   /**
    * @brief Write parameters on screen
-   */  
+   */
   void write_fftw_parameters();
 
 
@@ -1893,7 +1650,7 @@ class FftwFunctions{
    * @brief Write parameters on .log file
    * @param p void pointer
    * @param log_f log file
-   */  
+   */
   void write_fftw_parameters(void *p, string log_f);
 
 
@@ -1903,17 +1660,98 @@ class FftwFunctions{
    * @brief Write parameters on .log file
    * @param p void pointer
    * @param log_f log file
-   */  
+   */
   void free_fftw_vectors();
-  
+
 
   vector<real_prec>mass_cuts;
 
 
-  //////////////////////////////////////////////////////////
 
-  int imcut;
-  
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of FftwFunctions::n_ran
+   * @return FftwFunctions::n_ran
+   */
+  ULONG _n_ran(){return n_ran; }
+//////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of FftwFunctions::w_g
+   * @return FftwFunctions::w_g
+   */
+  real_prec _w_g(){return w_g; }
+//////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of FftwFunctions::w_r
+   * @return FftwFunctions::w_r
+   */
+  real_prec _w_r(){return w_r; }
+ //////////////////////////////////////////////////////////
+    /**
+   * @brief get the value of private member Number of FftwFunctions::alpha
+   * @return FftwFunctions::alpha
+   */
+  /** Return alpha*/
+  real_prec _alpha(){return alpha; }
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of FftwFunctions::normal_power
+   * @return FftwFunctions::normal_power
+   */
+  real_prec _normal_power(){return normal_power; }
+  void set_normal_power(real_prec new_normal_power){this->normal_power=new_normal_power; }
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of FftwFunctions::normal_power
+   * @return FftwFunctions::normal_power
+ */
+  real_prec _normal_power_two(){return normal_power_two; }
+  void set_normal_power_two(real_prec new_normal_power_two){this->normal_power_two=new_normal_power_two; }
+//////////////////////////////////////////////////////////
+  /**
+   *    @brief  Return normalization of window function
+   */
+  real_prec _normal_window(){return normal_window; }
+
+//////////////////////////////////////////////////////////
+  /**
+   * @brief Return Poisson Shot noise
+   */
+  real_prec _shot_noise(){return shot_noise; }
+
+//////////////////////////////////////////////////////////
+  /**
+   * @brief Return Poisson Shot noise
+   */
+  void set_imcut(int new_imcut){this->imcut=new_imcut; }
+//////////////////////////////////////////////////////////
+  /**
+   * @brief Return Poisson Shot noise
+   */
+  real_prec _Lbox_data(){return this->Lbox_data; }
+//////////////////////////////////////////////////////////
+  /**
+   * @brief Return Poisson Shot noise
+   */
+  void set_Lbox_data(real_prec new_Lbox_data){this->Lbox_data=new_Lbox_data; }
+
+//////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of  FftwFunctions::n_gal
+   * @return FftwFunctions::n_gal
+  */
+  ULONG _n_gal(){return n_gal; }
+//////////////////////////////////////////////////////////
+  /**
+   * @brief get the value of private member Number of  FftwFunctions::n_gal
+   * @return FftwFunctions::n_gal
+  */
+  void set_n_gal(ULONG new_ngal){this->n_gal=new_ngal; }
+//////////////////////////////////////////////////////////
+
+
+
 };
 
 
@@ -1921,8 +1759,3 @@ class FftwFunctions{
 
 
 #endif
-
-
-
-
-

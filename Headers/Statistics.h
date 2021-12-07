@@ -13,7 +13,7 @@
 #ifndef _STATISTICS_
 #define _STATISTICS_
 
-#include "def.h"
+//#include "def.h"
 
 class Statistics{
  private:
@@ -189,6 +189,20 @@ public:
   /**
    * @brief
   */
+   bool use_external_power;
+
+
+
+   //////////////////////////////////////////////////////////
+   /**
+    * @brief
+   */
+   vector<gsl_real> kvector_external;
+   //////////////////////////////////////////////////////////
+   /**
+    * @brief
+   */
+   vector<gsl_real> power_external;
 
 };
 

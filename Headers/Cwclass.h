@@ -51,74 +51,7 @@ class Cwclass {
    */
   Params params;
 
- 
-  //////////////////////////////////////////////////////////
-  /**
-    *@private
-   * @brief Number of grid cells
-   * @details computed inside Cwclass::Cwclass(params _par) as (Bam::Nft)*(Bam::Nft)*(Bam::Nft)
-   */
-  ULONG NGRID;
 
-  //////////////////////////////////////////////////////////
-  /**
-    *@private
-   * @brief Number of grid cells
-   * @details computed inside Cwclass::Cwclass(params _par) as (Bam::Nft)*(Bam::Nft)*(Bam::Nft)
-   */
-  ULONG Nft;
-  //////////////////////////////////////////////////////////
-  /**
-    *@private
-   * @brief Number of Grid cells N*N*(N/2+1). Computed inside BAM (constructor)
-   */
-  ULONG NT;
-  //////////////////////////////////////////////////////////
-  /**
-    *@private
-   * @brief Number of Grid cells N*N*N. Computed inside BAM (constructor)
-   */
-  ULONG NTT;
-
-  //////////////////////////////////////////////////////////
-  /**
-    *@private
-   * @brief Number of bins in the Mk info to build BIAS.
-   * @brief Read from parameter file
-   */
-  int n_sknot_massbin;
-
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @brief Number of bins in the Mk info to build BIAS.
-   * @brief Read from parameter file
-   */
-  int n_vknot_massbin;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @private
-   * @brief Size of the box in Mpc/h. Read from parameter file
-   */
-  real_prec Lbox;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @private
-   * @brief Number of CWT used, computed as the size of the
-   * Bam::cwt_used container
-   */
-  int n_cwt;
-
-  //////////////////////////////////////////////////////////
-  /**
-   * @private
-   * @brief Number of CWT used, computed as the size of the
-   * Bam::cwt_used container
-   */
-  int n_cwv;
- 
   //////////////////////////////////////////////////////////
   /**
    * @private
@@ -127,8 +60,21 @@ class Cwclass {
    */
 
   FileOutput File;
-
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @brief Container allocating the different V-CW classifications
+   * @brief required in the parameter file.
+   */
+  void Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type);
+  
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   *  @brief Object of type ScreenOutput.
+   */
+  ScreenOutput So;
+  //////////////////////////////////////////////////////////
 
   
  public:
@@ -150,14 +96,16 @@ class Cwclass {
   
  Cwclass(Params _par):params (_par), volume_knots(0),volume_filaments(0),volume_sheets(0), volume_voids(0)
   {
-    std::cout.precision(6);
-    sal.precision(8);
+
+    time_t time_bam;
+    time(&time_bam);
+    this->So.initial_time=time_bam;
     sal.setf(ios::showpoint); 
     sal.setf(ios::scientific); 
-    this->set_params_cwclass(params);
-    this->NGRID=params._NGRID();
-    this->NTT=static_cast<ULONG>(this->Nft*this->Nft*(this->Nft/2+1));
-  }
+    this->cwv_used=this->params._cwv_used();
+    this->cwt_used=this->params._cwt_used();
+    this->s_cosmo_pars=this->params.s_cosmo_pars;
+ }
 
   //////////////////////////////////////////////////////////
   /**
@@ -165,17 +113,8 @@ class Cwclass {
    *  @brief Default constructor
    */
   ~Cwclass(){}
-  
-  
-  //////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
   /**
-   * @public
-   * @brief Load CWclass with parameters. Parameters are members of class Params and are partially copied here
-   */
-  void set_params_cwclass(Params); 
-  //////////////////////////////////////////////////////////
-  /**
-   * @public
    * @brief Auxiliary s_CosmologicalParameters
    */
   s_CosmologicalParameters s_cosmo_pars;
@@ -188,24 +127,6 @@ class Cwclass {
   //////////////////////////////////////////////////////////
   /**
    * @public
-   * @brief Threshold for the T-eigenvalues. Read from input par file or modifined internally of TES_THRESHOLD is defined
-   */
-  real_prec lambdath;
-  //////////////////////////////////////////////////////////
-  /**
-   * @public
-   * @brief Threshold for the V-eigenvalues. Read from input par file or modifined internally of TES_THRESHOLD is defined
-   */
-  real_prec lambdath_v;
-  //////////////////////////////////////////////////////////
-  /**
-   * @public
-   *  @brief Object of type ScreenOutput.
-   */
-  ScreenOutput So;
-    //////////////////////////////////////////////////////////
-  /**
-   * @public
    * @brief Container to allocate the cosmic web classification for each cell.
    * @brief Example: for knots
    * @code
@@ -215,6 +136,20 @@ class Cwclass {
     *@endcode
    */
   vector<int>CWClass;
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @brief Container allocating the different T-CW classifications
+   * @brief required in the parameter file.
+   */
+  vector<int> cwt_used;
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @brief Container allocating the different V-CW classifications
+   * @brief required in the parameter file.
+   */
+  vector<int> cwv_used;
 
   //////////////////////////////////////////////////////////
   /**
@@ -228,9 +163,7 @@ class Cwclass {
     *@endcode
    */
   vector<int>CWClass_V;
-
-  
-  //////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the eigenvalue lambda_1 on the grid
@@ -255,21 +188,18 @@ class Cwclass {
    * @brief Container for the S2 term
    */
   vector<real_prec> S2;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the S3 term
    */
   vector<real_prec> S3;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the S2*delta term
    */
   vector<real_prec> S2DELTA;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
@@ -282,8 +212,6 @@ class Cwclass {
    * @brief Container for the delta³ term
    */
   vector<real_prec> DELTA3;
-
-
   //////////////////////////////////////////////////////////
   /**
    * @public
@@ -311,33 +239,50 @@ class Cwclass {
   //////////////////////////////////////////////////////////
   /**
    * @public
+   * @brief Container for the Invariant of the tidal field III
+    *@details The Invariant II of the T-field is product of the tree  eigenvalues
+   */
+  vector<real_prec> Invariant_TF_IV;
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
    * @brief Container for the Invariant of the shear of the velocity field I
     *@details In the linear theory approximation this is the overdensity   */
 
   vector<real_prec> Invariant_VS_I;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the Invariant II of the shear of the velocity field
    */
   vector<real_prec> Invariant_VS_II;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the Invariant III of the shear of the velocity field
    */
   vector<real_prec> Invariant_VS_III;
-
   //////////////////////////////////////////////////////////
   /**
    * @public
    * @brief Container for the tidal anisotropy
    */
   vector<real_prec> Tidal_Anisotropy;
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @brief Container for the ELLIPTICITY
+   */
+  vector<real_prec> Ellipticity;
+  //////////////////////////////////////////////////////////
 
-  
+  /**
+   * @public
+   * @brief Container for the ELLIPTICITY
+   */
+  vector<real_prec> Prolatness;
+
+
     //////////////////////////////////////////////////////////
   /**
    * @public
@@ -378,20 +323,6 @@ class Cwclass {
    */
   vector<real_prec>Dispersion_VelField;
 
-  //////////////////////////////////////////////////////////
-  /**
-   * @public
-   * @brief Container allocating the different T-CW classifications
-   * @brief required in the parameter file.
-   */
-  vector<int> cwt_used;
-  //////////////////////////////////////////////////////////
-  /**
-   * @public
-   * @brief Container allocating the different V-CW classifications
-   * @brief required in the parameter file.
-   */
-  vector<int> cwv_used;
 
   //////////////////////////////////////////////////////////
   /**
@@ -488,7 +419,7 @@ class Cwclass {
    * @returns This function loads the container Bam::CWClass of size Bam::NGRID specifying in
    * each cell the type of CW with 1, 2, 3, 4, for knots, filaments, sheets and voids, respectively.
    */
-  void do_CWC(const vector<real_prec>&delta);
+  void do_CWC(vector<real_prec>&delta);
 
 
   //////////////////////////////////////////////////////////
@@ -510,7 +441,7 @@ class Cwclass {
    * @return cvontainers for the terms S2 and Ð²ð
    * The other temrs such as ð² and ð³ are directly computed in Bam.cpp when called, i.e, in get_bias and get_mock
    */
-  void get_bias_terms(const vector<real_prec>&delta);
+  void get_bias_terms(vector<real_prec>&delta);
 
   /////////////////////////////////////////////////////////
   /**
@@ -543,6 +474,26 @@ class Cwclass {
    * @brief Volume filling factors for voids
    */
   real_prec volume_voids;
+  //////////////////////////////////////////////////////////
+  /**
+   * @public
+   * @brief Volume filling factors for voids
+   */
+
+
+  vector<real_prec>Kernel; // to be copied (heredado) from Bam.cpp
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief Set params. 
+   * @detail I have to do this when defining this class as a class membr (e.g, a Bam class member) abnd I cannot pass params through the constructor
+   */
+  void set_params(Params new_params){
+    this->params=new_params;
+    this->cwv_used=this->params._cwv_used();
+    this->cwt_used=this->params._cwt_used();
+    this->s_cosmo_pars=this->params.s_cosmo_pars;
+  }
+
 };
   
 #endif

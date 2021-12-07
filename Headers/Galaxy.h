@@ -1,23 +1,67 @@
+/**
+ *  @file Galaxy.h
+ *
+ *  @brief The class Galaxy
+ *
+ *  This file defines the interface of the class Galaxy.  Note: Our
+ */
 
+
+#ifndef __GALAXY__
+#define __GALAXY__
+
+
+//#define _USE_HEALPIX_
+//#define _USE_MASK_
+//#define _USE_mK_
+//#define _USE_COLOR_
+//#define _USE_JK_
 //#define _USE_LF_COLE_   //meant to speed calculations of Mags within iterative procedures
 
 
-#ifndef _GALAXY_
-#define _GALAXY_
+#define _USE_MASS_
 
-
-//#define _USE_JK_
-
+# include <iostream>
+# include <fstream>
+# include <vector>
+# include <algorithm>
+# include <math.h>
+# include <sstream>
+# include <iomanip>
+# include <string>
 # include "NumericalMethods.h"
+# include "ScreenOutput.h"
 # include "CosmologicalFunctions.h"
 # include "FileOutput.h"
-# include "Galaxy.h"
-
 
 using namespace std;
 
 #define fac M_PI/180.0
 #define no_zs -999.0
+
+
+struct s_bins_info{
+    int index;
+    real_prec min;
+    real_prec max;
+    int Nbins;
+    real_prec delta;
+    string type;
+    void get_delta()
+    {
+     this->delta=(this->max-this->min)/static_cast<real_prec>(this->Nbins);
+    };
+    void show(){
+      cout<<"Index = "<<this->index<<endl;
+      cout<<"Min = "<<this->min<<endl;
+      cout<<"Max = "<<this->max<<endl;
+      cout<<"Nbins = "<<this->Nbins<<endl;
+      cout<<"Delta = "<<this->delta<<endl;
+      cout<<"Type of binning = "<<this->type<<endl;
+    }
+};
+
+
 
 // ######################################################################
 // ######################################################################
@@ -39,20 +83,20 @@ struct gal_parameters{
   int i_lsd;
   int i_Kcsb;
   int i_mask_flag;
-  double z_min;
-  double z_max;
-  double mK_min;
-  double mK_max;
-  double MK_min;
-  double MK_max;
-  double color_min;
-  double color_max;
+  real_prec z_min;
+  real_prec z_max;
+  real_prec mK_min;
+  real_prec mK_max;
+  real_prec MK_min;
+  real_prec MK_max;
+  real_prec color_min;
+  real_prec color_max;
   int N_Mag_bins;
   int N_mag_bins;
   int N_z_bins;
   int N_color_bins;
   int N_iterations;
-  double area_in_deg;
+  real_prec area_in_deg;
   string ztype;
 
 };
@@ -82,13 +126,8 @@ private:
   /**
   *  @brief Structure containing the properties
   */
-  gal_parameters gp;
 
-  //////////////////////////////////////////////////////////
-  /**
-  *  @brief I/O
-  */
-  FileOutput Fm;
+  ofstream vdina;
 
   //////////////////////////////////////////////////////////
   /**
@@ -102,13 +141,13 @@ private:
   /**
   *  @brief Auxiliary integer used to count objects
   */
-  int count;
+  ULONG count;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  double zzns;
+  real_prec zzns;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
@@ -200,77 +239,70 @@ private:
   */
   bool Measure_LF;
   //////////////////////////////////////////////////////////
-    /**
-  *  @brief
-  */
-
-  FileOutput Fmm;
-
-  //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the comoving distance
   */
-  vector<double>rv;
+  vector<gsl_real>rv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the transverse comoving distance
   */
-  vector<double>trv;
+  vector<gsl_real>trv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the redshift
   */
-  vector<double>zv;
+  vector<gsl_real>zv;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  vector<double>zv_n;
+  vector<gsl_real>zv_n;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the growth factor normalized to unity at z=0
   */
-  vector<double>gv;
+  vector<gsl_real>gv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the galaxy bias as a function of z
   */
-  vector<double>bias_zv;
+  vector<gsl_real>bias_zv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the growth index
   */
-  vector<double>gfv;
+  vector<gsl_real>gfv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the Distance modulus
   */
-  vector<double>Dm;
+  vector<gsl_real>Dm;
   //////////////////////////////////////////////////////////
   // Vectors for redshift distributions
   /**
   *  @brief Vector to allocate the redshift for redshift distributions
   */
-  vector<double> zn;
-  vector<double> zn_low_res;
+  vector<gsl_real> zn;
+  vector<gsl_real> zn_low_res;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the min redshift in arrays for for redshift distributions
   */
-  vector<double> zn_min;
+  vector<gsl_real> zn_min;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the max redshift in arrays for for redshift distributions
   */
-  vector<double> zn_max;
+  vector<gsl_real> zn_max;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the Hubble function
   */
-  vector<double>Hv;
+  vector<gsl_real>Hv;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate Mags, and hist positions of gals, used when Vmax_dc is implemented
@@ -287,9 +319,9 @@ private:
   /**
   *  @brief Vector to allocate the Hubble function
   */
-  vector<double>v_z_Kcorr;
-  vector<double>v_Kcorr;
-  vector<double>v_color_correction_Kcorr;
+  vector<gsl_real>v_z_Kcorr;
+  vector<gsl_real>v_Kcorr;
+  vector<gsl_real>v_color_correction_Kcorr;
 
 
 
@@ -297,14 +329,14 @@ private:
   /**
   *  @brief Vector to allocate the Maximum volume as a function of the z and M
   */
-  vector<double> Vmax_v;
+  vector<gsl_real> Vmax_v;
 
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector to allocate the Maximum Area as a function of  K-magnitude
   */
-  vector<double> Amax_v;
+  vector<gsl_real> Amax_v;
 
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
@@ -313,12 +345,12 @@ private:
   */
   string type_of_K_correction;
 
-  double kcorr_index;
+  real_prec kcorr_index;
 
   /**
   *  @brief Vector to allocate Magnitudes used in the interpolation to get Vmax
   */
-  vector<double> MK_n;
+  vector<gsl_real> MK_n;
 
   //////////////////////////////////////////////////////////
   /**
@@ -328,7 +360,7 @@ private:
 
   ScreenOutput So;
 
-  FileOutput Fo;
+  FileOutput File;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Structure to allocate cosmological parameters
@@ -338,7 +370,7 @@ private:
   /**
   *  @brief Galaxy catalog
   */
-  vector<double > prop;
+  vector<real_prec> prop;
 
   vector<int > gal_mask;
 
@@ -346,7 +378,7 @@ private:
   /**
   *  @brief Random catalog
   */
-  vector<double>  prop_r;
+  vector<real_prec>  prop_r;
 
   vector<int > ran_mask;
 
@@ -355,111 +387,124 @@ private:
   /**
   *  @brief Vector to allocate the volume of an spherical shell
   */
-  vector<double> Vshell;
+  vector<gsl_real> Vshell;
+  vector<gsl_real> Vshell_lowres;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> nbarq;
+  vector<real_prec> nbarq;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<vector<double> >S;
+  vector<vector<real_prec> >S;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the redshift distribution
   */
-  vector<double> dNdz;
+  vector<gsl_real> dNdz;
 
-
-  //////////////////////////////////////////////////////////
-  /**
-  *  @brief Vector for the redshift distribution
-  */
-  vector<double> dNdmk;
-
-  vector<double> v_mk;
+  vector<real_prec> dNdM;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the redshift distribution
   */
-  vector<double> dNdz_low_res;
+  vector<gsl_real> dNdmk;
+
+  vector<gsl_real> v_mk;
+
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief Vector for the redshift distribution
+  */
+  vector<real_prec> dNdz_low_res;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> edNdz; // Poisson error in the dndz
+  vector<real_prec> edNdz; // Poisson error in the dndz
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
-  vector<double> edNdz_low_res; // Poisson error in the dndz
+  vector<real_prec> edNdz_low_res; // Poisson error in the dndz
   //////////////////////////////////////////////////////////
   /**
   *  @brief dndz from the luminosity function
   */
-  vector<double> dNdz_lf;
+  vector<real_prec> dNdz_lf;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
-  vector<double> dNdz_lf_low_res;
+  vector<real_prec> dNdz_lf_low_res;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> nbar;
+  vector<gsl_real> nbar;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> zn_new;
+  vector<gsl_real> zn_new;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> dNdz_new;
+  vector<gsl_real> dNdz_new;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> nbar_new;
+  vector<gsl_real> nbar_new;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> prob;
+  vector<gsl_real> prob;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the Luminosity function
   */
-  vector<double > Pm;
+  vector<real_prec > Pm;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the Luminosity function
   */
-  vector<double > Pm_low_res;
+  vector<real_prec > Pm_low_res;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the distribution of colors
   */
-  vector<double > Pc;
+  vector<real_prec > Pc;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the joint distribution of color-Magnitude
   */
-  vector<vector<double> >PcMk;
+  vector<vector<real_prec> >PcMk;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the joint distribution of color-Magnitude
   */
 
   void get_PcMk();
+
+
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief In this function we compute the joint probability P(X,Y) fron which the conditional P(Y|X) is computed
+  * to be uysed later in construction of, e.g., randoms.
+  */
+
+  void get_P_X_Y(s_bins_info *bx, s_bins_info *by,string type);
+
+
   //////////////////////////////////////////////////////////
   /**
   *  @brief Vector for the joint distribution of color-Magnitude
@@ -476,7 +521,7 @@ private:
     /**
   *  @brief Vector for the joint distribution of redshift-Magnitude
   */
-  vector<vector<double> >PzM;
+  vector<vector<real_prec> >PzM;
 
 
   //////////////////////////////////////////////////////////
@@ -489,15 +534,23 @@ private:
     /**
   *  @brief Vector for the joint distribution of redshift-Magnitude
   */
-  vector<vector<double> >Pzm;
+  vector<vector<real_prec> >Pzm;
 
 
   //////////////////////////////////////////////////////////
     /**
   *  @brief Vector for the joint distribution of redshift-Magnitude
   */
-  vector<vector<double> >PKc;
+  vector<vector<real_prec> >PKc;
 
+  //////////////////////////////////////////////////////////
+    /**
+  *  @brief Vector for the joint distribution of redshift-Magnitude
+  */
+  vector<real_prec> PXY;
+  vector<real_prec> PXY_lowres;
+  vector<real_prec> NXY;
+  vector<real_prec> nbarXY;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
@@ -533,69 +586,69 @@ private:
   /**
   *  @brief Vector for the number of galaxies in a bin of Magnitude
   */
-  vector<double> number_m; //CAMBIAR A int
+  vector<real_prec> number_m; //CAMBIAR A int
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  vector<double> number_m_low_res;  //CAMBIAR A int
+  vector<real_prec> number_m_low_res;  //CAMBIAR A int
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> number_z;  //CAMBIAR A int
+  vector<real_prec> number_z;  //CAMBIAR A int
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  vector<double> number_z_low_res;//CAMBIAR A int
+  vector<real_prec> number_z_low_res;//CAMBIAR A int
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> number_c; //CAMBIAR A int
+  vector<real_prec> number_c; //CAMBIAR A int
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<vector<double> >number_cm;  //CAMBIAR A int
+  vector<vector<real_prec> >number_cm;  //CAMBIAR A int
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double>v_Magnitude;
+  vector<real_prec>v_Magnitude;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  vector<double>v_Magnitude_low_res;
+  vector<real_prec>v_Magnitude_low_res;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double>v_color;
+  vector<real_prec>v_color;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> Delta_it;
+  vector<real_prec> Delta_it;
   //////////////////////////////////////////////////////////
     /**
   *  @brief
   */
 
-  vector<double> Delta_it_low_res;
+  vector<real_prec> Delta_it_low_res;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double alpha;
+  real_prec alpha;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -662,6 +715,11 @@ private:
   *  @brief Column with
   */
   int i_lgal;
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief Column with
+  */
+  int i_mass;
   //////////////////////////////////////////////////////////
   /**
   *  @brief Column with
@@ -744,22 +802,22 @@ private:
   /**
   *  @brief
   */
-  double z_min;
+  real_prec z_min;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double z_max;
+  real_prec z_max;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double z_min_low_res;
+  real_prec z_min_low_res;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double z_max_low_res;
+  real_prec z_max_low_res;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -769,12 +827,12 @@ private:
   /**
   *  @brief
   */
-  double mK_min;
+  real_prec mK_min;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double mK_max;
+  real_prec mK_max;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -784,12 +842,26 @@ private:
   /**
   *  @brief
   */
-  double color_min;
+  real_prec color_min;
+
+  real_prec color_max;
+
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double color_max;
+  int N_bin_lmass;
+  int N_bin_lmass_lowres;
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief
+  */
+  real_prec lmass_min;
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief
+  */
+  real_prec lmass_max;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -804,12 +876,12 @@ private:
   /**
   *  @brief
   */
-  double MK_min;
+  real_prec MK_min;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double MK_max;
+  real_prec MK_max;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -832,57 +904,58 @@ private:
   /**
   *  @brief
   */
-  vector<double> mK_limits;
-  vector<double> z_limits;
+  vector<real_prec> mK_limits;
+  vector<real_prec> z_limits;
 
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   //   Definition of cosmological parameters
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
-  double Om_matter;
-  double Om_cdm;
-  double Om_radiation ;
-  double Om_baryons;
-  double Om_vac;
-  double Om_k;
-  double Hubble;
-  double hubble;
-  double n_s;
-  double alpha_s;
-  double w_eos;
-  double N_eff;
-  double sigma8;
-  double Tcmb;
-  double GAL_BIAS;
-  double alpha_BIAS;
-  double kstar;
+  real_prec Om_matter;
+  real_prec Om_cdm;
+  real_prec Om_radiation ;
+  real_prec Om_baryons;
+  real_prec Om_vac;
+  real_prec Om_k;
+  real_prec Hubble;
+  real_prec hubble;
+  real_prec n_s;
+  real_prec alpha_s;
+  real_prec w_eos;
+  real_prec N_eff;
+  real_prec sigma8;
+  real_prec Tcmb;
+  real_prec GAL_BIAS;
+  real_prec alpha_BIAS;
+  real_prec kstar;
   bool use_K_correction;
   bool use_e_correction;
-
-
-  //////////////////////////////////////////////////////////
-  /**
-  *  @brief
-  */
-  double total_area;
-  //////////////////////////////////////////////////////////
-  /**
-  *  @brief
-  */
-  double z_min_vls;
-  //////////////////////////////////////////////////////////
-  /**
-  *  @brief
-  */
-  double deltaz;
-  double deltaz_low_res;
+  real_prec RR;
+  bool use_wiggles;
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  double area_pixel;
+  real_prec total_area;
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief
+  */
+  real_prec z_min_vls;
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief
+  */
+  real_prec deltaz;
+  real_prec deltaz_low_res;
+
+  //////////////////////////////////////////////////////////
+  /**
+  *  @brief
+  */
+  real_prec area_pixel;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -946,21 +1019,21 @@ private:
   /**
   *  @brief
   */
-  double area_in_deg;
+  real_prec area_in_deg;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double>  mask;
+  vector<real_prec>  mask;
 
-  vector<vector<double> > mask_old;
+  vector<vector<real_prec> > mask_old;
 
 
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  vector<double> lf;
+  vector<real_prec> lf;
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -999,7 +1072,7 @@ private:
   /**
   *  @brief Get the index from the mask loaded in the class, Very SLOW
   */
-  void get_ipix_from_mask(int, Healpix_Map<double>, long &ipx ); // to create random
+  void get_ipix_from_mask(int, Healpix_Map<real_prec>, long &ipx ); // to create random
 
 
 
@@ -1008,29 +1081,29 @@ private:
   *  @brief  Obtain minimum value of the i-th column of gal properties
   *          The column ic is passed explicitely
   */
-  double get_min(int ic);
+  real_prec get_mina(int ic);
   //////////////////////////////////////////////////////////
    /**
    *  @brief Obtain minimum value of the i-th column of random properties
    *          The column ic is passed explicitely
    */
-  double get_min_r(int ic);
+  real_prec get_min_r(int ic);
   //////////////////////////////////////////////////////////
    /**
    *  @brief  Obtain maximum value of the i-th column of gal properties
    *          The column is passed explicitely
    */
-  double get_max(int);
+  real_prec get_maxa(int);
   //////////////////////////////////////////////////////////
    /**
    *  @brief
    */
-  double get_max_r(int);
+  real_prec get_max_r(int);
   //////////////////////////////////////////////////////////
   /**
   *  @brief
   */
-  void get_zbins_same_ngal(int, int, double, double,vector< vector<double> >&);
+  void get_zbins_same_ngal(int, int, real_prec, real_prec,vector< vector<real_prec> >&);
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -1168,7 +1241,7 @@ private:
   /**
   *  @brief
   */
-  void set_nbar(vector<double>,vector<double>,vector<double>);
+  void set_nbar(vector<real_prec>,vector<real_prec>,vector<real_prec>);
   //////////////////////////////////////////////////////////
   /**
   *  @brief
@@ -1186,6 +1259,18 @@ private:
 
   ULONG Ngal_expected;
   
+  string output_dir;
+
+  real_prec dec_max;
+  real_prec dec_min;
+  real_prec phi_max;
+  real_prec phi_min;
+
+
+  gal_parameters gp;
+
+
 };
+
 
 #endif

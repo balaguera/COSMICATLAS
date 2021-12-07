@@ -1,8 +1,6 @@
 #ifndef _STRUCTURES_
 #define _STRUCTURES_
 
-
-# include "def.h"
 # include <cmath>
 # include <cctype>
 # include <string>
@@ -60,6 +58,9 @@ struct s_CosmoInfo
     *@brief Growth index at input cosmological redshift*/
   real_prec growth_index;  
   /**
+    *@brief Growth index at input cosmological redshift*/
+  real_prec growth_index2;
+  /**
     *@brief Halo dynamical time*/
   real_prec halo_dynamical_time;
   /**
@@ -71,6 +72,10 @@ struct s_CosmoInfo
   /**
     *@brief Cosmological scale factor at input cosmological redshift*/
   real_prec scale_factor;      
+  /**
+    *@brief Density contrast Dv/Omega_m */
+  real_prec Delta_Vir;
+
 };
 
 
@@ -345,7 +350,7 @@ struct s_CosmologicalParameters
   /**
 *@brief  Container for comoving distance r(z) */
   vector<gsl_real>rv;  
-  /**
+  /**0
 *@brief  Container for growth factor g(z) */
   vector<gsl_real>gv; 
   /**
@@ -376,6 +381,15 @@ struct s_CosmologicalParameters
   /**
  *@brief  HOD parameter*/
   real_prec coef_concentration_amp;
+
+  /**
+  *@brief  Container for comoving distance r(z) */
+    vector<gsl_real>kvector_external;
+    /**0
+  *@brief  Container for growth factor g(z) */
+    vector<gsl_real>power_external;
+
+  bool use_external_power;
 };
 
 
@@ -533,6 +547,8 @@ struct params_clth{
   /**
 *@brief  */
    vector<real_prec>rv;/** *@brief  */
+  /**
+*@brief  */
   vector<real_prec>zv; 
   /**
  *@brief  */
@@ -696,8 +712,10 @@ struct A1{
   *@code
 
    vector<s_Halo> halo(NOBJS);
-   for(int i=0;i<NOBJECTS;++i)
-     halo[i].coord1 = x; // x-coordinate of a catalog with NOBJECS
+   for(int i=0;i<NOBJECTS;++i){
+    real_prex x= pars[i_x+i*NCOLS];
+     halo[i].coord1 = x; // x-coordinate of a catalog with NOBJECTS 
+   }
  *@endcode
  */
 struct s_Halo
@@ -726,9 +744,40 @@ struct s_Halo
   /**
  *@brief  Tracer Vmax   */
   real_prec vmax;
+
   /**
- *@brief   ID (in the mesh) where this tracer is located given the nomial resolution  */
+ *@brief  Tracer poistion in the set 0..Nobjects ordererd by increasing order in Vmax   */
+  ULONG vmax_index;
+
+
+  /**
+ *@brief  Tracer Rs   */
+  real_prec rs;
+  /**
+ *@brief  Tracer T/|W|   */
+  real_prec virial;
+    /**
+  *@brief  Tracer Spin   */
+   real_prec spin;
+
+   /**
+ *@brief   ID (in the mesh) where this tracer is located given the nomial resolution () */
   ULONG GridID;
+
+  /**
+*@brief   bin number in the Theta properties binning in which the GridID of the galaxy has fallen */
+ ULONG galThetaID;
+
+
+  /**
+ *@brief   ID (in the file) of each tracer (..Nobjects)  */
+
+  ULONG galID;
+
+ /**
+// *@brief   ID wghich identifiesthe multiscale levels in which the tracer acqured the property  */
+  int multi_scale_level;
+
   /**
  *@brief  ID (in the mesh) where this tracer is located given the resolution with l1  */
   ULONG GridID_l1;
@@ -745,7 +794,7 @@ struct s_Halo
  *@brief   Number of substructures (if the tracer is parent halo) */
   int number_sub_structures;
   /**
- *@brief  Identify whether this is a random object (0) or a real tracer (1)  */
+ *@brief  Identify whether this is a random object (-1) or a real tracer from DM particle sin LPT (1)  */
   int identity;
   /**
 *@brief  Identify whether this has been observed (or used in different processes inside the code)  */
@@ -860,12 +909,12 @@ struct s_parameters_estimator{
   /**
 *@brief  Number of selected real objects from which the P(k) will be measured
 */
-  int number_of_objects;
+  ULONG number_of_objects;
 
   /**
  *@brief  number of selected random objects from which the P(k) will be measured
 */
-  int number_of_randoms;
+  ULONG number_of_randoms;
 
   /**
  *@brief  weighted number of selected real objects from which the P(k) will be measured
@@ -923,8 +972,8 @@ struct s_parameters_estimator{
 */
 struct s_parameters_bis_estimator{
   bool use_random_catalog;
-  int number_of_objects;  //number of selected real objects from which the P(k) will be measured
-  int number_of_randoms;  //number of selected random objects from which the P(k) will be measured
+  ULONG number_of_objects;  //number of selected real objects from which the P(k) will be measured
+  ULONG number_of_randoms;  //number of selected random objects from which the P(k) will be measured
   real_prec w_number_of_objects;  //weighted number of selected real objects from which the P(k) will be measured
   real_prec w_number_of_randoms;  //weighted number of selected random objects from which the P(k) will be measured
   real_prec alpha;                //  w_number_of_objects divided by w_number_of_randoms
@@ -950,63 +999,14 @@ struct s_parameters_bis_estimator{
 * @brief The s_parameters_box struct
 */
 struct s_parameters_box{
-  bool use_random_catalog;
-  string mas;       //Mass Assignment scheme
-  string ave;        //Type of average
-  real_prec k_bin_step;
-  bool use_MAS_correction; 
-  bool FKP_weight;
-  bool FKP_error_bars;
-  bool FKP_error_bars_exact;
-  bool use_SN_correction;
-  real_prec Pest;
-  bool nbar_tabulated;
-  bool compute_dndz;
-  bool constant_depth;
+//  string mas;       //Mass Assignment scheme
+//  string ave;        //Type of average
   vector<gsl_real>zz;
   vector<gsl_real>rc;
-  int n_dndz;
-  int new_n_dndz;
-  real_prec redshift_min_sample;
-  real_prec redshift_max_sample;
-  real_prec area_survey;
-  int sys_of_coord_r;
-  int i_coord1_r;
-  int i_coord2_r;
-  int i_coord3_r;
-  int i_weight1_r;
-  int i_weight2_r;
-  int i_weight3_r;
-  int i_weight4_r;
-  bool use_weight1_r;
-  bool use_weight2_r;
-  bool use_weight3_r;
-  bool use_weight4_r;
-  int i_mean_density_r;
-  string angles_units_r;
-  int i_coord1_g;
-  int i_coord2_g;
-  int i_coord3_g;
-  int i_mass_g;
-  int i_weight1_g;
-  int i_weight2_g;
-  int i_weight3_g;
-  int i_weight4_g;
-  bool use_weight1_g;
-  bool use_weight2_g;
-  bool use_weight3_g;
-  bool use_weight4_g;
-  int i_mean_density_g;
-  string angles_units_g;
-  real_prec area_pixel;
   long npixels;
   long nside;
   string file_dndz;
-  bool new_los;
-  real_prec kmin_bk;
-  real_prec kmax_bk;
-  bool use_fundamental_mode_as_kmin_bk;
-  bool measure_cross;
+
 };
 
 // *******************************************************************
@@ -1131,75 +1131,6 @@ struct s_galaxy_operations{
 };
 
 
-// *******************************************************************
-/**
-*@brief
-* @struct<params>
- * @brief The params struct
-  * @details IS THIS TO BE DEPRECATED???
- */
-struct params
-{
-  int NX;
-  int NY;
-  int Nlambdath;
-  int ndel_data;
-  string Output_directory;
-  string Input_Directory_Y;
-  string Name_Catalog_Y;
-  string Input_Directory_X;
-  string Input_Directory_X_REF;
-  string XNAME;
-  string Name_Catalog_X;
-  string Name_Catalog_X_REF_PDF;
-  string Name_Property_X;
-  string new_Name_Property_X;
-  string YNAME;
-  string Name_Property_Y;
-  string new_Name_Property_Y;
-  string Type_of_File_X;
-  string Type_of_File_Y;
-  int iMAS_X;
-  int iMAS_X_REF_PDF;
-  int iMAS_Y;
-  real_prec delta_Y_max;
-  real_prec delta_Y_min;
-  real_prec delta_X_max;
-  real_prec delta_X_min;
-  real_prec ldelta_Y_max;
-  real_prec ldelta_Y_min;
-  real_prec ldelta_X_max;
-  real_prec ldelta_X_min;
-  string Quantity;
-  int NCW_comb;
-  int NMASSbins;
-  real_prec redshift;
-  real_prec smscale;
-  int realization;
-  int Nft;
-  bool get_SKNOTS;
-  bool Comp_conditional_PDF;
-  bool Comp_joint_PDF;
-  bool write_files_for_histograms;
-  bool Redefine_limits;
-  bool Convert_Density_to_Delta_X;
-  bool Convert_Density_to_Delta_Y;
-  real_prec lambdath;
-  bool Write_Scatter_Plot;
-  bool Write_PDF_number_counts;  
-  string Scale_Y;
-  string Scale_X;
-  int n_sknot_massbin;
-  bool get_mock;
-  real_prec Lbox;
-  bool CWC_in;
-  int N_iterations;
-  int N_iterations_dm;
-  bool Apply_Rankordering;
-  vector<int> cwt_used;
-  int n_cwt;
-};
-
 
 // *******************************************************************
 /**
@@ -1219,10 +1150,7 @@ struct s_params_box_mas{
   real_prec min2;
   real_prec min3;
 };
-
-
 // *******************************************************************
-
 /**
  *@brief
 * @struct<s_Galaxy_struct>
@@ -1242,17 +1170,13 @@ struct s_Galaxy
   vector<real_prec> Mass;  // other scalar property such as the mass
   vector<real_prec> property;  // other scalar
   vector<real_prec> weight;
-
 };
-
 // *******************************************************************
-
 /**
  *@brief
 * @struct<s_minimums>
  * @brief The s_minimums struct
  * @details Auxiliary structure to allocate minimum values of properties used to characterize the bias in class::Bam
-
  */
 struct s_minimums{
    real_prec prop0;  // Tracer property, counts
@@ -1386,8 +1310,8 @@ struct s_mass_members{
 /**
 *@brief
  * @struct<s_nearest_cells struct>.
-   @details This is used in NumericalMethods::get_neighbour_cells()
-   @details Structure containing the closest cell neirbours
+   @details This is used in NumericalMethods::get_neighbour_cells() 
+   @details Structure containing the closest cell neighbours to a given cell
    @code
    vector<s_nearest_cells>nearest_cells_to_cell(NGRID);
    @endcode
@@ -1450,10 +1374,18 @@ struct s_cell_info{
 *@brief  Container to allocate the id of each object in a cell*/
   vector<ULONG> gal_index;
   /**
-*@brief  Position in the multidimensional DM property Theta of the current cell*/
+*@brief  Position in the multidimensional DM property Theta bin in which the cell has been identified */
   ULONG Theta_bin;
+
+  ULONG cell_index;
+
 };
 
+struct s_cell_info_reduced{
+  /**
+*@brief  Container to allocate the id of each object in a cell*/
+  vector<ULONG> gal_index;
+};
 // *******************************************************************
 
 /**

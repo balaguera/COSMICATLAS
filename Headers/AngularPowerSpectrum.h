@@ -123,7 +123,7 @@ class AngularPowerSpectrum{
   real_prec get_cl_exact(void*);
   gsl_real get_cl_ilimber(void*);
   void get_cl_limber(cl_params);
-  real_prec set_mixingM(string);
+  void set_mixingM(string);
   void get_normal(void*);
   void get_cosmo(Cosmology , s_CosmologicalParameters);
   void get_bessel();

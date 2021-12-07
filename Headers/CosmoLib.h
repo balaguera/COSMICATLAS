@@ -1,7 +1,25 @@
 //#define TIME
 #undef TIME
+
+
 #ifndef _COSMOLIB_
 #define _COSMOLIB_
+
+// Pre-proc directives for COSMO-LIB
+
+//#define _GET_EFF_BIAS_REDSHIFT_
+#define _GET_ONLY_MASS_FUNCTION_
+
+#define _GET_POWER_SPECTRUM_
+//#define _GET_NL_POWER_SPECTRUM_
+//#define _GET_NL_PT_POWER_SPECTRUM_
+
+#ifdef _GET_NL_POWER_SPECTRUM_
+#define _GET_HM_POWER_SPECTRUM_
+//#define _GET_HM_CORRELATION_FUNCTION_
+#endif
+
+
 
 # include <cmath>
 # include <cctype>
@@ -26,7 +44,7 @@
 # include "HOD.h"
 # include "Marks.h"
 # include "GalaxyOperations.h"
-# include "AngularPowerSpectrum.h"
+//# include "AngularPowerSpectrumTH.h"
 # include "McmcFunctions.h"
 # include "Galaxy.h"
 
@@ -61,7 +79,11 @@ class CosmoLib{
      *  @return type_of_lbinning
      */
     PowerSpectrum Ps;
-
+    //////////////////////////////////////////////////////////
+    /**
+     *  @brief get the value of the the private member type_of_lbinning
+     *  @return type_of_lbinning
+     */
     ScreenOutput So;
 
 public:
@@ -89,8 +111,8 @@ public:
 
   //////////////////////////////////////////////////////////
   /**
-   *  @brief get the value of the the private member type_of_lbinning
-   *  @return type_of_lbinning
+   *  @brief 
+   *  @return 
    */
 
    ParametersCosmolib params;

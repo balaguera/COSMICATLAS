@@ -13,12 +13,12 @@
 // **************************************************************
 
 
- 
+
 #ifndef _PATCHY_
 #define _PATCHY_
 
 
-#include "def.h"
+//#include "def.h"
 #include "bstream.h"
 #include <math.h>
 #include <fstream>
@@ -50,10 +50,10 @@ using namespace std;
 
 // *****************************************************************************************************
 /*!\class PATCHY
-  
+
  * @details   PATCHY
  * @author    Francisco-Shu Kitaura
- * @author    adapted by Andres Balaguera-Antolinez 
+ * @author    adapted by Andres Balaguera-Antolinez
 
  * @brief CLASS PATCHY
  */
@@ -64,14 +64,14 @@ using namespace std;
 class PATCHY{
 
   private:
-  
+
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   /* /\** */
   /*  * @brief outoput object */
   /*  *\/ */
   /* ofstream sal; */
-  
+
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   /**
@@ -85,20 +85,28 @@ class PATCHY{
    */
   string par_file;
 
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   string ic_WC_dir;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   string ic_file;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   bool use_ic_file;
 
-
-  
   /**
    *  @brief ScreenOutput obejct
    */
   ScreenOutput So;
 
-  
+
 
   //////////////////////////////////////////////////////////
   /**
@@ -108,79 +116,388 @@ class PATCHY{
 
   //  struct DATA *data;
 
-  
-  int inputmode;
-  int seed;
-  int seed_ref;
-  bool runsim;
-  bool runv;
-  bool diffcosmorz;
-  string Output_directory;
-  string ic_power_file;
-  string ic_WN_file;
-  string ic_WN_dir;
-  string dataFileName;
-  string fastpmpath;
-  bool lognden;
-  string dir;
-  bool transf;
-  real_prec slength;
-  real_prec slengthv;
-  real_prec vslength;
-  real_prec velbias;
-  int Nchunk;
-  int masskernel;
-  real_prec dkbin;
-  int N_bin;
-  real_prec biasE;
-  real_prec biasepsilon; 
-  real_prec biasrhoexp;
-  real_prec biasone;
-  real_prec biassign;
-  real_prec biassign2;
-  real_prec biasepsilon2;
-  real_prec biasrhoexp2;
-  real_prec devpois;
-  real_prec deltathH;
-  real_prec Nmean;
-  real_prec deltath;
-  real_prec cs2;
-  real_prec cs3;
-  real_prec cst;
-  real_prec cpsi;
-  real_prec cdeltas2;
-  real_prec biasL;
-  real_prec sfac;
-  real_prec ep;
-  real_prec xllc;
-  real_prec yllc;
-  real_prec zllc;
-  real_prec xobs;
-  real_prec yobs;
-  real_prec zobs;
-  real_prec d1;
-  real_prec d2;
-  real_prec d3;
-  real_prec L1;
-  real_prec L2;
-  real_prec L3;
-  ULONG N1;
-  ULONG N2;
-  ULONG N3;
-  bool readPS;
-  ULONG NGRID;
-  bool planepar;
-  Params params;
-  real_prec Redshift_initial;
-  bool Normalize_initial_redshift;
+
   //////////////////////////////////////////////////////////
   /**
-   * @brief 
+   * @brief  
+   */
+
+  int inputmode;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int seed_ref;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool runsim;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool runv;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool diffcosmorz;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string Output_directory;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string ic_power_file;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string ic_input_type;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string ic_WN_file;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string ic_WN_dir;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string dataFileName;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string fastpmpath;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool lognden;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string dir;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool transf;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec slength;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec slengthv;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec vslength;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec velbias;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int Nchunk;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int masskernel;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int masskernel_vel;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec dkbin;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int N_bin;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasE;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasepsilon;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasrhoexp;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasone;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biassign;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biassign2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasepsilon2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasrhoexp2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec devpois;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec deltathH;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string buffsf;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec Nmean;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec deltath;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec cs2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec cs3;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec cst;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec cpsi;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec cdeltas2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec biasL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec sfac;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec ep;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec xllc;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec yllc;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec zllc;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec xobs;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec yobs;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec zobs;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec d1;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec d2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec d3;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec L1;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec L2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec L3;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  ULONG N1;
+  ULONG N2;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  ULONG N3;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool readPS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  ULONG NGRID;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool planepar;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Params params;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec Initial_Redshift_DELTA;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  real_prec Initial_Redshift_ic_power_file;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  bool Normalize_initial_redshift;
+  real_prec growth_ini=1;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief
    */
   vector<real_prec>tab;
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
-  
+
  public:
 
   /**
@@ -188,26 +505,30 @@ class PATCHY{
    *  @brief object of class PATCHY. I use this to defined a PACHY objects as a BAM class member
    *  @brief
    */
-  PATCHY(){
-  }
-  
+  PATCHY(){}
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   /**
-   *  @brief constructor 
+   *  @brief constructor
    *  @param parameters_file parameter file
    *  @return object of class PATCHY
    */
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
  PATCHY(Params _params, s_CosmoInfo _s_cosmo_info) :s_cosmo_info(_s_cosmo_info)
   {
    this->set_params_patchy(_params);
    this->NGRID=static_cast<ULONG>(this->N1*this->N2*this->N3);
+   time_t time_bam;
+   time(&time_bam);
+   this->So.initial_time=time_bam;
+   this->gp_power<<"set border linewidth 1.5\n";
+   this->gp_pdf<<"set border linewidth 1.5\n";
+
  }
 
  //////////////////////////////////////////////////////////
@@ -235,12 +556,42 @@ class PATCHY{
   /**
    *  @brief Generate DM density field according to some SF model and IC
    */
- 
+
 #ifdef OMPPARRAN
  void get_dm_field(gsl_rng ** gBaseRand);
 #else
   void get_dm_field(gsl_rng * gBaseRand);
 #endif
+
+
+  //////////////////////////////////////////////////////////
+
+  /**
+   *  @brief Generate DM density field according to some SF model and IC
+   */
+
+#ifdef OMPPARRAN
+ void get_displacement(gsl_rng ** gBaseRand, vector<real_prec>&, int it);
+#else
+ void get_displacement(gsl_rng * gBaseRand, vector<real_prec>&, int it);
+#endif
+
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_power;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  Gnuplot gp_pdf;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  vector<real_prec>Displacement;
 
 
   //////////////////////////////////////////////////////////
@@ -254,7 +605,16 @@ class PATCHY{
   /**
    *  @brief
    */
+#ifndef _DISPLACEMENTS_
   void Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool periodic,vector<real_prec> &out,int comp);
+#else
+  void Lag2Eul_comp(real_prec biasLAG2,real_prec kth,int ftype,bool periodic,int comp);
+#endif
+  //////////////////////////////////////////////////////////
+  /**
+   *  @brief
+   */
+  void Lag2Eul_vel(real_prec biasLAG2,real_prec kth,int ftype,bool periodic);
 
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
@@ -264,7 +624,7 @@ class PATCHY{
   void Lag2Eul_compB(real_prec kth,int ftype,bool periodic,vector<real_prec> &out,int comp);
 
   //////////////////////////////////////////////////////////
-  
+
   //////////////////////////////////////////////////////////
   /**
    *  @brief Patchy routine to generate catalog with positions and velocities
@@ -277,35 +637,37 @@ class PATCHY{
 #endif
 
 
-
-
-  
-
-#ifdef OMPPARRANRSD
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+#ifdef _USE_OMP_
   void makecat_withv(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng ** gBaseRand, int ir);
+  void makecat_withv_new(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng ** gBaseRand,int ir);
 #else
   void makecat_withv(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng * gBaseRand, int ir);
+  void makecat_withv_new(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng * gBaseRand,int ir);
 #endif
 
-  void makecat_withv_new(string stradd,string fnameMOCK, ULONG NLL,ULONG NOBJ,gsl_rng ** gBaseRand, int ir);
 
-  
+
   //////////////////////////////////////////////////////////
   void read_tabulated_power();
-  
-  
+
+
   real_prec linInterp(real_prec xpos, real_prec ypos, real_prec zpos, const vector<real_prec>&);
 
   //////////////////////////////////////////////////////////
   /**
    * @brief Object of class Cosmology
    */
-  void theta2velcomp(const vector<real_prec> & delta, vector<real_prec> &vei, bool zeropad, bool norm, int comp);
+  void theta2velcomp(vector<real_prec> & delta, vector<real_prec> &vei, bool zeropad, bool norm, int comp);
 
-  void comp_velbias(const vector<real_prec> &delta, vector<real_prec>&out, bool zeropad, bool norm);
+  void comp_velbias(vector<real_prec> &delta, vector<real_prec>&out, bool zeropad, bool norm);
 
+  void normalize_df_z_ini(vector<real_prec>&, vector<real_prec>&, string type);
 
-  void normalize_df_z_ini(vector<real_prec>&, vector<real_prec>&, string type, gsl_rng * gBaseRand);
+  void DM_to_RSS(int los);
   //////////////////////////////////////////////////////////
   /**
    * @brief Object of class Cosmology
@@ -316,7 +678,7 @@ class PATCHY{
    * @brief Structure allocating cosmological parameters
    */
   s_CosmologicalParameters s_cosmo_pars;
-  
+
   //////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////
   /**
@@ -328,21 +690,48 @@ class PATCHY{
    * @brief Name of file containing the DM produced by PATCHY
    */
   string fnamePOSX;
+    //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+ string fnamePOSX_RS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   string fnameVXpart;
   /**
    * @brief Name of file containing the DM produced by PATCHY
    */
   string fnamePOSY;
+   //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+ string fnamePOSY_RS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
   string fnameVYpart;
 
   /**
    * @brief Name of file containing the DM produced by PATCHY
    */
   string fnamePOSZ;
-  string fnameVZpart;
-  
+  //////////////////////////////////////////////////////////
   /**
-   * @brief Name of file containing the DM produced by PATCHY
+   * @brief  
+   */
+  string fnamePOSZ_RS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  string fnameVZpart;
+
+  /**
+   * @brief Name of file containing the VX interpolated on the mesh produced by PATCHY
    */
   string fnameVX;
   /**
@@ -360,13 +749,13 @@ class PATCHY{
    */
    string fname3DPOWER;
 
-   //////////////////////////////////////////////////////////  
+   //////////////////////////////////////////////////////////
   /**
    * @brief Name of file the White noise in conf space
    */
    string fnameIC;
-   
-   //////////////////////////////////////////////////////////  
+
+   //////////////////////////////////////////////////////////
    /**
     * @brief Name of file the initial density field displaying an initial power spectrum
     */
@@ -374,8 +763,9 @@ class PATCHY{
 
       //////////////////////////////////////////////////////////
    string fnameDM;
-   
-   
+   string fnameDM_RS;
+
+
    //////////////////////////////////////////////////////////
    string fname2LPTTERM;
 
@@ -386,35 +776,110 @@ class PATCHY{
 
    //////////////////////////////////////////////////////////
    string fnameDMNGP;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+   string fnameDMNGP_RS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameS2TERM;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameS2TERMEUL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameP2TERMEUL;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameS3TERM;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameS3TERMEUL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameSTTERM;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameSTTERMEUL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnamePSITERMEUL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fname2LPTTERMEUL;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string stradd;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+   string stradd_bam;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fnameTRACERCAT;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fname_MOCK_NCOUNTS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fname_MOCK_MASS;
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    string fname_MOCK_NCOUNTS_SAT;
-   
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    ULONG Number_of_Tracers;
-
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
    int sfmodel;
+
+
+  //////////////////////////////////////////////////////////
+  /**
+   * @brief  
+   */
+  int seed;
+
 };
-  
+
 
 #endif
-  
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
 
+//##################################################################################
+//##################################################################################
+//##################################################################################
+//##################################################################################

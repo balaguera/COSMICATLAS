@@ -116,7 +116,7 @@ class CoordinateSystem{
    * the output is in the units of r       
    */
 
-  void equatorial_to_cartesian(real_prec, real_prec, real_prec, real_prec *, real_prec *, real_prec *);
+  void equatorial_to_cartesian(real_prec, real_prec, real_prec, real_prec &, real_prec &, real_prec &);
   
   ///////////////////////////////////////////////////////
    /**
@@ -128,7 +128,7 @@ class CoordinateSystem{
    * Input values of RA and Dec are in degrees,                                      
    * the output has the units of r         
   */
-  void new_equatorial_to_cartesian(real_prec, real_prec, real_prec , real_prec, real_prec, real_prec *, real_prec *, real_prec *);
+  void new_equatorial_to_cartesian(real_prec, real_prec, real_prec , real_prec, real_prec, real_prec &, real_prec &, real_prec &);
   ///////////////////////////////////////////////////////
   /**
    * \brief Convert equatorial coordinates, i.e, right ascension, declination and distance  
