@@ -15,9 +15,9 @@ real_prec CorrelationFunctionTH::Linear_Matter_Correlation_Function(s_Cosmologic
 gsl_real CorrelationFunctionTH::i_Linear_Matter_Correlation_Function(gsl_real k, void *p){        /*this k comes in h/Mpc */
   // Integrand related to the power spectrum in the correlation function
   // xi= (1/2pi²) / r * int dk k²(sin(kr)/k)P(k) se integra en k directamente
-  PowerSpectrum Ps;
   struct s_CosmologicalParameters * scp= (struct s_CosmologicalParameters *)p;
-  return k*Ps.Linear_Matter_Power_Spectrum(scp,k);
+  PowerSpectrum Ps(*scp);
+  return k*Ps.Linear_Matter_Power_Spectrum(k);
 }
 
 // *******************************************************************
@@ -32,8 +32,8 @@ real_prec CorrelationFunctionTH::Non_Linear_Matter_Correlation_Function_Halo_Fit
 // *******************************************************************
 
 gsl_real CorrelationFunctionTH::i_Non_Linear_Matter_Correlation_Function_Halo_Fit(gsl_real k, void *p){        /*this k comes in h/Mpc */
-  PowerSpectrum Ps;
   struct s_CosmologicalParameters * scp= (struct s_CosmologicalParameters *)p;
+  PowerSpectrum Ps(*scp);
   vector<gsl_real> v_k_ps = scp->v_k_ps;
   vector<gsl_real> v_nl_power_spectrum = scp->v_nl_power_spectrum;
   return k*gsl_inter_new(v_k_ps, v_nl_power_spectrum, k);
@@ -43,7 +43,6 @@ gsl_real CorrelationFunctionTH::i_Non_Linear_Matter_Correlation_Function_Halo_Fi
 // *******************************************************************
 
 real_prec CorrelationFunctionTH::Galaxy_Correlation_Function_1h_ss(s_CosmologicalParameters *scp, real_prec r){        /*this k comes in h/Mpc */
-  
   real_prec kmin=(scp->kmin_int);
   real_prec kmax=(scp->kmax_int);
   real_prec factor=0.5/pow(M_PI,2);
@@ -100,10 +99,10 @@ real_prec CorrelationFunctionTH::Galaxy_Correlation_Function_2h(s_CosmologicalPa
 
 gsl_real CorrelationFunctionTH::i_Galaxy_Correlation_Function_2h(gsl_real lk, void *p){        /*this k comes in h/Mpc */
  /*this k comes in h/Mpc */
-  PowerSpectrum Ps;
   real_prec k=lk;//pow(10,lk);
   real_prec jacobian=1.;//log(10)*k;
   struct s_CosmologicalParameters * scp= (struct s_CosmologicalParameters *)p;
+  PowerSpectrum Ps(*scp);
   vector<gsl_real> v_k_ps = scp->v_k_ps;
   vector<gsl_real> v_galaxy_power_spectrum_2h = scp->v_galaxy_power_spectrum_2h;
   return jacobian*k*gsl_inter_new(v_k_ps,v_galaxy_power_spectrum_2h, k);

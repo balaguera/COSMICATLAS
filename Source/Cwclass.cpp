@@ -1,62 +1,52 @@
-//##################################################################################
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 /** @file Cwclass.cpp
  *
  *  @brief Cosmic web classification
  *  @author: Andrés Balaguera-Antolínez, Francisco-Shu Kitaura, IAC, 2017-2019
  */
-
-# include "../Headers/Cwclass.h"
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+# include "Cwclass.h"
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 int sign(real_prec x)
 {
-
     int ans=1;
     if(x<0)
         ans=-1;
     return ans;
-
 }
-
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 void Cwclass::get_bias_terms(vector<real_prec>&delta)
 {
 #ifdef _FULL_VERBOSE_
     So.enter(__PRETTY_FUNCTION__);
 #endif
-
 #ifdef _USE_OMP_
   int NTHREADS=_NTHREADS_;
   omp_set_num_threads(NTHREADS);
 #endif
-
-
 #ifdef _FULL_VERBOSE_
   So.message_screen("Computing bias terms");
 #endif
-  vector<real_prec>phi(this->params._NGRID(),0);
+  this->potential.resize(this->params._NGRID(),0);
+  real_prec max_C1=0;
+  real_prec min_C1=0;
 
-  real_prec max_C1;
-  real_prec min_C1;
-  
 #ifdef _USE_DELTA2_
   So.message_screen("Computing ð²");
   this->DELTA2.resize(this->params._NGRID(),0);
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
   for(ULONG i=0;i<this->params._NGRID();++i)
     this->DELTA2[i]=delta[i]*delta[i];
   So.DONE();
-
 #ifdef _WRITE_DELTA2_
   File.write_array(this->params._Output_directory()+"DELTA2", DELTA2);
 #endif
-
   So.message_screen("DELTA2-term :");
   max_C1=get_max<real_prec>(DELTA2);
   So.message_screen("Maximum ð² =", max_C1);
@@ -67,9 +57,6 @@ void Cwclass::get_bias_terms(vector<real_prec>&delta)
 #endif
 #endif
 
-
-
-  
 #ifdef _USE_DELTA3_
   So.message_screen("Computing ð³");
   this->DELTA3.resize(this->params._NGRID(),0);
@@ -79,7 +66,6 @@ void Cwclass::get_bias_terms(vector<real_prec>&delta)
   for(ULONG i=0;i<this->params._NGRID();++i)
     DELTA3[i]=delta[i]*delta[i]*delta[i];
   So.DONE();
-
 #ifdef _WRITE_DELTA3_
   File.write_array(this->params._Output_directory()+"DELTA3", DELTA3);
 #endif
@@ -92,50 +78,34 @@ void Cwclass::get_bias_terms(vector<real_prec>&delta)
   cout<<endl;
 #endif
 #endif
-  
-  
   // Here we do not need the eigenvalues. Hence we do not resize these vectors
 #ifdef _FULL_VERBOSE_
   So.message_screen("Computing gravitational potential");
 #endif
-  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,phi);
+  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,this->potential);
   So.DONE();
-  
 #ifdef _USE_S2_
   So.message_screen("Computing s²");
   this->S2.resize(this->params._NGRID(),0);
   So.DONE();
 #endif
-
-
-
-  
 #ifdef _USE_S3_
   So.message_screen("Computing s³");
   this->S3.resize(this->params._NGRID(),0);
   So.DONE();
 #endif
-  
 #ifdef _USE_NABLA2DELTA_
   So.message_screen("Computing NABLA2DELTA term");
   this->N2D.resize(this->params._NGRID(),0);
 #endif
-
 #if defined (_USE_NABLA2DELTA_) || defined (_USE_S2_) || defined (_USE_S3_) || defined (_USE_S2DELTA_)
-  EigenValuesTweb_bias(this->params._Nft(),this->params._Lbox(),delta, phi,this->S2, this->S3, this->N2D);
+  EigenValuesTweb_bias(this->params._Nft(),this->params._Lbox(),delta, this->potential,this->S2, this->S3, this->N2D);
   So.DONE();
 #endif
-  
-  
-
-  
-  
 #ifdef _USE_S2_
 #ifdef _WRITE_S2_
     File.write_array(this->params._Output_directory()+"S2_original", this->S2);
 #endif
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -152,10 +122,7 @@ for (ULONG index=0;index<this->params._NGRID();++index)
    this->S2[index]=x;
 #endif
    }
-
-
 #ifdef _MAP_TO_INTERVAL_S2_
-
 real_prec xmin=get_min(this->S2);
 real_prec xmax=get_max(this->S2);
 #ifdef _USE_OMP_
@@ -164,9 +131,6 @@ real_prec xmax=get_max(this->S2);
 for (ULONG index=0;index<this->params._NGRID();++index)
     this->S2[index]=(NEWMAX_S2-NEWMIN_S2)*(this->S2[index]-xmin)/(xmax-xmin)+NEWMIN_S2;
 #endif
-
-
-
 #ifdef _WRITE_S2_
 if(0==this->step)
 #ifdef _USE_EXPONENT_S2_
@@ -174,12 +138,6 @@ if(0==this->step)
 #endif
 #endif
 #endif
-  
-
-
-
-
-
 #ifdef _USE_S3_
 #ifdef _WRITE_S3_
     this->File.write_array(this->params._Output_directory()+"S3_original", this->S3);
@@ -220,27 +178,15 @@ if(0==this->step)
 #endif
 #endif
 #endif
-
-
-
-// *************************************************************************************
-
-
-
-
 #ifdef _USE_S2DELTA_
   So.message_screen("Computing S²DELTA");
   this->S2DELTA.resize(this->params._NGRID(),0);
-
-
 #pragma omp parallel for
 for (ULONG index=0;index<this->params._NGRID();++index)
      this->S2DELTA[index]=this->S2[index]*delta[index];
-
 #ifdef _WRITE_S2DELTA_
     File.write_array(this->params._Output_directory()+"S2DELTA_original", this->S2DELTA);
 #endif
-
 #pragma omp parallel for
     for (ULONG index=0;index<this->params._NGRID();++index)
      {
@@ -255,8 +201,6 @@ for (ULONG index=0;index<this->params._NGRID();++index)
    this->S2DELTA[index]=x;
 #endif
    }
-
-
 #ifdef _MAP_TO_INTERVAL_S2DELTA_
     {
     real_prec xmin=get_min(this->S2DELTA);
@@ -265,21 +209,12 @@ for (ULONG index=0;index<this->params._NGRID();++index)
     for (ULONG index=0;index<this->params._NGRID();++index)
         this->S2DELTA[index]=(NEWMAX_S2DELTA-NEWMIN_S2DELTA)*(this->S2DELTA[index]-xmin)/(xmax-xmin)+NEWMIN_S2DELTA;
     }
-
 #endif
-
 #if defined (_WRITE_S2DELTA_ ) && defined (_USE_EXPONENT_S2DELTA_)
     if(0==this->step)
        File.write_array(this->params._Output_directory()+"S2DELTA", this->S2DELTA);
 #endif
-
-
 #endif
-
-
-// *************************************************************************************
-
-
 #ifdef _USE_NABLA2DELTA_
 #ifdef _WRITE_NABLA2DELTA_
   File.write_array(this->params._Output_directory()+"NABLA2DELTA", N2D);
@@ -293,22 +228,11 @@ for (ULONG index=0;index<this->params._NGRID();++index)
     cout<<endl;
   */
 #endif
-  
 }
-
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 // This function gnerates the CWC, the Iweb  sor the Pweb eigenvalues
-
-void Cwclass::do_CWC(vector<real_prec>&delta)
+void Cwclass::get_CWC(vector<real_prec>&delta)
 {
 #ifdef _FULL_VERBOSE_
   So.enter(__PRETTY_FUNCTION__);
@@ -318,51 +242,48 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   omp_set_num_threads(NTHREADS);
 #endif
 
-  vector<real_prec>phi(this->params._NGRID(),0);
+  this->potential.resize(this->params._NGRID(),0);
 
-#if !defined(_USE_PWEB_)
-#ifdef _FULL_VERBOSE_
-  So.message_screen("Computing gravitational potential");
 #ifdef _USE_ZERO_PADDING_POT_
   So.message_screen("using zero-padding");
 #endif
-#endif
-#endif
-
-#if !defined(_USE_PWEB_)
-  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,phi);
+#if defined(_USE_PWEB_)  || defined(_USE_CURVATURE_)
+  this->potential=delta;
 #else
-  phi=delta;
+
+#ifndef _USE_GFFT_EIGENV_
+#ifdef _FULL_VERBOSE_
+  So.message_screen("Computing gravitational potential");
+#endif
+// If the Tidal field is to be computed using FFT's, we pass delta directly and do not need to solve Poisson
+  PoissonSolver(this->params._Lbox(), this->params._Nft(),delta,this->potential);
+#endif
 #endif
   So.DONE();
-   
-  this->lambda1.resize(this->params._NGRID(),0);
-  this->lambda2.resize(this->params._NGRID(),0);
-  this->lambda3.resize(this->params._NGRID(),0);
-
-
-
-  
 #ifdef _FULL_VERBOSE_
-#ifdef _USE_PWEB_
+#if defined (_USE_PWEB_)  || defined (_USE_CURVATURE_)
   So.message_screen("Computing Eigenvalues of zeta field");
 #else
   So.message_screen("Computing Eigenvalues of tidal field");
 #endif
 #endif
+  this->lambda1.resize(this->params._NGRID(),0);
+  this->lambda2.resize(this->params._NGRID(),0);
+  this->lambda3.resize(this->params._NGRID(),0);
+#ifdef _USE_GFFT_EIGENV_
+  // If the Tidal field is to be computed using FFT's, we pass delta directly and do not need to solve Poisson
+  EigenValuesTweb(this->params._Nft(),this->params._Lbox(),delta,this->lambda1,this->lambda2,this->lambda3);//or Pweb, in case this->potential is delta
+#else
+  EigenValuesTweb(this->params._Nft(),this->params._Lbox(),delta, this->potential,this->lambda1,this->lambda2,this->lambda3);//or Pweb, in case this->potential is delta
+#endif
 
-  EigenValuesTweb(this->params._Nft(),this->params._Lbox(),delta, phi,this->lambda1,this->lambda2,this->lambda3);//or Pweb, in case phi is delta
+
 
 #ifdef _FULL_VERBOSE_
   So.DONE();
 #endif
-  phi.clear();
-  phi.shrink_to_fit();
- 
 
-
-
-   /*
+  /*
    real_prec max_C1;
    real_prec min_C1;
    max_C1=get_max<real_prec>(lambda1);
@@ -378,21 +299,14 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
    max_C1=get_min<real_prec>(lambda3);
    So.message_screen("Minimum lambda3 =", max_C1);
 */
-
 // ---------------------------------------------------------------------------------
 #if defined _USE_INVARIANT_TIDAL_FIELD_I_  || defined(_USE_INVARIANT_PWEB_I_)
-
-
 #ifdef _USE_INVARIANT_TIDAL_FIELD_I_
   So.message_screen("Computing Invariant Tidal field I");
 #else 
  So.message_screen("Computing Invariant Derivative field P1");
 #endif
-
-
-
  this->Invariant_TF_I.resize(this->params._NGRID(),0);
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -406,9 +320,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
     File.write_array(this->params._Output_directory()+"INVARIANT_PI_original", this->Invariant_TF_I);
 #endif
 #endif
-
-
-
 #if defined (_USE_INVARIANT_TIDAL_FIELD_I_) || defined (_USE_INVARIANT_PWEB_I_)  // the transformations so far only applies to the tidal field invariants
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -426,13 +337,10 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #elif defined(_USE_INVARIANT_PWEB_I_ )
       this->Invariant_TF_I[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_I);
 #endif
-
-
 #else
      this->Invariant_TF_I[index]=x;
 #endif
      }
-
 
 #if defined(_MAP_TO_INTERVAL_INV_I_) || defined(_MAP_TO_INTERVAL_INVARIANT_PWEB_I_)
   {
@@ -467,18 +375,10 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #ifdef _FULL_VERBOSE_
   cout<<endl;
 #endif
-
-
 #endif
 #endif
 #endif
-  
 
-  
-  
-
-  
-  // ---------------------------------------------------------------------------------
 #if defined _USE_INVARIANT_TIDAL_FIELD_II_  || defined(_USE_INVARIANT_PWEB_II_)
 
 #ifdef _FULL_VERBOSE_
@@ -507,11 +407,8 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #elif defined(_WRITE_INVARIANT_PWEB_II_)
     File.write_array(this->params._Output_directory()+"INVARIANT_PII_original", this->Invariant_TF_II);
 #endif
-  
 #endif
 #endif
-
-
 #if defined (_USE_INVARIANT_TIDAL_FIELD_II_ ) || defined (_USE_INVARIANT_PWEB_II_) || defined(_USE_EIGENVALUES_)
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -530,8 +427,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #elif defined(_USE_INVARIANT_PWEB_II_ )
       this->Invariant_TF_II[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_II);
 #endif
-
-
 #else
      this->Invariant_TF_II[index]=x;
 #endif
@@ -582,9 +477,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   So.DONE();
 #endif
 #endif
-
-
-
 #ifdef _HYDROTEST_
   this->File.read_array_t<PrecType_X>("/home/andres/data/Numerics/IACmocks/ANALYSIS/BAM/Output_Hydro/DensityGas_nohead.37.n128.dat",this->Invariant_TF_II);
   get_overdens(this->Invariant_TF_II, this->Invariant_TF_II);
@@ -595,7 +487,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
     this->Invariant_TF_II[i] = this->Invariant_TF_II[i]<-1 ?  0 :  log10(NUM_IN_LOG+ static_cast<real_prec>(this->Invariant_TF_II[i]));
 #endif
 
-  
 // ---------------------------------------------------------------------------------
 #if defined _USE_INVARIANT_TIDAL_FIELD_III_  || defined(_USE_INVARIANT_PWEB_III_)
 
@@ -651,11 +542,9 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #elif defined(_USE_INVARIANT_PWEB_III_ )
       this->Invariant_TF_III[index]=sign_x*pow(abs(x), EXPONENT_INVARIANT_PWEB_III);
 #endif
-
 #else
      this->Invariant_TF_III[index]=x;
 #endif
-
   }
 
 #if defined(_MAP_TO_INTERVAL_INV_III_) || defined(_MAP_TO_INTERVAL_INVARIANT_PWEB_III_)
@@ -673,10 +562,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #endif
   }
 #endif
-
-
-
-
 #ifdef _WRITE_INVARIANTS_
   if(0==this->step)
 #if defined (_USE_EXPONENT_INVARIANT_III_) || defined (_USE_EXPONENT_INVARIANT_PWEB_III_) || defined (_USE_EIGENVALUES_)
@@ -700,8 +585,7 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
     So.DONE();
 #endif
 #endif
-    
-    
+
 #ifdef _HYDROTEST_
     this->File.read_array_t<PrecType_X>("/home/andres/data/Numerics/IACmocks/ANALYSIS/BAM/Output_Hydro/NumberDensityHI_nohead.37.n128.dat",this->Invariant_TF_III);
   get_overdens(this->Invariant_TF_III, this->Invariant_TF_III);
@@ -711,10 +595,7 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   for(ULONG i = 0;i < this->params._NGRID() ;++i) //TRANSFORM DELTA TO LOG10(NUM_IN_LOG + DELTA)
     this->Invariant_TF_III[i] = this->Invariant_TF_III[i]<-1 ?  0 :  log10(NUM_IN_LOG+ static_cast<real_prec>(this->Invariant_TF_III[i]));
 #endif
-    
 // ---------------------------------------------------------------------------------
-
-
 #ifdef _USE_INVARIANT_TIDAL_FIELD_IV_
 #ifdef _FULL_VERBOSE_
   So.message_screen("Computing Invariant Tidal field IV");
@@ -734,8 +615,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
       File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV_original", this->Invariant_TF_IV);
 #endif
 #endif
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -751,10 +630,7 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #else
      this->Invariant_TF_IV[index]=x;
 #endif
-
   }
-
-
 #ifdef _MAP_TO_INTERVAL_INV_IV_
   {
   real_prec xmin=get_min(this->Invariant_TF_IV);
@@ -766,8 +642,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
       this->Invariant_TF_IV[index]=(NEWMAX_INV_IV-NEWMIN_INV_IV)*(this->Invariant_TF_IV[index]-xmin)/(xmax-xmin)+NEWMIN_INV_IV;
 }
 #endif
-
-
 #ifdef _WRITE_INVARIANTS_
   if(0==this->step)
 #ifdef _USE_EXPONENT_INVARIANT_IV_
@@ -776,23 +650,20 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #else
       File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV", this->Invariant_TF_IV);
 #endif
-
   if(this->step ==this->params._N_iterations_Kernel())
 #ifdef _USE_EXPONENT_INVARIANT_IV_
      File.write_array(this->params._Output_directory()+"INVARIANT_TIDAL_IV_iteration"+to_string(this->step), this->Invariant_TF_IV);
 #endif
 #endif
 #endif
-
-
 #endif
-
-  // *********************************************************************************
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 #ifdef _USE_TIDAL_ANISOTROPY_
+#ifdef _FULL_VERBOSE_
   So.message_screen("Computing Tidal Anisotropy");
+#endif
   this->Tidal_Anisotropy.resize(this->params._NGRID(),0);
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -802,8 +673,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   if(0==this->step)
       File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY_original", this->Tidal_Anisotropy);
 #endif
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -820,8 +689,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
      this->Tidal_Anisotropy[index]=x;
 #endif
   }
-
-
 #ifdef _MAP_TO_INTERVAL_TIDAL_ANISOTROPY_
   {
   real_prec xmin=get_min(this->Tidal_Anisotropy);
@@ -833,13 +700,11 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
       this->Tidal_Anisotropy[index]=(NEWMAX_TIDAL_ANISOTROPY-NEWMIN_TIDAL_ANISOTROPY)*(this->Tidal_Anisotropy[index]-xmin)/(xmax-xmin)+NEWMIN_TIDAL_ANISOTROPY;
 }
 #endif
-
 #ifdef _WRITE_INVARIANTS_
   if(0==this->step)
 #ifdef _USE_EXPONENT_TIDAL_ANISOTROPY_
       File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY", this->Tidal_Anisotropy);
 #endif
-
   if(this->step ==this->params._N_iterations_Kernel())
 #ifdef _USE_EXPONENT_USE_TIDAL_ANISOTROPY_
      File.write_array(this->params._Output_directory()+"TIDAL_ANISOTROPY_iteration"+to_string(this->step), this->Tidal_Anisotropy);
@@ -847,16 +712,10 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #endif
     So.DONE();
 #endif
-
-
-
-
-    // *********************************************************************************
-
+   // *********************************************************************************
   #ifdef _USE_ELLIPTICITY_
     So.message_screen("Computing Ellipticity");
     this->Ellipticity.resize(this->params._NGRID(),0);
-
   #ifdef _USE_OMP_
   #pragma omp parallel for
   #endif
@@ -866,8 +725,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
     if(0==this->step)
         File.write_array(this->params._Output_directory()+"ELLIPTICITY_original", this->Ellipticity);
   #endif
-
-
   #ifdef _USE_OMP_
   #pragma omp parallel for
   #endif
@@ -883,10 +740,7 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   #else
        this->Ellipticity[index]=x;
   #endif
-
     }
-
-
   #ifdef _MAP_TO_INTERVAL_ELLIPTICITY_
     {
     real_prec xmin=get_min(this->Ellipticity);
@@ -898,13 +752,11 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
         this->Ellipticity[index]=(NEWMAX_ELLIPTICITY-NEWMIN_ELLIPTICITY)*(this->Ellipticity[index]-xmin)/(xmax-xmin)+NEWMIN_ELLIPTICITY;
   }
   #endif
-
   #ifdef _WRITE_INVARIANTS_
     if(0==this->step)
   #ifdef _USE_EXPONENT_ELLIPTICITY_
         File.write_array(this->params._Output_directory()+"ELLIPTICITY", this->Ellipticity);
   #endif
-
     if(this->step ==this->params._N_iterations_Kernel())
   #ifdef _USE_ELLIPTICITY_
        File.write_array(this->params._Output_directory()+"ELLIPTICITY_iteration"+to_string(this->step), this->Ellipticity);
@@ -912,13 +764,10 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   #endif
       So.DONE();
   #endif
-
-
     // ************************************************************************************
 #ifdef _USE_PROLATNESS_
   So.message_screen("Computing Prolatness");
   this->Prolatness.resize(this->params._NGRID(),0);
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -928,8 +777,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   if(0==this->step)
       File.write_array(this->params._Output_directory()+"PROLATNESS_original", this->Prolatness);
 #endif
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -945,11 +792,7 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #else
      this->Prolatness[index]=x;
 #endif
-
   }
-
-
-
 #ifdef _MAP_TO_INTERVAL_PROLATNESS_
   {
   real_prec xmin=get_min(this->Prolatness);
@@ -975,20 +818,10 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #endif
     So.DONE();
 #endif
-
-  // ************************************************************************************
-
-
-
-
-
-
   this->CWClass.clear();
 #if defined (_USE_CWC_) || defined (_USE_MASS_KNOTS_)
   this->CWClass.resize(this->params._NGRID(),0);
 #endif
-
-
 
 #ifdef _USE_CWC_
   ULONG nknots=0;
@@ -1001,12 +834,15 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   So.message_screen("Lambda threshold = ", this->params._lambdath());
 #endif
 
+  /*
+
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:nknots,nfilaments,nsheets,nvoids,nrest)
 #endif
   for (ULONG index=0;index<this->params._NGRID();++index)
     {
-      if (this->lambda1[index]>this->params._lambdath() && this->lambda2[index]>this->params._lambdath() && this->lambda3[index]>this->params._lambdath())
+
+          if (this->lambda1[index]>=this->params._lambdath() && this->lambda2[index]>=this->params._lambdath() && this->lambda3[index]>=this->params._lambdath())
 	{
 	  this->CWClass[index]=I_KNOT;
 	  nknots++;
@@ -1018,13 +854,13 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 	  nvoids++;
 	}
       
-      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>this->params._lambdath()) || (lambda1[index]<this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]<this->params._lambdath()))
+      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>=this->params._lambdath()) || (lambda1[index]<this->params._lambdath() && lambda2[index]>=this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>=this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]<this->params._lambdath()))
 	{
 	  this->CWClass[index]=I_SHEET;
 	  nsheets++;
 	}
       
-      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]>this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>this->params._lambdath()))
+      else if ((lambda1[index]<this->params._lambdath() && lambda2[index]>=this->params._lambdath() && lambda3[index]>=this->params._lambdath()) || (lambda1[index]>=this->params._lambdath() && lambda2[index]>this->params._lambdath() && lambda3[index]<this->params._lambdath()) || (lambda1[index]>this->params._lambdath() && lambda2[index]<this->params._lambdath() && lambda3[index]>=this->params._lambdath()))
 	{
 	  this->CWClass[index]=I_FILAMENT;
 	  nfilaments++;
@@ -1032,15 +868,40 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
       else
 	nrest ++;
     }
+ */
+
+
+  // This is a more compact way of performing the classifictation
+ vector<int>vff(4,0);
+#ifdef _USE_OMP_
+#pragma omp parallel for
+#endif
+  for (ULONG index=0;index<this->params._NGRID();++index)
+    {
+    vector<real_prec>cwc_v={this->lambda1[index], this->lambda2[index],this->lambda3[index]};
+    int vtype=0;
+    for(int it=0;it<cwc_v.size();++it)
+        if(cwc_v[it]>this->params._lambdath())
+            vtype++;
+    this->CWClass[index]=4-vtype;
+#pragma omp atomic
+    vff[4-vtype-1]++;
+  }
   So.DONE();
+  this->volume_knots=static_cast<real_prec>(vff[0])/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_filaments=static_cast<real_prec>(vff[1])/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_sheets=static_cast<real_prec>(vff[2])/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+  this->volume_voids=static_cast<real_prec>(vff[3])/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
+/*
 
+  string ss = this->params._Output_directory()+"delta_cwc.txt";
+  ofstream ssa; ssa.open(ss.c_str());
+  for (ULONG index=0;index<this->params._NGRID();++index)
+    ssa<<delta[index]<<"\t"<<CWClass[index]<<endl;
+    ssa.close();
+//    exit(0);
 
-  this->volume_knots=static_cast<real_prec>(nknots)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
-  this->volume_filaments=static_cast<real_prec>(nfilaments)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
-  this->volume_sheets=static_cast<real_prec>(nsheets)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
-  this->volume_voids=static_cast<real_prec>(nvoids)/static_cast<real_prec>(this->params._NGRID()); // Volume in knots / Total volume
-
-
+*/
 //  File.write_array(this->params._Output_directory()+"CWC",this->CWClass);
 
 /*
@@ -1116,12 +977,16 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   */
 
 #ifdef _FULL_VERBOSE_
-  So.message_screen("Summary of T-web classification, Lambda threshold = ", this->params._lambdath());
+  So.message_screen("Summary of T-web classification");
   So.message_screen("Knots (%) =", volume_knots*100.0);
   So.message_screen("Filaments (%) =", volume_filaments*100.0);
   So.message_screen("Sheets (%) =", volume_sheets*100.);
   So.message_screen("Voids (%) =", volume_voids*100.0);
 #endif
+  this->knots_fraction=volume_knots*100.0;
+  this->filaments_fraction=volume_sheets*100.0;
+  this->sheets_fraction=volume_filaments*100.0;
+  this->voids_fraction=volume_voids*100.0;
 
 
 
@@ -1129,7 +994,6 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
 #ifndef _TEST_THRESHOLDS_RESIDUALS_
   int index= (this->step <=this->params._N_iterations_Kernel())  ?  this->step  : this->step - (this->params._N_iterations_Kernel())+1;
   string label_aux = this->step <= this->params._N_iterations_Kernel() ? "_iteration": "_realization";
-  
   string file_cwc=this->params._Output_directory()+"CWC"+label_aux+to_string(index)+".txt";
   ofstream fcwc; fcwc.open(file_cwc.c_str());
   So.message_screen("Writing CWC fractions in file", file_cwc);
@@ -1139,14 +1003,14 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
   fcwc<<static_cast<real_prec>(nvoids)*100./static_cast<real_prec>(this->params._NGRID())<<endl;
   fcwc.close();
   So.DONE();
-#endif
+#endif //* end for ifndef _TEST_THRESHOLDS_RESIDUALS_ *//
 
 
 #ifdef _FULL_VERBOSE_
   if(nrest>0)
     So.message_screen("Unclassified (%) =",static_cast<real_prec>(nrest)*100./static_cast<real_prec>(this->params._NGRID()));
 #endif
-#endif
+#endif //* end for _VERBOSE_
 
   // If we do not want to use the CWC but still use the infor from the knots, then
 #elif !defined _USE_CWC_
@@ -1160,19 +1024,12 @@ void Cwclass::do_CWC(vector<real_prec>&delta)
       this->CWClass[index]=I_KNOT;
   So.DONE();
 #endif
-#endif
+#endif  //* end for  #ifdef _USE_CWC_
 
 }
-
-
-
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
-
-
-void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_prec>&Vz)
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+void Cwclass::get_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_prec>&Vz)
 {
 #ifdef _FULL_VERBOSE_
     So.enter(__PRETTY_FUNCTION__);
@@ -1192,7 +1049,6 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
     }
 
 */
-
   this->lambda1_vs.resize(this->params._NGRID(),0);
   this->lambda2_vs.resize(this->params._NGRID(),0);
   this->lambda3_vs.resize(this->params._NGRID(),0);
@@ -1234,18 +1090,12 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
       this->Invariant_VS_I[index]=(NEWMAX_INV_SHEAR_I-NEWMIN_INV_SHEAR_I)*(this->Invariant_VS_I[index]-xmin)/(xmax-xmin)+NEWMIN_INV_SHEAR_I;
 }
 #endif
-
-
-
 #ifdef _USE_EXPONENT_INVARIANT_VS_I_
       File.write_array(this->params._Output_directory()+"INVARIANT_SHEAR_I", this->Invariant_VS_I);
 #else
       File.write_array(this->params._Output_directory()+"INVARIANT_SHEAR_I_original", this->Invariant_VS_I);
 #endif
-
 #endif
-
-
 #ifdef _USE_INVARIANT_SHEAR_VFIELD_II_
     So.message_screen("Invariant Shear Vfield II");
     this->Invariant_VS_II.resize(this->params._NGRID(),0);
@@ -1324,25 +1174,15 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
       File.write_array(this->params._Output_directory()+"INVARIANT_SHEAR_III_original", this->Invariant_VS_III);
 #endif
 #endif
-
-
-
-
-
 #ifdef _USE_CWC_V_
   this->CWClass_V.clear();
   this->CWClass_V.resize(this->params._NGRID(),0);
-
   ULONG nknots=0;
   ULONG nfilaments=0;
   ULONG nsheets=0;
   ULONG nvoids=0;
   ULONG nrest=0;
-
-
-
   So.message_screen("Extracting the Cosmic Web Classification:");
-
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:nknots,nfilaments,nsheets,nvoids,nrest)
 #endif
@@ -1413,25 +1253,13 @@ void Cwclass::do_CWC_V(vector<real_prec>&Vx,vector<real_prec>&Vy,vector<real_pre
   So.DONE();
 #endif
 #endif
-
 }
-
-
-
-
-
-
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 {
   /*
-    Routine taken from HADRON
+    Routine taken from HADRON and adapted to BAM by A. Balaguera
   */
 #ifdef _USE_OMP_
    int NTHREADS=_NTHREADS_;
@@ -1444,10 +1272,8 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   So.message_screen("Getting FoF from Knots");
   So.message_screen("mean number density =", Nmean);
 #endif
-
   vector<real_prec>rho(in.size(),0);
 
-  
   if(Nmean>0)  // If Nob is zero, then we are passing a density field. If not, convert delta to density with the value of Nobs passed
     {
 #ifdef _USE_OMP_
@@ -1482,13 +1308,14 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
   real_prec knotmass;
   real_prec MKrange_max = -1e38;  // Maximum  and Min of Mass of DM in knots. Mass here is number of DM particles in the super knot
   real_prec MKrange_min = +1e38; // These two variables are updated when knot masses are computed
-
+  
   for(ULONG i=0;i < this->params._NGRID(); ++i)
     {
       if(this->CWClass[i]==I_KNOT && rho[i]>0)  // If cell is classified as knot, proceed. This must be the classification of the REFERENCE density  field. The >0 indicates that there might be some cells classified as knots but empty
 	{
-	  if(this->SKNOT_M_info[i] == -1) // if has not been already used in the fof, proceed
+	  if(this->SKNOT_M_info[i] == -1) // if this cell has not been already used in the fof, proceed
 	    {
+	      
 	      knot[0]=i;            // The first cell classified as knot. knot is always inizialized like this for every cell
 	      this->SKNOT_M_info[i]=1;    //Mark the first knot as visited
 	      int n=1; // Starts from 1. It gets added 1 if one of the neighbour cells is a knot. Percolation.
@@ -1499,7 +1326,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
                     if( (this->CWClass[k]==I_KNOT && rho[k]>0) && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
 		      {
 			knot[n] = k;   
-			this->SKNOT_M_info[n] = 1; //mark this cell as already visited
+			this->SKNOT_M_info[k] = 1; //mark this cell as already visited
 			n++;
 			if(n >= KNOT_MAX_SIZE)
 			  So.message_error("Error: size of knots is larger than KNOT_MAX_SIZE, ", n);
@@ -1557,7 +1384,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 		}
 	      
 	      knotmass = 0;
-              for(int j = 0; j < n; j++) // Compute the mass of the SK by adding the mass of its n parts. Note that if n=1, i.e, only
+              for(int j = 0; j < n; j++) // Compute the mass of the SK by adding the mass of its n parts. 
 		knotmass += rho[knot[j]];
 
 	      for(int j = 0; j < n; j++) //Assign to all cells in this superknot the mass of the sp they are in.
@@ -1574,7 +1401,6 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 
  knot.clear();
  knot.shrink_to_fit();
-
 
 
 #ifdef _WRITE_MKNOTS_
@@ -1599,7 +1425,7 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 #ifndef _MODIFY_LIMITS_
   MKrange_max = MKMAX;
   MKrange_min = MKMIN;
-#ifdef FULL_VERBOSE
+#ifdef _FULL_VERBOSE_
   So.message_screen("log Used minimum Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_min+number_log));
   So.message_screen("log Used maximim Knot-mass (in units of log_10 Mass of DM particle) =", log10(MKrange_max+number_log));
   So.message_screen("");
@@ -1608,33 +1434,246 @@ void Cwclass::get_Mk_collapsing_regions(vector<real_prec>&in, real_prec Nmean)
 
 
   real_prec deltaMK= static_cast<real_prec>((log10(MKrange_max+number_log)-log10(MKrange_min+number_log))/static_cast<real_prec>(this->params._n_sknot_massbin()));
+
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
-  for(ULONG i = 0; i < this->params._NGRID(); i++)
+  for(ULONG i = 0; i < this->params._NGRID(); ++i)
     if(this->SKNOT_M_info[i] == -1) // If this cell was not used, exit
       this->SKNOT_M_info[i] = 0;
     else
      // Get the bin in Knot mass. At this point SKNOT_M_info[i] encodes the mass of the Super knot where this cell is included
      this->SKNOT_M_info[i] = get_bin(log10(SKNOT_M_info[i]+number_log),log10(MKrange_min+number_log), this->params._n_sknot_massbin(), deltaMK,true);
-
-
   So.DONE();
-
-
 }
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+void Cwclass::get_collapsing_regions(ULONG &Ntsk,vector<real_prec>&sk_index)
+{
+  
+  // If we are in _GET_REALIZATIONS_, the limits here must be fixed, since different realizations might have different min and max,
+  So.message_screen("Getting FoF from Knots");
+  
+  // Initialize to -1 to then identify whether a cell it is used or not
+  // This array will be finally used to allocate the bin in wehich a mass knot is found.
+  this->SKNOT_M_info.clear();
+  this->SKNOT_M_info.shrink_to_fit();
+  this->SKNOT_M_info.resize(this->params._NGRID(), -1);
+  
+  // This vector contains the number of grids-cells that belongs to a SKNOT. One expects
+  // KNOT_MAX_SIZE superknots
+  vector<ULONG>knot(KNOT_MAX_SIZE,0);  // id of cells in superknots
+  
+  int k;
+  int Nsk=0;// Number of super-knots identified
+  
+  for(ULONG i=0;i < this->params._NGRID(); ++i)
+    {
+      if(this->CWClass[i]>0)  // If cell is classified as knot, proceed. This must be the classification of the REFERENCE density  field. The >0 indicates that there might be some cells classified as knots but empty
+	{
+	  if(this->SKNOT_M_info[i] == -1) // if has not been already used in the fof, proceed
+	    {
+	      knot[0]=i;            // The first cell classified as knot. Container "knot" is always inizialized like this for every cell, if not yet visited (according to the if above)
+	      this->SKNOT_M_info[i]=1;    //Mark the the current cell as  visited
+	      int n=1; // n denotes the number of cells in SuperKnot. Starts from 1 as the current cells (if not visited before) has been identified as a knot. It gets added 1 if one of the neighbour cells is a knot. 
 
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
+	      for(int j=0;j<n;++j)  // j runs over the neighbour cells of the current one. The limit "n" is increased inside the "if" when a neighbour knot is found such that we keep on searching for more friends
+	   	{
+		  // The following lines are based on the decomposition I(i,j,k)=k+Nj+N²i
+		  // such that
+		  // I(i,j,k+-1) = I+-1
+		  // I(i,j+-1,k) = I+-N
+		  // I(i+-1,j,k) = I+-N²
+		  
+		  if( (k= knot[j]-1)>=0 && k < this->params._NGRID()) 		  // I(i,j,k-1) = I-1
+		    {
+		      if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+			{
+			  knot[n] = k;   
+			  this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+			  n++;
+			}
+		    }
+		  if( (k = knot[j] + 1) >= 0 && k < this->params._NGRID())  // I(i,j,k+1) = I+1
+		    {
+		      if( this->CWClass[k] >0 && this->SKNOT_M_info[k] == -1)
+			{
+			  knot[n] = k;
+			  this->SKNOT_M_info[k] = 1;
+			  n++;
+			}
+		    }
+		  if( (k = knot[j] - this->params._Nft()) >= 0 && k < this->params._NGRID())  // I(i,j-1,k) = I-N
+		    {
+		      if( this->CWClass[k]>0 && this->SKNOT_M_info[k] == -1)
+			{
+			  knot[n] = k;
+			  this->SKNOT_M_info[k] = 1;
+			  n++;
+			}
+		    }
+		  if( (k = knot[j] + this->params._Nft()) >= 0 && k < this->params._NGRID()) // I(i,j+1,k) = I+N
+		    {
+		      if(this->CWClass[k]>0 && this->SKNOT_M_info[k] == -1)
+			{
+			  knot[n] = k;
+			  this->SKNOT_M_info[k] = 1;
+			  n++;
+			}
+		    }
+		  if( (k = knot[j] - this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID()) // I(i-1,j,k) = I-N²
+		    {
+		      if( this->CWClass[k]>0 && this->SKNOT_M_info[k] == -1)
+			{
+			  knot[n] = k;
+			  this->SKNOT_M_info[k] = 1;
+			  n++;
+		      }
+		    }
+		  if( (k = knot[j] + this->params._Nft()*this->params._Nft()) >= 0 && k < this->params._NGRID()) // I(i+1,j,k) = I+N²
+		    {
+		      if( this->CWClass[k] >0 && this->SKNOT_M_info[k] == -1)
+			{
+			  knot[n] = k;
+			  this->SKNOT_M_info[k] = 1;
+			  n++;
+		      }
+		    }
+		}
+	      for(int j = 0; j < n; j++)
+		sk_index[knot[j]]=Nsk;// allocate the ID of supoerknot in which the cell lives, e.g., sk_index[211]=5155 means that the ID mesh 211 lives in teh superknot 5155, and 211=knot[j=45] measn that the 45th cell in the Sknot 5155 has ID 211 in the mesh
+	      Nsk++;
+	    }
+	}
+    }
+  
+  knot.clear();
+  knot.shrink_to_fit();
+  Ntsk=Nsk;
+  So.DONE();
+}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+void Cwclass::get_collapsing_regions(ULONG &Ntsk,vector<real_prec>&sk_index)
+{
+  
+  // If we are in _GET_REALIZATIONS_, the limits here must be fixed, since different realizations might have different min and max,
+  So.message_screen("Getting FoF from Knots");
+  
+  // Initialize to -1 to then identify whether a cell it is used or not
+  // This array will be finally used to allocate the bin in wehich a mass knot is found.
+  this->SKNOT_M_info.clear();
+  this->SKNOT_M_info.shrink_to_fit();
+  this->SKNOT_M_info.resize(this->params._NGRID(), -1);
+  
+  // This vector contains the number of grids-cells that belongs to a SKNOT. One expects
+  // KNOT_MAX_SIZE superknots
+  vector<ULONG>knot(KNOT_MAX_SIZE,0);  // id of cells in superknots
+  
+  int k;
+  int Nsk=0;// Number of super-knots identified
+  
+  for(ULONG ic=0;ic < this->params._Nft(); ++ic)
+    for(ULONG jc=0;jc < this->params._Nft(); ++jc)
+      for(ULONG kc=0;kc < this->params._Nft(); ++kc)
+	{
+	  
+	  ULONG i=index_3d(ic,jc,kc, this->params._Nft(), this->params._Nft());
+	  if(this->CWClass[i]>0)  // If cell is classified as knot, proceed. This must be the classification of the REFERENCE density  field. The >0 indicates that there might be some cells classified as knots but empty
+	    {
+	      if(this->SKNOT_M_info[i] == -1) // if has not been already used in the fof, proceed
+		{
+		  knot[0]=i;            // The first cell classified as knot. Container "knot" is always inizialized like this for every cell, if not yet visited (according to the if above)
+		  this->SKNOT_M_info[i]=1;    //Mark the the current cell as  visited
+		  int n=1; // n denotes the number of cells in SuperKnot. Starts from 1 as the current cells (if not visited before) has been identified as a knot. It gets added 1 if one of the neighbour cells is a knot. 
+		  int ni=1;
+		  int nj=1;
+		  int nk=1;
+		  
+		  for(ULONG ip=0;ip<ni;++ip)
+		    {
+		      ULONG ji=index_3d(ic+ip,jc,kc, this->params._Nft(), this->params._Nft());	      
+		      if( (k= knot[ji]-1)>=0 && k < this->params._NGRID())
+			{
+			  if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+			    {
+			      knot[ni] = k;   
+			      this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+			      ni++;
+			    }
+			}
+		      if( (k= knot[ji]+1)>=0 && k < this->params._NGRID())
+			{
+			  if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+			    {
+			      knot[ni] = k;   
+			      this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+			      ni++;
+			    }
+			}
+		      
+		      for(ULONG jp=0;ip<nj;++jp)
+			{
+			  ULONG jj=index_3d(ic+ip,jc+jp,kc, this->params._Nft(), this->params._Nft());	      
+			  if( (k= knot[jj]-1)>=0 && k < this->params._NGRID())
+			    {
+			      if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+				{
+				  knot[nj] = k;   
+				  this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+				  nj++;
+				}
+			    }
+			  if( (k= knot[jj]+1)>=0 && k < this->params._NGRID())
+			    {
+			      if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+				{
+				  knot[nj] = k;   
+				  this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+				  nj++;
+				}
+			    }
+			  for(ULONG kp=0;kp<nk;++kp)
+			    {
+			      ULONG jk=index_3d(ic+ip,jc+jp,kc+kp, this->params._Nft(), this->params._Nft());	      
+			      if( (k= knot[jk]-1)>=0 && k < this->params._NGRID())
+				{
+				  if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+				    {
+				      knot[nk] = k;   
+				      this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+				      nk++;
+				    }
+				}
+			      if( (k= knot[jk]+1)>=0 && k < this->params._NGRID())
+				{
+				  if( this->CWClass[k]>0 && this->SKNOT_M_info[k]== -1)   // If density is greater than zero and cell not yet used
+				    {
+				      knot[nk] = k;   
+				      this->SKNOT_M_info[k] = 1; //mark this cell as already visited
+				      nk++;
+				    }
+				}
+			    }  
+			}  
+		    }
+		  
+		  for(int j = 0; j < n; j++)
+		    sk_index[knot[j]]=Nsk;// allocate the ID of supoerknot in which the cell lives, e.g., sk_index[211]=5155 means that the ID mesh 211 lives in teh superknot 5155, and 211=knot[j=45] measn that the 45th cell in the Sknot 5155 has ID 211 in the mesh
+		  Nsk++;
+		}
+	    }
+	}
+  knot.clear();
+  knot.shrink_to_fit();
+  Ntsk=Nsk;
+  So.DONE();
+}
+*/
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 void Cwclass::get_SigmaVel_collapsing_regions(const vector<real_prec>&in, vector<real_prec>&Vx, vector<real_prec>&Vy,vector<real_prec>&Vz, real_prec Nmean)
 {
   /*
@@ -1877,16 +1916,9 @@ for(int i=0; i<this->params._NGRID();++i)
       else
         this->VDISP_KNOT_info[i] = 0;
     }
-
-
 }
-
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 // This function helps to asses whether a cell should be counted (true) or not (false)
 // according to the CW classification (member object) and the classifications
 // requested in the input parameter file.
@@ -1936,15 +1968,8 @@ bool Cwclass::get_cell_classified(int sua, ULONG ig)
   return res;
 }
 
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 /** 
  * @brief This function provides the index identifying the CWT classification
@@ -1952,7 +1977,7 @@ bool Cwclass::get_cell_classified(int sua, ULONG ig)
  * to the CWClass array
  */
 
-int Cwclass::get_Tclassification(int ig)
+int Cwclass::get_Tclassification(ULONG ig)
 {
 
   int ans=0;
@@ -2003,9 +2028,8 @@ int Cwclass::get_Tclassification(int ig)
   
   return ans;
 }
-
-
-//##################################################################################
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 /**
  * @brief This function provides the index identifying the CWT classification
@@ -2064,31 +2088,20 @@ int Cwclass::get_Vclassification(int ig)
 
   return ans;
 }
-
-
-//##################################################################################
-//##################################################################################
-
-
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type)
 {
-
   So.message_screen("Using Konvolve in Cwclass");
 #ifdef _USE_OMP_
   int NTHREADS=_NTHREADS_;
   omp_set_num_threads(NTHREADS);
 #endif
-
-
-
 #ifdef DOUBLE_PREC
   complex_prec *data_out= (complex_prec *)fftw_malloc(2*this->params._NGRID_h()*sizeof(real_prec));
 #else
   complex_prec *data_out= (complex_prec *)fftwf_malloc(2*this->params._NGRID_h()*sizeof(real_prec));
 #endif
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -2096,11 +2109,7 @@ void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type
     data_out[i][REAL]=0;
     data_out[i][IMAG]=0;
   }
-
   do_fftw_r2c(this->params._Nft(),in, data_out);
-
-
-
   double paux=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:paux)
@@ -2119,7 +2128,6 @@ void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type
 #else
   real_prec correction_factor = 1.00;
 #endif
-
   double we=0;
 #ifdef _USE_OMP_
 #pragma omp parallel for reduction(+:we)
@@ -2139,12 +2147,9 @@ void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type
 #endif
       data_out[ind][IMAG]*=cor;
     }
-
   do_fftw_c2r(this->params._Nft(), data_out, out);
-
   // Here I have to correct for the normalization of the kernel
   // for the function  do_fftw_c2r returns the transform normalized by the this->params._NGRID(), so I divide by this->params._NGRID() and by multiply by 2 we
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -2160,5 +2165,25 @@ void Cwclass::Konvolve(vector<real_prec> &in, vector<real_prec>&out, string type
 #else
   fftwf_free(data_out);
 #endif
-
+}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+void Cwclass::get_tidal_anisotropy(string input_file, string output_file){
+    vector<real_prec>delta(this->params._NGRID(),0);
+    this->File.read_array(input_file, delta);
+    for(ULONG i=0;i<delta.size();++i)
+    cout<<delta[i]<<endl;
+    get_overdens(delta,delta);
+    for(ULONG i=0;i<delta.size();++i)
+        delta[i]=tidal_anisotropy(this->lambda1[i],this->lambda2[i],this->lambda3[i]);
+    this->File.write_array(output_file, delta);
+}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+void Cwclass::get_tidal_anisotropy(vector<real_prec>&delta, string output_file){
+    get_overdens(delta,delta);
+    this->get_CWC(delta);
+    for(ULONG i=0;i<delta.size();++i)
+        delta[i]=tidal_anisotropy(this->lambda1[i],this->lambda2[i],this->lambda3[i]);
+    this->File.write_array(output_file, delta);
 }

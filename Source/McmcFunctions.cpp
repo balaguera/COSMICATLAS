@@ -1,9 +1,19 @@
-# include "../Headers/McmcFunctions.h"
-
-// ************************************************************************************
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * @class<McmcFunctions>
+ * @file McmcFunctions.cpp
+ * @brief Methods of the class McmcFunctions
+ * @details McmcFunctions Bayesian methods
+ * @author Andres Balaguera Antolinez 2007-2024
+ */
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# include "../headers/McmcFunctions.h"
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 real_prec maf(string mas, real_prec x){
   /*Mas assigment*/
-
   real_prec ans;
   real_prec daux;
   if(mas=="NGP")
@@ -30,20 +40,16 @@ real_prec maf(string mas, real_prec x){
   }
   return ans;
 }
-
-// ************************************************************************************
-// ************************************************************************************
-// ************************************************************************************
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 void McmcFunctions::read_parameters(string parameters_file, string code){
   ifstream fin_parameters (parameters_file.c_str());
   if (!fin_parameters)
    cerr <<"Error in opening the parameters file "<<parameters_file<<"!"<<endl; exit(1);
-
   gsl_rng_env_setup(); 
   gsl_rng_default_seed=this->seed; 
   this->T = gsl_rng_ranlux; 
   this->r = gsl_rng_alloc (T); 
-
   string line_in_file;
   string par_name;
   string equality;
@@ -55,9 +61,6 @@ void McmcFunctions::read_parameters(string parameters_file, string code){
   string par_value4;
   string par_value5;
   string par_value6;
-
-
-
   while (getline(fin_parameters,line_in_file)) {
     // The single values will start with a P in the parameter file
     if(line_in_file[0] != '#' && line_in_file.empty()==0 && line_in_file[0] =='P'){
@@ -161,20 +164,13 @@ void McmcFunctions::read_parameters(string parameters_file, string code){
       cout << "Fifth value of " << par_name << " not specified in " << parameters_file << endl;
       continue;
     }
-
-
     // read 6 parameter value
   line_string >> par_value6;
   if (par_value6.empty()) {
     cout << "Fifth value of " << par_name << " not specified in " << parameters_file << endl;
     continue;
   }
-
-
-
-
-      
-      // Now get the numbers 
+    // Now get the numbers 
     for(int i=0;i<this->n_parameters;i++){
       string parname = "par"+to_string(i);
       if(par_name==parname){
@@ -185,25 +181,17 @@ void McmcFunctions::read_parameters(string parameters_file, string code){
         this->error_fixed_parameters.push_back(atof(par_value4.c_str()));
         this->parameters_max_2dplot.push_back(atof(par_value5.c_str()));
         this->parameters_min_2dplot.push_back(atof(par_value6.c_str()));
-
       }
     }
-
-
     // If no min and max specified for plots, use the initial min and max values
     if (par_value5.empty()){
         for(int i=0;i<this->n_parameters;++i)this->parameters_max_2dplot.push_back(this->parameters_max[i]);
         continue;
     }
-
     if (par_value6.empty()){
         for(int i=0;i<this->n_parameters;++i)this->parameters_min_2dplot.push_back(this->parameters_min[i]);
         continue;
     }
-
-
-
-
     }
     
   }
@@ -212,37 +200,24 @@ void McmcFunctions::read_parameters(string parameters_file, string code){
   for(int i=0;i<this->n_parameters;i++)
     if(this->fixed_parameters[i]!=0)
         this->parameters_ini[i]=this->parameters_min[i]+(this->parameters_max[i]-this->parameters_min[i])*gsl_rng_uniform(this->r);
-
-  // Ammend name of output chains
-  
+  // Append name of output chains
   string dir_out = this->output_dir;
-
-
  // if(code!="run" || code!="analyze")cout<<RED<<"PLEASE PROVIDE A VALID OPTION, run or analize"<<RESET<<endl;
-
   if(code=="run"){
   cout<<RED<<"WARNING: creation of output file commented in McmcFunctions.cpp"<<RESET<<endl;
-
   if(this->analytic_marginalization_wrt_amplitude)this->file_oo = "acc_par_"+this->experiment+"_"+this->observable+"_"+this->model+"_"+this->sampling+"_amp_marg_chain"+to_string(this->chain)+".txt";
   else this->file_oo = "acc_par_"+this->experiment+"_"+this->observable+"_"+this->model+"_"+this->sampling+"_chain"+to_string(this->chain)+".txt";
-
   this->output_file = dir_out+this->file_oo;
-
   this->lpout.open(output_file.c_str());
   this->lpout.precision(12);
   this->lpout.setf(ios::showpoint);
   this->lpout.setf(ios::scientific);  
   }
-
   this->nchains=this->chain_fin-this->chain_ini+1;
-
- 
- 
 }
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
-// ************************************************************************************
-// ************************************************************************************
-// ************************************************************************************
 void McmcFunctions::set_mcmc_read_vectors(){
 
   cout<<BLUE<<"Defining space for accepted models"<<RESET<<endl;
@@ -1451,48 +1426,17 @@ void McmcFunctions::posterior2d(string tdpost, string CR,vector<real_prec>  &wei
 // This does the same as pòsterior2d,  taking the 2d historgram as input.
 // The histogram is expected to be normalized to its maximum
 void McmcFunctions::get_contour_levels(string CR,vector<vector<real_prec> > &poster){
-  /*
-    BEING
-    D= DATA
-    X= MODEL
-    THIS ROUTINE  COMPUTES THE POSTERIOR DISTRIBUTION OF THE PARAMETERS X GIVEN A DATA D , P(X|D).
-    FROM BAYES THEOREM, P(X|D)=P(D|X)P(X)/P(D)
-    WHERE
-    P(D|X)=THE LIKELIHOOD, THE PROBABILITY OF MEASURE A DATA SET {D} GIVEN A SET OF PARAMETERS {X}. (FORWARD MODELING)
-    P(X|D)=IS THE POSTERIOR PROBABILITY OF THE PARAMETERS,  THE PROBABILITY THAT THE PARAMETERS OF A MODEL X TAKE CERTAIN VALUES AFTER DOING THE EXPERIMENT D.
-    THIS LAST QUANTITY IS WHAT WE WANT TO DETERMINE WITH THE MARKOV CHAINS
-    P(X)  = PRIOR, THE DEGREE OF KNOWLEDGE OF THE PARAMETERS PRIOR TO THE EXPERIMENT, eG., TAKEN FROM OTHER EXPERIMENT
-    P(D)  = EVIDENCE, PLAYING THE ROLE OF NORMALIZATION AND ONLY USEFUL IN MODDEL SELECTION ANALYSIS.
-    BAYES' THEOREM -> THE PRIOR IS UPDATED BY THE LIKELIHOOD TO OBTAIN THE POSTERIOR, NORMALIZED BY THE EVIDENCE.
-
-    The Metropolis-Hasting algorithm used assumes a Gaussian Likelihood
-    which, while being evaluated within the boundaries defined by the prior, gives a sampling of the posterior
-    distribution
-
-
-    Given the accpeted models acc_alp, this return the 2d histogram in the array posterior[][], e.g,
-    the two dimensional posterior distribution marginalzed over the rest of the parameters.
-
+  /*    Given the posterior or a 2D hisgoram normaized to its maximim, this gives the height for differnet confidence intervales
   */
-
-  //Re-define the range to compute the posterior
-  // this->parameters_max[1]=0.27;
-  // this->parameters_min[1]=0.235 ;
-  // this->parameters_max[2]=0.80;
-  // this->parameters_min[2]=0.745;
-
+  
   this->So.message_screen("Building probability contours and writing to files");
-
+  this->nbin_2D=poster.size();
   real_prec poster_all;
   int nll  = 100;  /*Divide the interval of posterior [0,1] in this number of bins*/
   real_prec min_log_posterior = -10;  // El valor minimo de la posterior será siempre cero, Acá coloco un log 0 = -5 para andar
-  
   real_prec max_log_posterior = 0.0; // La posterior esta normalizada,
   real_prec delta_log_posterior = (max_log_posterior-min_log_posterior)/static_cast<real_prec>(nll);
-  
   int np=2; // Number of parameters, so far I have only two for this is mainly used for the delta delta scatter plot
-  
-  this->nbin_2D=poster.size();
   
   // Vector containing the heights for the posterior
   vector<real_prec>sigmalevel;
@@ -1505,140 +1449,277 @@ void McmcFunctions::get_contour_levels(string CR,vector<vector<real_prec> > &pos
 
   /*Define Vectors: Do not forget to initialize them when used within loops*/
   vector<real_prec>com(nll);
-
+  
   vector<vector<vector<real_prec> > > las;
   las.resize(nll);
-
-
-  for (int i = 0; i<nll;++i) {
-    las[i].resize(this->nbin_2D);
-    for (int j=0;j<this->nbin_2D;++j)las[i][j].resize(this->nbin_2D);
-  }
-  for(int i=0;i<nll;++i)for(int j=0;j<this->nbin_2D;++j)for(int k=0;k<this->nbin_2D;k++)las[i][j][k]=0;
   
+  for (int i = 0; i<nll;++i)
+  {
+    las[i].resize(this->nbin_2D);
+    for (int j=0;j<this->nbin_2D;++j)
+      las[i][j].resize(this->nbin_2D);
+  }
+  for(int i=0;i<nll;++i)
+    for(int j=0;j<this->nbin_2D;++j)
+      for(int k=0;k<this->nbin_2D;k++)
+        las[i][j][k]=0;
   
   vector<real_prec> nppi(nll,0); /*Number of bins that contribute to the nll-th bin of posterior */
   vector<real_prec> cs(nll,0);   /*Create a vector if dimension nll: each element denotes the cumulative enclosed volume */
   vector<int> lsl(7,0);       /*Used to allocate number if bin in posterior at which the enclosed volume is a fraction of that given by different sigmas*/
   vector<real_prec> sf(7,0);     /*Use to allocate heights of posterior for different sigmas*/
-
   
-
-  
-
-  
- 
-  
-  /* ==========================================================================================================================================
-     Compute the 2d posterior probability  distribution by assigning the accepted models to a grid using a Triangular
-     shape cloud mass asssignement scheme and unsing the weights.
-     ================================================*/
-  
+    
   for(int ip=0;ip<np;ip++)
     {                                 /*Loops over the parameters*/
-    for(int jp=0;jp<np;jp++)
-      {
-	/*
-	  Estimates of the levels defining confidence regions
-	*/
-	
-	poster_all=0;
-	for(int i=0;i<this->nbin_2D;++i)for(int j=0;j<this->nbin_2D;++j)poster_all+=poster[i][j];      /*total volumen  enclosed by the 2d de posterior*/
-	
-	fill(com.begin(), com.end(), 0);
-	fill(nppi.begin(), nppi.end(), 1); // Initialize it with 1
-	
-	for(int li=0;li<nll;++li)
+      for(int jp=0;jp<np;jp++)
+	{
+	  /*
+	    Estimates of the levels defining confidence regions
+	  */
+	  
+	  poster_all=0;
 	  for(int i=0;i<this->nbin_2D;++i)
-	    for(int j=0;j<this->nbin_2D;++j)las[li][i][j]=0;
-	
-	
-	for(int i=0;i<this->nbin_2D;++i)
-	  {                                                    /*Loop over bins of parameter 1*/
 	    for(int j=0;j<this->nbin_2D;++j)
-	      {
-                real_prec lpost = log10(poster[i][j]);
-		
-		if(lpost >= min_log_posterior && lpost<=max_log_posterior)
-		  {
-		    /*Loop over bins of parameter 2*/
-		    int li = floor((lpost-min_log_posterior)/delta_log_posterior);    // get bin in the posterior
-		    if (li==nll) li--;
-                    las[li][i][j]=static_cast<real_prec>(poster[i][j]);                                            /*fill tensor las[][][]*/
-		    nppi[li]++;      /*Compute the number of cells that contribute to this posterior*/
-		    com[li]+=poster[i][j];   /*Compute the volume enclosed by the posterior within this specific bin i-j*/
-		  }		                                                         	    
-	      }
-	  }
-	
-	
-        fill(cs.begin(), cs.end(), 0);
-        for(int li=0;li<nll;li++)
-	  for(int lj=0;lj<=li;++lj)
-	    cs[li]+=com[lj];  /*In each bin of posterior, compute the cumulative volume enclosed until that bin*/
-	
-	for(int sl=0;sl<sigmalevel.size();sl++)
-	  lsl[sl]=0;
-	
-        for(int sl=0;sl<sigmalevel.size();sl++) /*Loop over the values defining the confidence regions*/
-	  {                           
-	    for(int li=0;li<nll;li++)
-	      {   /*Loop over the bins in posterior: find the bin (for each sigma)*/                                                                   
-		/* at which the enclosed*/
-		if( (1.0-sigmalevel[sl])*poster_all>=cs[li]  && (1.0-sigmalevel[sl])*poster_all<cs[li+1]){     /*volume corresponds to a fraction (1-sigmalevel) of the total*/
-		  lsl[sl]=li;                                                                                  /*enclosed volume poster_all. The term (1-sigmalevel) means that*/
-		}                                                                                              /*we are staring from below upwards and once the bin is found, a fraction*/
-	      }                                                                                                /*sigmalevel remains above that bin*/
-	  }
-	
-        // ***********************************************************************************************
-        // Computing the height in posterior defining cofidence regions:
-        // for each sigma, compute the average posterior at the
-        // corresponding bin lsl[sl] found in the previus step: that is, compute the sum of the posterior
-        // read from the tensor las[lsls[sl]][i][j] divided by the number
-        // of parameter_cells that contributed to that particular bin of posterior nppi[lsl[sl]]
-        // ***********************************************************************************************
-
-
-        fill(sf.begin(), sf.end(), 0);
-        for(int sl=0;sl<sigmalevel.size();sl++)// loop sobre los distintos valores de sigma que queremos escribir
-	  {
-	    int index=lsl[sl];
-	    int number = nppi[index] == 0 ? 1: nppi[index];
+	      poster_all+=poster[i][j];      /*total volumen  enclosed by the 2d de posterior*/
+	  
+	  fill(com.begin(), com.end(), 0);
+	  fill(nppi.begin(), nppi.end(), 1); // Initialize it with 1
+	  
+	  for(int li=0;li<nll;++li)
 	    for(int i=0;i<this->nbin_2D;++i)
+	      for(int j=0;j<this->nbin_2D;++j)las[li][i][j]=0;
+	  
+	  
+	  for(int i=0;i<this->nbin_2D;++i)
+	    {                                                    /*Loop over bins of parameter 1*/
 	      for(int j=0;j<this->nbin_2D;++j)
-                sf[sl]+=las[index][i][j]/static_cast<real_prec>(number);
-	  }
-        /*  Output of height of normalized posterior distribution defining different confidence regions
-            One line, six columns. A file for every pair of parameters*/
-	
-	if(ip<jp)
-	  {
-	    ofstream kout;
-	    string nCR=CR+"_"+to_string(ip)+"_"+to_string(jp)+".txt";
-	    kout.open(nCR.c_str());
-	    kout.precision(12);
-	    kout.setf(ios::showpoint);
-	    kout.setf(ios::scientific);
-	    
-	    for(int sl=0;sl<sigmalevel.size();sl++)kout<<sf[sl]<<"\t"; kout<<"\t"<<endl;
-	    So.message_screen("Wrote CR in file", nCR);
-	    kout.close();
-	  }
+		{
+		  real_prec lpost = log10(poster[i][j]);
+		  if(lpost >= min_log_posterior && lpost<=max_log_posterior)
+		    {
+		      /*Loop over bins of parameter 2*/
+		      int li = floor((lpost-min_log_posterior)/delta_log_posterior);    // get bin in the posterior
+		      if (li==nll) li--;
+		      las[li][i][j]=static_cast<real_prec>(poster[i][j]);                                            /*fill tensor las[][][]*/
+		      nppi[li]++;      /*Compute the number of cells that contribute to this posterior*/
+		      com[li]+=poster[i][j];   /*Compute the volume enclosed by the posterior within this specific bin i-j*/
+		    }		                                                         	    
+		}
+	    }
+	  
+	  
+	  fill(cs.begin(), cs.end(), 0);
+	  for(int li=0;li<nll;li++)
+	    for(int lj=0;lj<=li;++lj)
+	      cs[li]+=com[lj];  /*In each bin of posterior, compute the cumulative volume enclosed until that bin*/
+	  
+	  for(int sl=0;sl<sigmalevel.size();sl++)
+	    lsl[sl]=0;
+	  
+	  for(int sl=0;sl<sigmalevel.size();sl++) /*Loop over the values defining the confidence regions*/
+	    {                           
+	      for(int li=0;li<nll;li++)
+		{   /*Loop over the bins in posterior: find the bin (for each sigma)*/                                                                   
+		  /* at which the enclosed*/
+		  if( (1.0-sigmalevel[sl])*poster_all>=cs[li]  && (1.0-sigmalevel[sl])*poster_all<cs[li+1]){     /*volume corresponds to a fraction (1-sigmalevel) of the total*/
+		    lsl[sl]=li;                                                                                  /*enclosed volume poster_all. The term (1-sigmalevel) means that*/
+		  }                                                                                              /*we are staring from below upwards and once the bin is found, a fraction*/
+		}                                                                                                /*sigmalevel remains above that bin*/
+	    }
+	  
+	  // ***********************************************************************************************
+	  // Computing the height in posterior defining cofidence regions:
+	  // for each sigma, compute the average posterior at the
+	  // corresponding bin lsl[sl] found in the previus step: that is, compute the sum of the posterior
+	  // read from the tensor las[lsls[sl]][i][j] divided by the number
+	  // of parameter_cells that contributed to that particular bin of posterior nppi[lsl[sl]]
+	  // ***********************************************************************************************
+	  
+	  
+	  fill(sf.begin(), sf.end(), 0);
+	  for(int sl=0;sl<sigmalevel.size();sl++)// loop sobre los distintos valores de sigma que queremos escribir
+	    {
+	      int index=lsl[sl];
+	      int number = nppi[index] == 0 ? 1: nppi[index];
+	      for(int i=0;i<this->nbin_2D;++i)
+		for(int j=0;j<this->nbin_2D;++j)
+		  sf[sl]+=las[index][i][j]/static_cast<real_prec>(number);
+	    }
+	  /*  Output of height of normalized posterior distribution defining different confidence regions
+	      One line, six columns. A file for every pair of parameters*/
+	  
+	  if(ip<jp)
+	    {
+	      ofstream kout;
+	      string nCR=CR+"_"+to_string(ip)+"_"+to_string(jp)+".txt";
+	      kout.open(nCR.c_str());
+	      kout.precision(12);
+	      kout.setf(ios::showpoint);
+	      kout.setf(ios::scientific);
+	      
+	      for(int sl=0;sl<sigmalevel.size();sl++)kout<<sf[sl]<<"\t"; kout<<"\t"<<endl;
+	      So.message_screen("Wrote CR in file", nCR);
+	      kout.close();
+	    }
+	}
     }
-   }
-
+  
   //  std:: cout<<GREEN<<"Posterior distributions succesfully written!"<<RESET<<std::endl;
   return;
 }
-
 // ********************************************************************************************
 // ********************************************************************************************
 // ********************************************************************************************
 
+void McmcFunctions::get_contour_levels(string CR,ULONG Nbins, vector<real_prec> &poster){
+  /*    Given the posterior or a 2D hisgoram normaized to its maximim, this gives the height for differnet confidence intervales
+  */
+  
+  this->So.message_screen("Building probability contours and writing to files");
+  this->nbin_2D=Nbins;
+  real_prec poster_all;
+  int nll  = 100;  /*Divide the interval of posterior [0,1] in this number of bins*/
+  real_prec min_log_posterior = -10;  // El valor minimo de la posterior será siempre cero, Acá coloco un log 0 = -5 para andar
+  real_prec max_log_posterior = 0.0; // La posterior esta normalizada,
+  real_prec delta_log_posterior = (max_log_posterior-min_log_posterior)/static_cast<real_prec>(nll);
+  int np=2; // Number of parameters, so far I have only two for this is mainly used for the delta delta scatter plot
+  
+  // Vector containing the heights for the posterior
+  vector<real_prec>sigmalevel;
+  sigmalevel.push_back(0.683);
+  sigmalevel.push_back(0.90);
+  sigmalevel.push_back(0.954);
+  sigmalevel.push_back(0.9900);
+  sigmalevel.push_back(0.9973);
+  sigmalevel.push_back(0.9999);
+
+  /*Define Vectors: Do not forget to initialize them when used within loops*/
+  vector<real_prec>com(nll);
+  
+  vector<vector<vector<real_prec> > > las;
+  las.resize(nll);
+  
+  for (int i = 0; i<nll;++i)
+  {
+    las[i].resize(this->nbin_2D);
+    for (int j=0;j<this->nbin_2D;++j)
+      las[i][j].resize(this->nbin_2D);
+  }
+  for(int i=0;i<nll;++i)
+    for(int j=0;j<this->nbin_2D;++j)
+      for(int k=0;k<this->nbin_2D;k++)
+        las[i][j][k]=0;
+  
+  vector<real_prec> nppi(nll,0); /*Number of bins that contribute to the nll-th bin of posterior */
+  vector<real_prec> cs(nll,0);   /*Create a vector if dimension nll: each element denotes the cumulative enclosed volume */
+  vector<int> lsl(7,0);       /*Used to allocate number if bin in posterior at which the enclosed volume is a fraction of that given by different sigmas*/
+  vector<real_prec> sf(7,0);     /*Use to allocate heights of posterior for different sigmas*/
+  
+    
+  for(int ip=0;ip<np;ip++)
+    {                                 /*Loops over the parameters*/
+      for(int jp=0;jp<np;jp++)
+  {
+    /*
+      Estimates of the levels defining confidence regions
+    */
+    
+    poster_all=0;
+    for(int i=0;i<this->nbin_2D;++i)
+      for(int j=0;j<this->nbin_2D;++j)
+        poster_all+=poster[index_2d(i,j,Nbins)];      /*total volumen  enclosed by the 2d de posterior*/
+    
+    fill(com.begin(), com.end(), 0);
+    fill(nppi.begin(), nppi.end(), 1); // Initialize it with 1
+    
+    for(int li=0;li<nll;++li)
+      for(int i=0;i<this->nbin_2D;++i)
+        for(int j=0;j<this->nbin_2D;++j)las[li][i][j]=0;
+    
+    
+    for(int i=0;i<this->nbin_2D;++i)
+      {                                                    /*Loop over bins of parameter 1*/
+        for(int j=0;j<this->nbin_2D;++j)
+    {
+      real_prec lpost = log10(poster[index_2d(i,j,Nbins)]);
+      if(lpost >= min_log_posterior && lpost<=max_log_posterior)
+        {
+          /*Loop over bins of parameter 2*/
+          int li = floor((lpost-min_log_posterior)/delta_log_posterior);    // get bin in the posterior
+          if (li==nll) li--;
+          las[li][i][j]=static_cast<real_prec>(poster[index_2d(i,j,Nbins)]);                                            /*fill tensor las[][][]*/
+          nppi[li]++;      /*Compute the number of cells that contribute to this posterior*/
+          com[li]+=poster[index_2d(i,j,Nbins)];   /*Compute the volume enclosed by the posterior within this specific bin i-j*/
+        }                                                                 
+    }
+      }
+    
+    
+    fill(cs.begin(), cs.end(), 0);
+    for(int li=0;li<nll;li++)
+      for(int lj=0;lj<=li;++lj)
+        cs[li]+=com[lj];  /*In each bin of posterior, compute the cumulative volume enclosed until that bin*/
+    
+    for(int sl=0;sl<sigmalevel.size();sl++)
+      lsl[sl]=0;
+    
+    for(int sl=0;sl<sigmalevel.size();sl++) /*Loop over the values defining the confidence regions*/
+      {                           
+        for(int li=0;li<nll;li++)
+    {   /*Loop over the bins in posterior: find the bin (for each sigma)*/                                                                   
+      /* at which the enclosed*/
+      if( (1.0-sigmalevel[sl])*poster_all>=cs[li]  && (1.0-sigmalevel[sl])*poster_all<cs[li+1]){     /*volume corresponds to a fraction (1-sigmalevel) of the total*/
+        lsl[sl]=li;                                                                                  /*enclosed volume poster_all. The term (1-sigmalevel) means that*/
+      }                                                                                              /*we are staring from below upwards and once the bin is found, a fraction*/
+    }                                                                                                /*sigmalevel remains above that bin*/
+      }
+    
+    // ***********************************************************************************************
+    // Computing the height in posterior defining cofidence regions:
+    // for each sigma, compute the average posterior at the
+    // corresponding bin lsl[sl] found in the previus step: that is, compute the sum of the posterior
+    // read from the tensor las[lsls[sl]][i][j] divided by the number
+    // of parameter_cells that contributed to that particular bin of posterior nppi[lsl[sl]]
+    // ***********************************************************************************************
+    
+    
+    fill(sf.begin(), sf.end(), 0);
+    for(int sl=0;sl<sigmalevel.size();sl++)// loop sobre los distintos valores de sigma que queremos escribir
+      {
+        int index=lsl[sl];
+        int number = nppi[index] == 0 ? 1: nppi[index];
+        for(int i=0;i<this->nbin_2D;++i)
+    for(int j=0;j<this->nbin_2D;++j)
+      sf[sl]+=las[index][i][j]/static_cast<real_prec>(number);
+      }
+    /*  Output of height of normalized posterior distribution defining different confidence regions
+        One line, six columns. A file for every pair of parameters*/
+    
+    if(ip<jp)
+      {
+        ofstream kout;
+        string nCR=CR+"_"+to_string(ip)+"_"+to_string(jp)+".txt";
+        kout.open(nCR.c_str());
+        kout.precision(12);
+        kout.setf(ios::showpoint);
+        kout.setf(ios::scientific);
+        
+        for(int sl=0;sl<sigmalevel.size();sl++)kout<<sf[sl]<<"\t"; kout<<"\t"<<endl;
+        So.message_screen("Wrote CR in file", nCR);
+        kout.close();
+      }
+  }
+    }
+  
+  //  std:: cout<<GREEN<<"Posterior distributions succesfully written!"<<RESET<<std::endl;
+  return;
+}
 // ********************************************************************************************
 // ********************************************************************************************
 // ********************************************************************************************
+
+
 
 //NOTE: MAYBE WE CAN PUT HERE THE 1D DISTRIBUTION AND LET THE FUNCTION ABOVE ONLY FOR THE percentiles
 void McmcFunctions::posterior2d_combined_experiments(string fname_mean, string fname_pdf, string tdpost, string CR, experiments experiments){
@@ -2413,7 +2494,7 @@ real_prec McmcFunctions::chi_squared_distance_priors(){
 // ************************************************************************* *
 
 void McmcFunctions::distance_priors_cmb_model(int I, int J, s_CosmologicalParameters *scp){
-  Cosmology CF;
+  Cosmology CF(*scp);
   this->priors_model.resize(this->n_priors,0);
   /*Distance priors from Komatsu et al. 2010 (CMB)*/
   /*Calculamos z_dec segun Hu & Sujiyama, ver Komatsu et al. 2007 WMAP5 eq 65 */
@@ -2421,11 +2502,9 @@ void McmcFunctions::distance_priors_cmb_model(int I, int J, s_CosmologicalParame
   real_prec omega_m  = (scp->Om_matter)*pow(scp->hubble,2);
 
   // Baryon drag epoch:
-  real_prec z_drag_a  = 0.0783*pow(omega_b,(real_prec)-0.238)/(1.+39.5*pow(omega_b,(real_prec)0.763));
-  real_prec z_drag_b  = 0.560/(1+21.1*pow(omega_b,(real_prec)1.81));
-  real_prec z_drag    = 1048.0*(1.+0.00124*pow(omega_b,(real_prec)-0.738))*(1.+z_drag_a*pow(omega_m,(real_prec)z_drag_b));
-  real_prec da_zd  = CF.proper_angular_diameter_distance(z_drag, (void *)scp);
-  real_prec rsound = CF.comoving_sound_horizon(z_drag,(void *)scp);
+  real_prec z_drag = CF.drag_redshift(); 
+  real_prec da_zd  = CF.proper_angular_diameter_distance(z_drag);
+  real_prec rsound = CF.comoving_sound_horizon(z_drag);
   real_prec R      = (1+z_drag)*da_zd*sqrt(scp->Om_matter)*scp->Hubble/Constants::speed_light;
   real_prec lA     = (1+z_drag)*da_zd*M_PI/rsound;
 
@@ -2461,7 +2540,7 @@ void McmcFunctions::distance_priors_cmb_model(int I, int J, s_CosmologicalParame
     this->priors_model[1] =  z_drag;
     this->priors_model[2] =  lA;
     this->priors_model[3] =  R;
-    this->priors_model[4] =  (1+Constants::z_mean_sdss)*this->Cf.proper_angular_diameter_distance(Constants::z_mean_sdss, (void *)&scp)*pow(0.01*this->Cf.Hubble_function(Constants::z_mean_sdss, (void *)&scp),0.8);
+    this->priors_model[4] =  (1+Constants::z_mean_sdss)*this->Cf.proper_angular_diameter_distance(Constants::z_mean_sdss)*pow(0.01*this->Cf.Hubble_function(Constants::z_mean_sdss),0.8);
   }
 
   

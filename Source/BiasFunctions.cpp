@@ -1,28 +1,20 @@
-# include "../Headers/NumericalMethods.h"
-# include "../Headers/BiasFunctions.h"
-# include "../Headers/CosmologicalFunctions.h"
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/** @file BiasFunctions.cpp
+ *  @brief BiasFunctions 
+ *  @author: Andrés Balaguera-Antolínez
+ */
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+# include "BiasFunctions.h"
 using namespace std;
-
-
-// **********************************************************************************
-// **********************************************************************************
-
-
-
-
-
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 real_prec MASS_BIAS_FUNCTIONS::mass_function(real_prec nu, real_prec z, void *p){
   /*A esto llamo la cantidad nu*f(nu)*/
-  
-
-  Cosmology cf;
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)p;
-
-
+  Cosmology cf(*s_cp);
   string mb=s_cp->mass_function_fit;
-
-
   gsl_real A_par[10]={0};
   gsl_real a_par[10]={0};
   gsl_real b_par[10]={0};
@@ -83,7 +75,7 @@ real_prec MASS_BIAS_FUNCTIONS::mass_function(real_prec nu, real_prec z, void *p)
   c_par[8]=2.24;
   c_par[9]=2.44;
   
-  gsl_real deltac = cf.critical_density(z,s_cp);
+  gsl_real deltac = cf.critical_overdensity(z);
 
   real_prec q,pp,AA;
   real_prec a,b,c;
@@ -134,12 +126,14 @@ real_prec MASS_BIAS_FUNCTIONS::dm_h_bias(real_prec z, real_prec nu, void *s_p){
   real_prec y,a,b,c,A,B,C;
 
   struct s_CosmologicalParameters * s_cp= (struct s_CosmologicalParameters *)s_p;
-  Cosmology cf;
+  Cosmology cf(*s_cp);
   string mb=s_cp->halo_mass_bias_fit;
 
-  real_prec deltac = cf.critical_density(z,s_cp);
+  real_prec n_nu=sqrt(nu);
 
-  real_prec dcontrast=cf.density_contrast_top_hat(z,s_cp);
+  real_prec deltac = cf.critical_overdensity(z);
+
+  real_prec dcontrast=s_cp->Delta_SO;//    cf.density_contrast_top_hat(z,s_cp);
   real_prec ans=0;
   if(mb=="Peak_Background")ans= nu/(deltac);
   if(mb=="Mo_White")ans= 1.+(0.75*nu-1)/(deltac); 
@@ -150,16 +144,16 @@ real_prec MASS_BIAS_FUNCTIONS::dm_h_bias(real_prec z, real_prec nu, void *s_p){
     c=0.80; //valores de Tinker 2005 0.80 ; valor original Sheth-Tormen 0.6
     ans= 1.+(1./((deltac)*sqrt(a)))*(sqrt(a)*(a*nu)+b*sqrt(a)*pow(a*nu,1.-c)-pow(a*nu,c)/(pow(a*nu,c)+b*(1.-c)*(1.-0.5*c)));
   }
-  if(mb=="Tinker")
+  if(mb=="Tinker") //https://arxiv.org/pdf/1001.3162.pdf
   {
     y=log10(dcontrast); 
     A=1.0+0.24*y*exp(-pow(4./y,4));
     a=0.44*y-0.88;
     B=0.183;
     b=1.5;
-    C=0.019+0.107*y+0.19*exp(-pow(4./y,4));
+    C=0.019 + 0.107*y + 0.19*exp(-pow(4./y,4));
     c=2.4;
-    ans= 1.0-A*(pow(sqrt(nu),(real_prec)a)/(pow(sqrt(nu),(real_prec)a)+pow((real_prec)(deltac),(real_prec)a)))+B*pow((real_prec)sqrt(nu),(real_prec)b)+C*pow((real_prec)sqrt(nu),(real_prec)c);
+    ans= 1.0-A*pow(n_nu,a)/(pow(n_nu,a)+pow(deltac,a)) +  B*pow(n_nu,b) + C*pow(n_nu,c);
   }
   
   if(mb=="Pillepich")

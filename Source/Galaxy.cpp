@@ -1,35 +1,21 @@
-#include "../Headers/Galaxy.h"
-#include "../Headers/cosmo_parameters.h"
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** @class<Galaxy>
+ *  @file Galaxy.cpp
+ *  @brief Methods of the class Galaxy
+ *  @details Reads and administrates input parameters
+ *  @author Andrés Balaguera-Antolínez,
+ *  @date 2007-2024
+ */
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "../headers/Galaxy.h"
 #define EPSILON_MK 1.0
 
 //#define _USE_PDF_PHOT2SPEC_   //tjis is to speed up the code, ut has to be given in accordance to parameter file
-#undef _USE_PDF_PHOT2SPEC_   //tjis is to speed up the code, ut has to be given in accordance to parameter file
+#undef _USE_PDF_PHOT2SPEC_   //this is to speed up the code, ut has to be given in accordance to parameter file
 
-// ######################################################################
-// ######################################################################
-void gal2equ(double b, double l, double *ra, double *dec){
-  double alpha_p=fac*192.859508;                        /*Right ascention of galactic north pole in radians*/
-  double delta_p=fac*27.128336;                         /*Declination of galactic north pole in radians*/
-  double l_n   =fac*122.932;                           /*Galactic longitude of the celestial pole, in radians*/
-  double delta=sin(b*fac)*sin(delta_p)+cos(b*fac)*cos(delta_p)*cos(fac*l-l_n);
-  *dec=asin(delta);
-  double alpha1=sin(fac*l-l_n);
-  double alpha2=cos(fac*l-l_n)*sin(delta_p)-tan(fac*b)*cos(delta_p);
-  *ra=atan2(alpha1, alpha2)+12.25;
-}
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::read_pars(string &file){
 
   cout<<CYAN<<endl;
@@ -156,22 +142,22 @@ void GALAXY::read_pars(string &file){
 
       else if (par_name == "N_bin_z")N_bin_z = atoi(par_value.c_str());
       else if (par_name == "N_bin_z_low_res")N_bin_z_low_res = atoi(par_value.c_str());
-      else if (par_name == "z_min")z_min = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "z_max")z_max = static_cast<double>(atof(par_value.c_str()));
+      else if (par_name == "z_min")z_min = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "z_max")z_max = static_cast<real_prec>(atof(par_value.c_str()));
       
-      else if (par_name == "z_min_low_res")z_min_low_res = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "z_max_low_res")z_max_low_res = static_cast<double>(atof(par_value.c_str()));
+      else if (par_name == "z_min_low_res")z_min_low_res = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "z_max_low_res")z_max_low_res = static_cast<real_prec>(atof(par_value.c_str()));
 
-      else if (par_name == "kcorr_index")this->kcorr_index= static_cast<double>(atof(par_value.c_str()));
+      else if (par_name == "kcorr_index")this->kcorr_index= static_cast<real_prec>(atof(par_value.c_str()));
       
       
-      else if (par_name == "mK_min")mK_min = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "mK_max")mK_max = static_cast<double>(atof(par_value.c_str()));
+      else if (par_name == "mK_min")mK_min = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "mK_max")mK_max = static_cast<real_prec>(atof(par_value.c_str()));
 
-      else if (par_name == "MK_min")MK_min = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "MK_max")MK_max = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "color_min")color_min = static_cast<double>(atof(par_value.c_str()));
-      else if (par_name == "color_max")color_max = static_cast<double>(atof(par_value.c_str()));
+      else if (par_name == "MK_min")MK_min = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "MK_max")MK_max = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "color_min")color_min = static_cast<real_prec>(atof(par_value.c_str()));
+      else if (par_name == "color_max")color_max = static_cast<real_prec>(atof(par_value.c_str()));
 
       else if (par_name == "N_z_cosmo")N_z_cosmo = atoi(par_value.c_str());
 
@@ -181,24 +167,24 @@ void GALAXY::read_pars(string &file){
 
 
 
-      else if (par_name == "Om_matter")this->Om_matter = (double)atof(par_value.c_str());
-      else if (par_name == "Om_cdm")this->Om_cdm = (double)atof(par_value.c_str());
+      else if (par_name == "Om_matter")this->Om_matter = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Om_cdm")this->Om_cdm = (real_prec)atof(par_value.c_str());
 
-      else if (par_name == "Om_radiation")this->Om_radiation = (double)atof(par_value.c_str());
-      else if (par_name == "Om_baryons")this->Om_baryons = (double)atof(par_value.c_str());
-      else if (par_name == "Om_vac")this->Om_vac = (double)atof(par_value.c_str());
-      else if (par_name == "Om_k")this->Om_k = (double)atof(par_value.c_str());
-      else if (par_name == "Hubble")this->Hubble = (double)atof(par_value.c_str());
-      else if (par_name == "hubble")this->hubble = (double)atof(par_value.c_str());
-      else if (par_name == "n_s")this->n_s = (double)atof(par_value.c_str());
-      else if (par_name == "alpha_s")this->alpha_s = (double)atof(par_value.c_str());
-      else if (par_name == "w_eos")this->w_eos = (double)atof(par_value.c_str());
-      else if (par_name == "N_eff")this->N_eff = (double)atof(par_value.c_str());
-      else if (par_name == "sigma8")this->sigma8 = (double)atof(par_value.c_str());
-      else if (par_name == "Tcmb")this->Tcmb = (double)atof(par_value.c_str());
-      else if (par_name == "GAL_BIAS")this->GAL_BIAS = (double)atof(par_value.c_str());
-      else if (par_name == "alpha_BIAS")this->alpha_BIAS = (double)atof(par_value.c_str());
-      else if (par_name == "kstar")this->kstar = (double)atof(par_value.c_str());
+      else if (par_name == "Om_radiation")this->Om_radiation = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Om_baryons")this->Om_baryons = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Om_vac")this->Om_vac = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Om_k")this->Om_k = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Hubble")this->Hubble = (real_prec)atof(par_value.c_str());
+      else if (par_name == "hubble")this->hubble = (real_prec)atof(par_value.c_str());
+      else if (par_name == "n_s")this->n_s = (real_prec)atof(par_value.c_str());
+      else if (par_name == "alpha_s")this->alpha_s = (real_prec)atof(par_value.c_str());
+      else if (par_name == "w_eos")this->w_eos = (real_prec)atof(par_value.c_str());
+      else if (par_name == "N_eff")this->N_eff = (real_prec)atof(par_value.c_str());
+      else if (par_name == "sigma8")this->sigma8 = (real_prec)atof(par_value.c_str());
+      else if (par_name == "Tcmb")this->Tcmb = (real_prec)atof(par_value.c_str());
+      else if (par_name == "GAL_BIAS")this->GAL_BIAS = (real_prec)atof(par_value.c_str());
+      else if (par_name == "alpha_BIAS")this->alpha_BIAS = (real_prec)atof(par_value.c_str());
+      else if (par_name == "kstar")this->kstar = (real_prec)atof(par_value.c_str());
 
 
       // this is to read magnitude limits
@@ -242,7 +228,7 @@ void GALAXY::read_pars(string &file){
 	  string par_value0;
 	  int ending=0;
 	  int n_m_lims=0;
-	  vector<double>z_limits_aux;
+      vector<real_prec>z_limits_aux;
 	  do{
 	    line_string >> par_value0;  //read value
 	    n_m_lims++;
@@ -261,7 +247,7 @@ void GALAXY::read_pars(string &file){
       
     }
   }
-  
+
 
   // Cosmological parameters
 #ifdef _USE_COSMO_PARS_
@@ -282,17 +268,12 @@ void GALAXY::read_pars(string &file){
   this->RR = COSMOPARS::RR;
   this->alpha_s=COSMOPARS::alpha_s;
 #endif
-
-
   this->scp.Om_matter=this->Om_matter;
-
   this->scp.Om_cdm=this->Om_cdm;
   this->scp.Om_radiation=this->Om_radiation;
   this->scp.Om_baryons=this->Om_baryons;
   this->scp.Om_k=this->Om_k;
-  
   this->scp.Om_vac=1.- this->scp.Om_matter-this->scp.Om_radiation- this->scp.Om_k;
-
   this->scp.Hubble=this->Hubble;
   this->scp.hubble=this->hubble;
   this->scp.n_s=this->n_s;
@@ -311,7 +292,7 @@ void GALAXY::read_pars(string &file){
   this->scp.use_K_correction=this->use_K_correction;
   this->scp.use_e_correction=this->use_e_correction;
 
-  
+  this->cosmology.set_cosmo_pars(this->scp);
   
   if(this->redshift_type=="ps" || this->redshift_type=="s" || this->redshift_type=="ps_s")
     this->zzns=this->z_min;
@@ -320,29 +301,17 @@ void GALAXY::read_pars(string &file){
       this->zzns=-2000.0;
   
   So.DONE();
-
-  
 }
 
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::set_file_names(){
 
     So.message_screen("Setting file names");
-
-  // ********************************
-  // tHIS IS TO SELECT WHETHER WE WORK WITH S, P or objects WITH BOTH S AND P redshifts
+// tHIS IS TO SELECT WHETHER WE WORK WITH S, P or objects WITH BOTH S AND P redshifts
   // en este caso no importa si hay zs o no
   //this->zzns=this->z_min;
 
-  // ********************************
-  // ********************************
-  // ********************************
   string nmask="";
 #ifdef _USE_JK_
   nmask="_JK"+to_string(this->index_mask);
@@ -381,16 +350,8 @@ void GALAXY::set_file_names(){
   So.DONE();
 
 }
-
-
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_cosmo(int nz, bool silence){
 
   time_t start_all;
@@ -426,27 +387,27 @@ void GALAXY::get_cosmo(int nz, bool silence){
   //Vector for the Distance modulus
   this->Dm.resize(nz,0);
 
-  double g_today = Cf.growth_factor(0.0,(void *)&this->scp);
+  real_prec  g_today = cosmology.growth_factor(0.0);
 
 
-  double zmin_inter=0.00000001;
-  double zmax_inter=1.5;
+  real_prec  zmin_inter=0.001;
+  real_prec  zmax_inter=1.1;
  #pragma omp parallel for
   for(int i=0;i<nz;++i)
-      this->zv[i]=zmin_inter+i*(zmax_inter-zmin_inter)/static_cast<double>(nz-1);
+      this->zv[i]=zmin_inter+i*(zmax_inter-zmin_inter)/static_cast<real_prec>(nz-1);
   
 
 
- #pragma omp parallel for
+// #pragma omp parallel for
   for(int i=0;i<nz;++i)
     {
-      this->Hv[i]=Cf.Hubble_function(this->zv[i],(void *)&this->scp);
-      this->rv[i]=Cf.comoving_distance(this->zv[i],(void *)&this->scp);
-      this->gv[i]=Cf.growth_factor(this->zv[i],(void *)&this->scp)/g_today;
-      this->bias_zv[i]=this->scp.GAL_BIAS*pow(1+this->zv[i], this->scp.alpha_BIAS);
-      this->gfv[i]=Cf.growth_index(this->zv[i],(void *)&this->scp);
-      this->Dm[i]=Cf.Distance_Modulus(this->zv[i],(void *)&this->scp);
- //       cout<<rv[i]<<"  "<<zv[i]<<endl;
+      this->Hv[i]=cosmology.Hubble_function(this->zv[i]);
+      this->rv[i]=cosmology.comoving_distance(this->zv[i]);
+//      this->gv[i]=cosmology.growth_factor(this->zv[i])/g_today;
+//      this->bias_zv[i]=this->scp.GAL_BIAS*pow(1+this->zv[i], this->scp.alpha_BIAS);
+//      this->gfv[i]=cosmology.growth_index(this->zv[i]);
+//      this->Dm[i]=cosmology.Distance_Modulus(this->zv[i]);
+//       cout<<rv[i]<<"  "<<zv[i]<<endl;
       }
   
   // ALLOCATE VECTORS TO STRUCTURE cosmological parameters TO USE THEM IN OTHER OPERATIONS
@@ -454,16 +415,18 @@ void GALAXY::get_cosmo(int nz, bool silence){
   this->scp.rv=this->rv;
   
   // HERE THESE ARE COMPUTED FROM ALREADY TABULATED QUANTITIES
+
+/*
 #pragma omp parallel for
   for(int i=0;i<nz;++i)
-    this->trv[i]=Cf.inter_transverse_comoving_distance(this->zv[i],(void *)&this->scp);
+    this->trv[i]=cosmology.inter_transverse_comoving_distance(this->zv[i]);
   
   this->scp.trv=this->trv;
-
+*/
 
   if(silence){
     time(&end);
-    double lapse=difftime(end,start_all);
+    real_prec  lapse=difftime(end,start_all);
     std::cout<<BLUE<<"Done in "<<lapse<<" secs "<<RESET<<std::endl;
     time(&start_all);
   }
@@ -471,21 +434,19 @@ void GALAXY::get_cosmo(int nz, bool silence){
 
 }
 
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_mask(){
 
   this->mask.clear();
-  if(this->hemisphere=="all")
+/* ANDRES WARNING
+    if(this->hemisphere=="all")
       this->NMASK=this->File.read_file(name_file_mask,this->mask, omp_get_max_threads());
   else if(this->hemisphere=="south")
       this->NMASK=this->File.read_file(name_file_mask_south_gal,this->mask,omp_get_max_threads());
   else if(this->hemisphere=="north")
       this->NMASK=this->File.read_file(name_file_mask_north_gal,this->mask,omp_get_max_threads());
+*/
 
   this->NCOLS_MASK=static_cast<unsigned long>(this->mask.size()/NMASK);
   
@@ -507,21 +468,18 @@ void GALAXY::get_mask(){
   //  We need to use the mask,since the catalogue read
   //  in this code is not yet masked.
   //  The pixels of the mask are defined in Galactic coordinates.
-  this->total_area=static_cast<double>(pix_count*area_pixel);
-
+  this->total_area=static_cast<real_prec>(pix_count*area_pixel);
   So.message_screen("Total area covered by the mask = ", this->total_area/(3.0462e-4)," squared degrees");
   So.message_screen("fsky = ", this->total_area/(3.0462e-4)/(129600.0/M_PI));
-  
-  
+
 }
 
-
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_mask_fits(string file){
   cout<<CYAN<<"Reading mask from "<<file<<endl;
   cout<<RESET<<endl;
-  Healpix_Map<double>mask_aux(log2(this->nside), RING);
+  Healpix_Map<real_prec>mask_aux(log2(this->nside), RING);
   //  read_Healpix_map_from_fits(file,mask_aux, 1,2);
   this->nside=mask_aux.Nside();
   n_pixels=12*this->nside*this->nside;
@@ -557,10 +515,8 @@ void GALAXY::get_mask_fits(string file){
   So.DONE();
 
 }
-
-// ######################################################################
-// ######################################################################  
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::read_input_cats(string cat)
 {
 
@@ -585,26 +541,19 @@ void GALAXY::read_input_cats(string cat)
 #endif
 }
 
-
-
-// ######################################################################
-// ######################################################################  
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::set_catalog(string cat){
-
-  omp_set_num_threads(_NTHREADS_);
-
-
   if(cat=="g")
     {
       So.message_screen("Adding information of the mask to each galaxy ...");
-      Healpix_Map<double>map_aux(log2(this->nside), RING);
+      Healpix_Map<real_prec>map_aux(log2(this->nside), RING);
 
       gal_mask.resize(this->NGAL);
 
-      
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
       for(int i=0;i<this->NGAL;++i)
 	{
 	  this->point.phi=fac*this->prop[this->i_lgal+i*this->NCOLS];
@@ -617,11 +566,13 @@ void GALAXY::set_catalog(string cat){
   
   else if(cat=="r")
     {
-      Healpix_Map<double>map_aux(log2(this->nside), RING);
+      Healpix_Map<real_prec>map_aux(log2(this->nside), RING);
       So.message_screen("Adding information of the mask to each galaxy ...");
       gal_mask.resize(this->NRAN);
 
+#ifdef _USE_OMP_
 #pragma omp parallel for
+#endif
       for(int i=0;i<this->NRAN;i++)
 	{
 	  this->point.phi=fac*this->prop_r[this->i_lgal+i*this->NCOLS_R];
@@ -630,16 +581,10 @@ void GALAXY::set_catalog(string cat){
 	  ran_mask[i]=this->mask[this->i_mask_flag+ipix*NCOLS_MASK];
 	}
     }
-  
-  So.DONE();
-
+    So.DONE();
 }
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::set_pars(int izvls){
   this->i_z = (this->redshift_type == "s" ? this->i_zs : this->i_zp);
 
@@ -655,31 +600,21 @@ void GALAXY::set_pars(int izvls){
 
   this->mK_max=this->mK_limits[this->i_magnitude_limit];
   
-  this->deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z;
-  this->deltaz_low_res=(this->z_max_low_res-this->z_min_low_res)/(double)this->N_bin_z_low_res;
+  this->deltaz=(this->z_max-this->z_min)/(real_prec)this->N_bin_z;
+  this->deltaz_low_res=(this->z_max_low_res-this->z_min_low_res)/(real_prec)this->N_bin_z_low_res;
 
-//  this->deltaz=(0.4-0.001)/(double)this->N_bin_z;
-//  this->deltaz_low_res=(0.4-0.001)/(double)this->N_bin_z_low_res;
+//  this->deltaz=(0.4-0.001)/(real_prec)this->N_bin_z;
+//  this->deltaz_low_res=(0.4-0.001)/(real_prec)this->N_bin_z_low_res;
 
   
 }
-
-
-// ######################################################################  
-// ######################################################################  
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::set_vec(){
-
   So.message_screen("Initializing vectors");
-
-
-  real_prec zz_min=this->z_min;
-  real_prec zz_min_low_res=this->z_min;
-
+  real_prec  zz_min=this->z_min;
+  real_prec  zz_min_low_res=this->z_min;
+  this->deltaz=(this->z_max-this->z_min)/(real_prec)this->N_bin_z;
   zn.clear();
   zn.resize(this->N_bin_z,0);
 #pragma omp parallel for
@@ -710,10 +645,10 @@ void GALAXY::set_vec(){
 #pragma omp parallel for
   for(int i=0;i<this->N_bin_z;i++)
     {
-      real_prec dr_dz=Constants::speed_light/Cf.Hubble_function(zn[i],(void *)&(this->scp));
-      real_prec distance=gsl_inter_new(this->zv,this->rv,zn[i]);
+      real_prec  dr_dz=Constants::speed_light/cosmology.Hubble_function(zn[i]);
+      real_prec  distance=cosmology.comoving_distance(zn[i]); // gsl_inter_new(this->zv,this->rv,zn[i]);
       this->Vshell[i]=this->total_area*deltaz*pow(distance,2)*dr_dz;
-    }
+  }
 
 
   Vshell_lowres.clear();
@@ -721,8 +656,8 @@ void GALAXY::set_vec(){
 #pragma omp parallel for
   for(int i=0;i<this->N_bin_z_low_res;i++)
     {
-      real_prec dr_dz=Constants::speed_light/Cf.Hubble_function(zn_low_res[i],(void *)&(this->scp));
-      real_prec distance=gsl_inter_new(this->zv,this->rv,zn_low_res[i]);
+      real_prec  dr_dz=Constants::speed_light/cosmology.Hubble_function(zn_low_res[i]);
+      real_prec  distance=gsl_inter_new(this->zv,this->rv,zn_low_res[i]);
       this->Vshell_lowres[i]=this->total_area*deltaz*pow(distance,2)*dr_dz;
     }
 
@@ -735,33 +670,26 @@ void GALAXY::set_vec(){
   v_color.resize(this->N_bin_color,0);
 #pragma omp parallel for
   for(int i=0;i<v_color.size();++i)
-    v_color[i]=this->color_min+(i+0.5)*(this->color_max-this->color_min)/(static_cast<double>(this->N_bin_color));
+    v_color[i]=this->color_min+(i+0.5)*(this->color_max-this->color_min)/(static_cast<real_prec>(this->N_bin_color));
 
 
   So.DONE();
 }  
-
-
-// ######################################################################
-// ######################################################################  
-// ######################################################################  
-void GALAXY::set_nbar(vector<double> zz,vector<double>nnb,vector<double>pp){
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void GALAXY::set_nbar(vector<real_prec> zz,vector<real_prec>nnb,vector<real_prec>pp){
   zn_new.resize(zz.size());
   nbar_new.resize(nnb.size());
   prob.resize(pp.size());
-  zn_new=zz;
-  nbar_new=nnb;
-  prob=pp;
+  for(int i=0;i<zz.size();++i)zn_new[i]=zz[i];
+  for(int i=0;i<nnb.size();++i)nbar_new[i]=nnb[i];
+  for(int i=0;i<pp.size();++i)prob[i]=pp[i];
 }
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::read_get_Kcorr()
 {
-  
-  /* The K-correction, obtained from the File provided by Jarret 2014
+    /* The K-correction, obtained from the File provided by Jarret 2014
    * in which we have the rest frame flux = F * observed flux, and
    * here we read the factor F. Converting to magnidutes,
    * we get m_rest  = -2.5log10(F) + m_observed
@@ -774,7 +702,7 @@ void GALAXY::read_get_Kcorr()
    * We therefore allocate two vectors v_z_Kcorr and v_Kcorr
    */
   
-  vector<double> propK;
+  vector<real_prec> propK;
   int nlinesK=this->File.read_file(this->name_file_Kcorr, propK,omp_get_max_threads());
   int ncolsK=propK.size()/nlinesK;
   this->v_z_Kcorr.resize(nlinesK,0);
@@ -790,63 +718,59 @@ void GALAXY::read_get_Kcorr()
   
   propK.clear();
 }
-
-
-// ######################################################################
-// ######################################################################  
-// ######################################################################  
-double GALAXY::get_mina(int ii){
-  double ZX=10000;
-  double zmx;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+real_prec  GALAXY::get_mina(int ii){
+  real_prec  ZX=10000;
+  real_prec  zmx;
   for(int i=0;i<this->NGAL;i++){
     zmx=min(ZX,this->prop[ii+i*this->NCOLS]);
     ZX=zmx;
   }
   return zmx;
 }
-// ######################################################################
-// ######################################################################
-double GALAXY::get_min_r(int ii){
-  double ZX=10000;
-  double zmx;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+real_prec  GALAXY::get_min_r(int ii){
+  real_prec  ZX=10000;
+  real_prec  zmx;
   for(int i=0;i<this->NRAN;i++){
     zmx=min(ZX,this->prop_r[ii+i*this->NCOLS_R]);
     ZX=zmx;
   }
   return zmx;
-}
-// ######################################################################  
-// ######################################################################
-double GALAXY::get_maxa(int ii ){
-  double ZX=-100;
-  double zmx;
+}////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+real_prec  GALAXY::get_maxa(int ii ){
+  real_prec  ZX=-100;
+  real_prec  zmx;
   for(int i=0;i<this->NGAL;i++){
     zmx=max(ZX,this->prop[ii+i*NCOLS]);
     ZX=zmx;
   }
   return zmx;
 }
-// ######################################################################
-// ######################################################################
-double GALAXY::get_max_r(int ii ){
-  double ZX=-100;
-  double zmx;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+real_prec  GALAXY::get_max_r(int ii ){
+  real_prec  ZX=-100;
+  real_prec  zmx;
   for(int i=0;i<this->NRAN;i++){
     zmx=max(ZX,this->prop_r[ii+i*this->NCOLS_R]);
     ZX=zmx;
   }
   return zmx;
 }
-// ######################################################################  
-// ######################################################################  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void GALAXY::get_zbins_same_ngal(int nbins, int iiz, double zmn, double zmx, vector<vector<double> >&zzv){
+void GALAXY::get_zbins_same_ngal(int nbins, int iiz, real_prec  zmn, real_prec  zmx, vector<vector<real_prec> >&zzv){
 
   // ************************************
   // Construct the dNdz with many bins
-  double ZX=-100;
+  real_prec  ZX=-100;
   int na=20000; //This value is critical to avoid seg foults. The higher, the best.
-  double delta=(zmx-zmn)/((double)na);
+  real_prec  delta=(zmx-zmn)/((real_prec)na);
   vector<int>dn(na,0);
   for(int i=0;i<this->NGAL;++i){
     if(this->prop[iiz+i*this->NCOLS]<zmx && this->prop[iiz+i*this->NCOLS]>=zmn){
@@ -856,9 +780,9 @@ void GALAXY::get_zbins_same_ngal(int nbins, int iiz, double zmn, double zmx, vec
   }
   // ************************************
   
-  int Nca=(int)(floor)(prop.size()/((double)nbins)); //Desired number of galaxies per redshift bin:
+  int Nca=(int)(floor)(prop.size()/((real_prec)nbins)); //Desired number of galaxies per redshift bin:
   cout<<"Number of galaxies per redshift bin = "<<Nca<<endl;
-  vector<double>zan(na,0);
+  vector<real_prec>zan(na,0);
   for(int i=0;i<dn.size();++i)zan[i]=zmn+(i+0.5)*delta;
 
   // Set the full z-interval
@@ -872,10 +796,11 @@ void GALAXY::get_zbins_same_ngal(int nbins, int iiz, double zmn, double zmx, vec
   if(nbins>1){
     for(int ib=1;ib<=nbins;++ib){
       int caa=0;
-      vector<double>zaux;
+      vector<real_prec>zaux;
       for(int i=0;i<dn.size();++i){
         caa+=dn[i];  //Cumulative number of galaxies
-        if((caa>=Nca*(ib-1)) &&  (caa<Nca*ib)) zaux.push_back(zan[i]);
+        if((caa>=Nca*(ib-1)) &&  (caa<Nca*ib))
+            zaux.push_back(zan[i]);
       }
       zzv[ib][0]=zaux[0]-0.5*delta;  //Allocate the zmin of the ib zbin
       zzv[ib][1]=zaux[zaux.size()-1]+0.5*delta; //Allocate the zmax of the ib zbin
@@ -886,17 +811,9 @@ void GALAXY::get_zbins_same_ngal(int nbins, int iiz, double zmn, double zmx, vec
   return ;
 }
 
-
-// ######################################################################  
-// ######################################################################  
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_dndz(){
-
   this->dNdz.clear();
   this->dNdz.resize(this->N_bin_z,0);
   this->dNdz.shrink_to_fit();
@@ -946,11 +863,11 @@ void GALAXY::get_dndz(){
               if(this->prop[i_zs+i*this->NCOLS]>=zzns)
 		{
 #ifdef _USE_COLOR_
-                   real_prec JKcolor = this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
+                   real_prec  JKcolor = this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
                    if(JKcolor>=this->color_min && JKcolor<this->color_max)
                      {
 #endif
-                       real_prec zgal=this->prop[i_z+i*this->NCOLS];
+                       real_prec  zgal=this->prop[i_z+i*this->NCOLS];
                        if(zgal>=this->z_min && zgal<this->z_max)
                          {
 #ifdef _USE_COLOR_
@@ -985,22 +902,17 @@ void GALAXY::get_dndz(){
 #endif
       }
  So.DONE();
-    
-    
   this->count=0;
   for(auto i=0;i<dNdz.size();++i)
     this->count+=dNdz[i];
-  
+
   this->Ngal_dndz=count;
   
   // Here we divide by the width of the redshift intercal such that
   // When we plot the dNdz, hte heigh will be independent of the chosen Deltaz
   // Hence, at those plots, we will be seeing
   // dN/dz, and if we want to know the true number of objects per bin, then
-  // we would need to multiply by the value of Dz
-
-  //cout<<RED<<dNdz[50]<<RESET<<"  "<<this->prop[i_z+160*this->NCOLS]<<"   "<<this->z_min<<"   "<<zzns<<endl;
-  
+  // we would need to multiply by the value of Dz  
 
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -1020,7 +932,7 @@ void GALAXY::get_dndz(){
 #pragma omp parallel for
 #endif
   for(auto i=0;i<dNdz.size();i++){
-    auto Nk=(double)this->dNdz[i];
+    auto Nk=(real_prec)this->dNdz[i];
     this->edNdz[i]= Nk==0? 0 : sqrt(Nk);
   }
 
@@ -1028,54 +940,38 @@ void GALAXY::get_dndz(){
 #pragma omp parallel for
 #endif
   for(auto i=0;i<dNdz_low_res.size();i++){
-    auto Nk=(double)this->dNdz_low_res[i];
+    auto Nk=(real_prec)this->dNdz_low_res[i];
     this->edNdz_low_res[i]= Nk==0? 0 : sqrt(Nk);
   }
 
-  this->File.write_to_file(this->output_dir+"dndz.txt",zn_low_res, dNdz_low_res, edNdz_low_res);
+  //this->File.write_to_file(this->output_dir+"dndz.txt",zn_low_res, dNdz_low_res, edNdz_low_res);
   So.message_screen("Number of objects in requested (redshift, mK,color) interval =",this->count);
   cout<<endl;
-
-
  // bring dNdz low res to dN/dz
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
   for(auto i=0;i<dNdz_low_res.size();i++)
       this->dNdz_low_res[i]*=static_cast<real_prec>(count);
-
-  
 }
 
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_dndmk(){
-  
-  this->dNdmk.resize(this->N_bin_mag ,0);
-  
-  double delta_mk=(this->mK_max-this->mK_min)/((double)this->N_bin_mag);
-
+    this->dNdmk.resize(this->N_bin_mag ,0);
+  real_prec  delta_mk=(this->mK_max-this->mK_min)/((real_prec)this->N_bin_mag);
   v_mk.clear();
-  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((double)i)*delta_mk);
+  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((real_prec)i)*delta_mk);
   // ***************************************************************
   // select objects in pixels observed following the mask.
   // The mask cuts includes the cts in EBV and log_stellar_den,
   // so no need to make them here again.
   // ***************************************************************
-
   time_t start;
   time(&start);
-
   // omp_set_num_threads(omp_get_max_threads());
-
   cout<<this->mK_max<<endl;
   std::cout<<CYAN<<"Measuring dN/dK";
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -1106,7 +1002,7 @@ void GALAXY::get_dndmk(){
 #endif
   for(int i=0;i<dNdmk.size();++i)
     {
-      double Nk=static_cast<double>(this->dNdmk[i]);
+      real_prec  Nk=static_cast<real_prec>(this->dNdmk[i]);
       this->edNdz[i]= Nk==0? 0 : sqrt(Nk);
       ngal_mk+=this->dNdmk[i];
     }
@@ -1117,42 +1013,28 @@ void GALAXY::get_dndmk(){
 #pragma omp parallel for
 #endif
   for(int i=0;i<dNdmk.size();++i)
-    this->dNdmk[i]/=static_cast<double>(ngal_mk);
+    this->dNdmk[i]/=static_cast<real_prec>(ngal_mk);
   
   
-  this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
+  //this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
   std::cout<<BLUE<<count<<" objects in N(z), in file"<<this->output_file_dndz<<RESET<<endl ;
-
   So.DONE();
 }
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_z_pdf(){
   time_t start;
   time(&start);
-
-  vector<vector<double > > z_ps_grid(this->N_bin_z,vector<double>(this->N_bin_z,0));
-  vector<vector<double > > z_ps_grid2(this->N_bin_z,vector<double>(this->N_bin_z,0));
+  vector<vector<real_prec  > > z_ps_grid(this->N_bin_z,vector<real_prec>(this->N_bin_z,0));
+  vector<vector<real_prec  > > z_ps_grid2(this->N_bin_z,vector<real_prec>(this->N_bin_z,0));
 
   auto Nbins_z_new=16; //We'll show 16 plots in SM
-  vector<vector<double > > z_ps;
+  vector<vector<real_prec  > > z_ps;
   z_ps.resize(Nbins_z_new);
-  auto deltaz_new=  (this->z_max-this->z_min)/((double)Nbins_z_new);
-
-  vector<double> ZP(this->N_bin_z,0);
-  vector<double> ZS(this->N_bin_z,0);
-
+  auto deltaz_new=  (this->z_max-this->z_min)/((real_prec)Nbins_z_new);
+  vector<real_prec> ZP(this->N_bin_z,0);
+  vector<real_prec> ZS(this->N_bin_z,0);
   omp_set_num_threads(omp_get_max_threads());
-
-
-  
   int count=0;
 #pragma omp parallel for reduction(+:count)
   for(int i=0;i<this->NGAL;++i)
@@ -1183,8 +1065,8 @@ void GALAXY::get_z_pdf(){
     }
 
 
-  vector<double> z_photi(count,0);
-  vector<double> z_spec(count,0);
+  vector<real_prec> z_photi(count,0);
+  vector<real_prec> z_spec(count,0);
   
   count=0;
   for(int i=0;i<this->NGAL;++i)
@@ -1205,29 +1087,25 @@ void GALAXY::get_z_pdf(){
 	    }
 	}
     }
-
-
 #pragma omp parallel for
   for(int i=0;i< z_photi.size();++i)
     z_photi[i]-=z_spec[i];
-
-  double mean=0;
+  real_prec  mean=0;
 #pragma omp parallel for reduction(+:mean)
   for(int i=0;i< z_photi.size();++i)
     mean+=z_photi[i];
-  mean/=static_cast<double>(z_photi.size());
-  
-  double var=0;
+  mean/=static_cast<real_prec>(z_photi.size());
+    real_prec  var=0;
 #pragma omp parallel for reduction(+:var)
   for(int i=0;i< z_photi.size();++i)
     var+=pow(z_photi[i]-mean,2);
-  var/=static_cast<double>(z_photi.size()-1);
+  var/=static_cast<real_prec>(z_photi.size()-1);
   cout<<"Mean "<<mean<<"   Var = "<<sqrt(var)<<endl;
   
   cout<<CYAN<<count<<" counted objects with two types of redshifts"<<RESET<<endl;
 
   // Her we do the zp_mk histograms, taking all zp available
-  for(int i=0;i<this->N_bin_z;++i)for(int j=0;j<this->N_bin_z;++j)z_ps_grid2[i][j]= (ZS[i]==0? 0 : ((double)z_ps_grid[i][j])/((double)ZS[i]));
+  for(int i=0;i<this->N_bin_z;++i)for(int j=0;j<this->N_bin_z;++j)z_ps_grid2[i][j]= (ZS[i]==0? 0 : ((real_prec)z_ps_grid[i][j])/((real_prec)ZS[i]));
 
   string filezs="2d_grid_joint_zp_zs_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
   string filezs2="2d_grid_zp_zs_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
@@ -1235,7 +1113,7 @@ void GALAXY::get_z_pdf(){
   ofstream sal, sal2;
   sal.open(filezs);
   sal2.open(filezs2);
-  double maxx=-1000.,maxi;
+  real_prec  maxx=-1000.,maxi;
   for(int i=0;i<this->N_bin_z;++i)
     {
       for(int j=0;j<this->N_bin_z;++j)
@@ -1258,12 +1136,12 @@ void GALAXY::get_z_pdf(){
   sal.close();
   sal2.close();
 
-  vector<double> meanz(Nbins_z_new,0);
+  vector<real_prec> meanz(Nbins_z_new,0);
   for(int i=0;i<Nbins_z_new;++i)
       for(int j=0;j<z_ps[i].size();++j)
           meanz[i]+=z_ps[i][j]/(z_ps[i].size());
 
-  vector<double> varz(Nbins_z_new,0);
+  vector<real_prec> varz(Nbins_z_new,0);
   for(int i=0;i<Nbins_z_new;++i)
       for(int j=0;j<z_ps[i].size();++j)
           varz[i]+=pow(meanz[i]-z_ps[i][j],2)/(z_ps[i].size()-1);
@@ -1285,31 +1163,18 @@ if(this->redshift_type=="p")
 	sal<<z_ps[i][j]-meanz[i]<<endl;
       sal.close();
     }
-}
-  
-}
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+    }
+  }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_M_pdf(){
   time_t start;
   time(&start);
 
   int Nbins_new=16; //We'll show 16 plots in SM
-  vector<vector<double > > z_ps;
+  vector<vector<real_prec  > > z_ps;
   z_ps.resize(Nbins_new);
-  double delta_new=  (this->MK_max-this->MK_min)/((double)Nbins_new);
-
-  
-
- 
+  real_prec  delta_new=  (this->MK_max-this->MK_min)/((real_prec)Nbins_new);
   count=0;
   for(int i=0;i<this->NGAL;++i){
     if(this->gal_mask[i]==this->observed_pixels_in_mask)
@@ -1320,10 +1185,10 @@ void GALAXY::get_M_pdf(){
 	      {
 		if((this->prop[this->i_zp+i*this->NCOLS]>=this->z_min && prop[this->i_zp+i*this->NCOLS]<this->z_max) && (this->prop[this->i_zs+i*this->NCOLS]>=this->z_min && prop[this->i_zs+i*this->NCOLS]<this->z_max))
 		  {
-		    double MKs;
+            real_prec  MKs;
 		    this->i_z=this->i_zs;
 		    get_MK(prop[this->i_zs+i*this->NCOLS], prop[this->i_mK+i*this->NCOLS], MKs); //Compute ABsolute magnitude spectroscopic
-		    double MKp;
+            real_prec  MKp;
 		    this->i_z=this->i_zp;
 		    get_MK(prop[this->i_z+i*this->NCOLS], prop[this->i_mK+i*this->NCOLS], MKp); //Compute ABsolute magnitude photometric
 		    //            cout<<MKp<<"  "<<MKs<<endl;
@@ -1338,13 +1203,12 @@ void GALAXY::get_M_pdf(){
       }
   }
   cout<<CYAN<<count<<" counted objects with two types of redshifts"<<RESET<<endl;
-  
-  vector<double> meanz(Nbins_new,0);
+  vector<real_prec> meanz(Nbins_new,0);
   for(int i=0;i<Nbins_new;++i)
     for(int j=0;j<z_ps[i].size();++j)
       meanz[i]+=z_ps[i][j]/(z_ps[i].size());
 
-  vector<double> varz(Nbins_new,0);
+  vector<real_prec> varz(Nbins_new,0);
   for(int i=0;i<Nbins_new;++i)
     for(int j=0;j<z_ps[i].size();++j)
       varz[i]+=pow(meanz[i]-z_ps[i][j],2)/(z_ps[i].size()-1);
@@ -1365,55 +1229,17 @@ void GALAXY::get_M_pdf(){
       for(int j=0;j<z_ps[i].size();++j)
 	sal<<z_ps[i][j]-meanz[i]<<endl;
       sal.close();
-    }
-  
+    }  
 }
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-void GALAXY::get_ipix_from_mask(int i, Healpix_Map<double>map_aux, long & ipix){
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void GALAXY::get_ipix_from_mask(int i, Healpix_Map<real_prec>map_aux, long & ipix){
   this->point.phi=fac*this->prop[this->i_lgal+i*this->NCOLS];
   this->point.theta=0.5*M_PI-fac*this->prop[this->i_bgal+i*this->NCOLS];
   ipix=map_aux.ang2pix(this->point);
 }
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-void GALAXY::get_nbar(){
-
-
-  this->nbar.clear();
-  this->nbar.shrink_to_fit();
-
-  this->nbar.resize(this->N_bin_z,0);
-  So.message_screen("Computing Mean number density");
-  
-  for(int i=0;i<dNdz.size();i++)
-    this->nbar[i]=dNdz[i]*this->deltaz/Vshell[i];
-
- // string filezs=this->output_dir+this->name_cat+"_nbar_p_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
-  string filezs=this->output_dir+"nbar.txt";
-
- this->So.message_screen("Writting to file ", filezs);
- ofstream sal(filezs);
- for(int i=0;i<this->N_bin_z;++i)
-      sal<<this->z_min+(i+0.5)*(this->z_max-z_min)/static_cast<real_prec>(this->N_bin_z)<<"\t"<<this->nbar[i]<<endl;
- sal.close();
- So.DONE();
-  
-}
-
-
-// ######################################################################
-// ######################################################################
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void GALAXY::get_Vmax(){
   // Here we obtain the Vmax and the Sij matrix , used for the LF as well as
@@ -1426,9 +1252,9 @@ void GALAXY::get_Vmax(){
   // Here we redefine the limits in Absolute magnitude
   // in order to include all the objects that were included when doing the dNdz
   // when no MK were already assigned.
-  double MK_MAX_NEW=-1000.0;
-  double MK_MIN_NEW=1000.0;
-  double MK_MAX_NEW_AUX, MK_MIN_NEW_AUX;
+  real_prec  MK_MAX_NEW=-1000.0;
+  real_prec  MK_MIN_NEW=1000.0;
+  real_prec  MK_MAX_NEW_AUX, MK_MIN_NEW_AUX;
     
   int i;
     
@@ -1445,9 +1271,9 @@ void GALAXY::get_Vmax(){
 		      if((this->prop[i_z+i*this->NCOLS]>=this->z_min && prop[this->i_z+i*this->NCOLS]<this->z_max))
 			{
 
-			  double MKs;
-			  real_prec color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
-			  real_prec color2=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mH+i*this->NCOLS];
+              real_prec  MKs;
+              real_prec  color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
+              real_prec  color2=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mH+i*this->NCOLS];
 
 			  this->get_MK(this->prop[i_z+i*this->NCOLS],this->prop[i_mK+i*this->NCOLS], color1, color2,MKs); //Compute ABsolute magnitude
 			  MK_MAX_NEW_AUX=max(MK_MAX_NEW,MKs);
@@ -1462,11 +1288,9 @@ void GALAXY::get_Vmax(){
       this->MK_max=MK_MAX_NEW+EPSILON_MK;
       this->MK_min=MK_MIN_NEW-EPSILON_MK;
     }
-    
-    
-  double deltaMK_h=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag;
-  double deltaMK_l=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag_low_res;
-    
+        
+  real_prec  deltaMK_h=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag;
+  real_prec  deltaMK_l=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag_low_res;
   this->v_Magnitude.resize(this->N_bin_Mag,0);
 #pragma omp parallel for
   for(int i=0;i<this->N_bin_Mag;++i)
@@ -1502,56 +1326,38 @@ void GALAXY::get_Vmax(){
       for(int i=0;i<this->N_bin_z;++i)
 	{
 	  // Get the limiting absolute magnitude given the mK_max and the minimum redshift of the z-bin
-
-	  real_prec mean_color_zbin=0;
+      real_prec  mean_color_zbin=0;
 	  // Get the mean color in the redhsift bin
 	  if(true==cw)
             {
 	      for(int j=0;j<this->N_bin_color;++j)
-		mean_color_zbin+=this->Pzc[i][j]/static_cast<real_prec>(this->dNdz[i]);
+        mean_color_zbin+=this->Pzc[i][j]/static_cast<real_prec>(this->dNdz[i]);
             }
 	  // Get MABS for m_Kmax in the lower limit of the z-bin
-	  double Dma1=gsl_inter_new(this->zv, this->Dm, this->zn_min[i]);
-
-	  double K_e1 =Cf.K_correction(this->zn_min[i],mean_color_zbin, 0.0, (void *)&(this->scp))+Cf.e_correction(this->zn_min[i],(void *)&(this->scp));
-
-	  double M_lim_zmin1=this->mK_max - Dma1 - K_e1;
+      real_prec  Dma1=gsl_inter_new(this->zv, this->Dm, this->zn_min[i]);
+      real_prec  K_e1 =cosmology.K_correction(this->zn_min[i],mean_color_zbin, 0.0)+cosmology.e_correction(this->zn_min[i]);
+      real_prec  M_lim_zmin1=this->mK_max - Dma1 - K_e1;
 	  // Get MABS for m_Kmin in the low limit of the z-bin
-
-	  double M_lim_zmax1=this->mK_min - Dma1 - K_e1;
-	    
-	    
-	  // Get MABS for m_Kmax in the upper limit of the z-bin
-	  double Dma2=gsl_inter_new(this->zv, this->Dm, this->zn_max[i]);
-
-	  double K_e2 =Cf.K_correction(this->zn_max[i],mean_color_zbin,0,(void *)&(this->scp))+Cf.e_correction(this->zn_max[i],(void *)&(this->scp));
-
-	  double M_lim_zmin2=this->mK_max - Dma2 - K_e2;
+      real_prec  M_lim_zmax1=this->mK_min - Dma1 - K_e1;
+          // Get MABS for m_Kmax in the upper limit of the z-bin
+      real_prec  Dma2=gsl_inter_new(this->zv, this->Dm, this->zn_max[i]);
+      real_prec  K_e2 =cosmology.K_correction(this->zn_max[i],mean_color_zbin,0)+cosmology.e_correction(this->zn_max[i]);
+      real_prec  M_lim_zmin2=this->mK_max - Dma2 - K_e2;
 	  // Get MABS for m_Kmin in the low limit of the z-bin
-
-	  double M_lim_zmax2=this->mK_min - Dma2 - K_e2;
-	    
-	    
-	    
-	  double M_lim_zmin=M_lim_zmin1+0.5*(M_lim_zmin2-M_lim_zmin1);
-	  double M_lim_zmax=M_lim_zmax1+0.5*(M_lim_zmax2-M_lim_zmax1);
-	    
-	  double M_zmin=min(M_lim_zmin,this->MK_max);
-	    
-	  double M_zmax=min(M_lim_zmax,this->MK_min);
-	    
-	  for(int j=0;j<this->N_bin_Mag;++j)
+      real_prec  M_lim_zmax2=this->mK_min - Dma2 - K_e2;
+      real_prec  M_lim_zmin=M_lim_zmin1+0.5*(M_lim_zmin2-M_lim_zmin1);
+      real_prec  M_lim_zmax=M_lim_zmax1+0.5*(M_lim_zmax2-M_lim_zmax1);
+      real_prec  M_zmin=min(M_lim_zmin,this->MK_max);
+      real_prec  M_zmax=min(M_lim_zmax,this->MK_min);
+      for(int j=0;j<this->N_bin_Mag;++j)
 	    {
 	      this->S[i][j]=1.0;
 	      if(this->v_Magnitude[j]> M_zmin  || this->v_Magnitude[j]< M_zmax )
 		this->S[i][j]=0.0;
 	    }
-	}
-	
+	}	
       So.DONE();
-
       So.message_screen("Computing Vmax(M) ...");
-
 #pragma omp parallel for
       for(int j=0;j<this->N_bin_Mag;++j)
 	this->Vmax_v[j]=0;
@@ -1560,35 +1366,22 @@ void GALAXY::get_Vmax(){
       for(int j=0;j<this->N_bin_Mag;++j)
 	for(int i=0;i<this->N_bin_z;++i)
 	  this->Vmax_v[j]+=this->S[i][j]*this->Vshell[i];//*pow(1+zn[i],this->scp.e_index_zstar);
-
       So.DONE();
-	
-    }
+	    }
 }
-
-
-
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_PzK(){
-
-
-
-  this->Pzm.resize(this->N_bin_z_low_res);
+    this->Pzm.resize(this->N_bin_z_low_res);
   for(int i=0;i<Pzm.size();++i)
       Pzm[i].resize(this->N_bin_mag, 0);
 
-  double deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z_low_res;
-  double deltamK=(this->mK_max-this->mK_min)/(double)this->N_bin_mag;
-
+  real_prec  deltaz=(this->z_max-this->z_min)/(real_prec)this->N_bin_z_low_res;
+  real_prec  deltamK=(this->mK_max-this->mK_min)/(real_prec)this->N_bin_mag;
   zn.clear();
   for(int i=0;i<this->N_bin_z_low_res;++i)zn.push_back(this->z_min+(i+0.5)*deltaz);
   v_mk.clear();
   for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+(i+0.5)*deltamK);
-
-
-
   So.message_screen("Measuring  N(z,m)");
   for(int i=0;i<this->NGAL;++i){
     if(this->gal_mask[i]==this->observed_pixels_in_mask){
@@ -1615,52 +1408,39 @@ void GALAXY::get_PzK(){
   te.close();
 
 */
-real_prec acount =0;
+real_prec  acount =0;
 #pragma omp parallel for reduction (+:acount) collapse (2)
   for(int i=0;i<this->N_bin_z_low_res;++i)
     for(int j=0;j<this->N_bin_mag;j++)
       acount+=this->Pzm[i][j];
   So.message_screen("Number of ojects from P(z,M) = ", acount);
-
-
 }
-
-// ######################################################################  
-// ######################################################################  
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_PcMk(){
-
   this->PcMk.clear();
   this->PcMk.resize(this->N_bin_color);
   for(int i=0;i<PcMk[0].size();++i)
       PcMk[i].resize(this->N_bin_Mag_low_res, 0);
-
   So.message_screen("Measuring  N(c,M)");
-  double deltac=(this->color_max-this->color_min)/(double)this->N_bin_color;
-
-  double deltaMK_low_res=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag_low_res;
-
-  double deltaMK=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag;
-
+  real_prec  deltac=(this->color_max-this->color_min)/(real_prec)this->N_bin_color;
+  real_prec  deltaMK_low_res=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag_low_res;
+  real_prec  deltaMK=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag;
   this->v_Magnitude_low_res.clear();
-
   for(int i=0;i<this->N_bin_Mag_low_res;++i)
       this->v_Magnitude_low_res.push_back(this->MK_min+(i+0.5)*deltaMK_low_res);
-
   v_color.clear();
   for(int i=0;i<this->N_bin_color;++i)
       v_color.push_back(this->color_min+(i+0.5)*deltac);
-
-
   for(int i=0;i<this->NGAL;++i){
     if(this->gal_mask[i]==this->observed_pixels_in_mask){
       if(this->prop[i_zs+i*this->NCOLS]>=this->zzns){
         if(this->prop[i_z+i*this->NCOLS]<this->z_max && this->prop[i_z+i*this->NCOLS]>=this->z_min){
           if(this->prop[this->i_mK+i*this->NCOLS]<this->mK_max && this->prop[this->i_mK+i*this->NCOLS]>=this->mK_min){
-            double JKcolor=(this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS])-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_zp+i*this->NCOLS]);
+            real_prec  JKcolor=(this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS])-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_zp+i*this->NCOLS]);
 	    if(JKcolor>=this->color_min && JKcolor<this->color_max){
-              real_prec MKs;
-              real_prec color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
+              real_prec  MKs;
+              real_prec  color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
               this->get_MK(this->prop[i_z+i*this->NCOLS], this->prop[i_mK+i*this->NCOLS],color1,0.0, MKs); //Compute ABsolute magnitude
 
 	      if(MKs>=this->MK_min && MKs<this->MK_max){ 	  // Check boundaries in abs Mag
@@ -1687,14 +1467,8 @@ void GALAXY::get_PcMk(){
   So.DONE();
 
 }
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_PcMk_Vmax(){
 
   int NTHREADS = omp_get_max_threads();
@@ -1702,8 +1476,8 @@ void GALAXY::get_PcMk_Vmax(){
 
   So.message_screen("Measuring  P(c,M) using 1/Vmax");
 
-  real_prec deltac=(this->color_max-this->color_min)/static_cast<real_prec>(this->N_bin_color);
-  real_prec deltaMK=(this->MK_max-this->MK_min)/static_cast<real_prec>(this->N_bin_Mag);
+  real_prec  deltac=(this->color_max-this->color_min)/static_cast<real_prec>(this->N_bin_color);
+  real_prec  deltaMK=(this->MK_max-this->MK_min)/static_cast<real_prec>(this->N_bin_Mag);
 
   this->PcMk.clear();
   this->PcMk.resize(this->N_bin_color);
@@ -1716,57 +1490,45 @@ void GALAXY::get_PcMk_Vmax(){
     {
     if(this->Gal_inside_intervals_z_m_c[i]>0)
       {
-         real_prec MKs;
-         real_prec color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
+         real_prec  MKs;
+         real_prec  color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
          this->get_MK(this->prop[i_z+i*this->NCOLS], this->prop[i_mK+i*this->NCOLS],color1,0.0, MKs); //Compute ABsolute magnitude
          if(MKs>=this->MK_min && MKs<this->MK_max)
           { 	  // Check boundaries in abs Mag
             int ic=get_bin(color1,this->color_min,this->N_bin_color,deltac,true);
             int iM=get_bin(MKs,this->MK_min,this->N_bin_Mag,deltaMK,true);
-            real_prec vmax=this->Vmax_v[iM];
+            real_prec  vmax=this->Vmax_v[iM];
 #pragma omp atomic update
-            this->PcMk[ic][iM]+=1./static_cast<double>(vmax*deltaMK);
+            this->PcMk[ic][iM]+=1./static_cast<real_prec>(vmax*deltaMK);
           }
        }
     }
   So.DONE();
-
 }
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_PzMK(){
   So.message_screen("Measuring  P(z,M)");
-
   this->PzM.clear();
   this->PzM.resize(this->N_bin_z_low_res);
   for(int i=0;i<PzM.size();++i)PzM[i].resize(this->N_bin_Mag_low_res, 0);
-
-  double deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z_low_res;
-  double deltaMK=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag_low_res;
-
-
+  real_prec  deltaz=(this->z_max-this->z_min)/(real_prec)this->N_bin_z_low_res;
+  real_prec  deltaMK=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag_low_res;
   v_Magnitude.clear();
   v_Magnitude.resize(this->N_bin_Mag,0);
 #pragma omp parallel for
   for(int i=0;i<this->N_bin_Mag;++i)
-    v_Magnitude[i]=this->MK_min+(static_cast<double>(i))*deltaMK;
-
+    v_Magnitude[i]=this->MK_min+(static_cast<real_prec>(i))*deltaMK;
   zn.clear();
   zn.resize(this->N_bin_z_low_res,0);
 #pragma omp parallel for
   for(int i=0;i<this->N_bin_z_low_res;++i)
     zn[i]=(this->z_min+(i+0.5)*deltaz);
-
-
   for(int i=0;i<this->NGAL;++i)
     {
      if(this->Gal_inside_intervals_z_m_c[i]>0)
        {
-         double MKs;
+         real_prec  MKs;
 	  get_MK(this->prop[i_z+i*this->NCOLS],this->prop[i_mK+i*this->NCOLS], MKs); //Compute ABsolute magnitude
           if(MKs>=this->MK_min && MKs<this->MK_max)
             { 	  // Check boundaries in abs Mag
@@ -1783,8 +1545,7 @@ void GALAXY::get_PzMK(){
   for(int i=0;i<this->N_bin_z_low_res;++i)for(int j=0;j<this->N_bin_Mag_low_res;j++)
       te<<this->zn[i]<<"\t"<<this->v_Magnitude[j]<<"\t"<<log10(this->PzM[i][j])<<endl;
   te.close();
-
-  real_prec acount =0;
+  real_prec  acount =0;
 #pragma omp parallel for reduction (+:acount) collapse (2)
   for(int i=0;i<this->N_bin_z;++i)
       for(int j=0;j<this->N_bin_Mag;j++)
@@ -1792,25 +1553,17 @@ void GALAXY::get_PzMK(){
   So.message_screen("Number of ojects from P(z,M) = ", acount);
   So.DONE();
   zn.clear(); zn.shrink_to_fit();
-
 }
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_P_X_Y(s_bins_info *bx, s_bins_info *by, string type){
   So.message_screen("Measuring  P(z,M)");
-
   this->PXY.clear(); // let us recyclye this
   this->PXY.resize(bx->Nbins*by->Nbins,0);
   this->NXY.clear(); // let us recyclye this
   this->NXY.resize(bx->Nbins*by->Nbins,0);
   this->nbarXY.clear();
   this->nbarXY.resize(bx->Nbins*by->Nbins,0);
-
-
 #ifdef _USE_OMP_
 #pragma omp parallel for
 #endif
@@ -1832,17 +1585,12 @@ void GALAXY::get_P_X_Y(s_bins_info *bx, s_bins_info *by, string type){
 #endif
       }
 
-
-
-
   ofstream te;
   te.open(this->output_dir+"PzMass_"+type+".txt");
   for(int i=0;i<bx->Nbins;++i)
     for(int j=0;j<by->Nbins;++j)
        te<< bx->min+(i+0.5)*bx->delta <<"\t"<<by->min+(j+0.5)*by->delta<<"\t"<<NXY[index_2d(j,i,bx->Nbins)]<<endl;
   te.close();
-
-
  // Divide by the volume of the z shell to get nbar
   for(int i=0;i<bx->Nbins;++i)
     for(int j=0;j<by->Nbins;++j)
@@ -1852,8 +1600,8 @@ void GALAXY::get_P_X_Y(s_bins_info *bx, s_bins_info *by, string type){
   // normalization for every bin in z
   for(int i=0;i<bx->Nbins;++i)
     {
-    real_prec aux_a;
-    real_prec aux_b=-1000.0;
+    double  aux_a;
+    double  aux_b=-1000.0;
     for(int j=0;j<by->Nbins;++j)
       {
         ULONG ind=index_2d(j,i,bx->Nbins);
@@ -1867,50 +1615,31 @@ void GALAXY::get_P_X_Y(s_bins_info *bx, s_bins_info *by, string type){
         PXY[ind]= aux_a==0 ? 0 : nbar[ind]/static_cast<real_prec>(aux_a);
         }
       }
-
-
-
-
   //PXY must be smoothed
-
-
-
   So.DONE();
-
-
 }
-
-
-// ######################################################################
-// ######################################################################
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_Pzc_from_PcMk(){
     int NTHREADS = omp_get_max_threads();
     omp_set_num_threads(NTHREADS);
-
     So.message_screen("Computing P(z,c) from P(c,Mk(z))");
-
-    real_prec deltaMK=(this->MK_max-this->MK_min)/static_cast<double>(this->N_bin_Mag);
-
+    real_prec  deltaMK=(this->MK_max-this->MK_min)/static_cast<real_prec>(this->N_bin_Mag);
     this->v_Magnitude.resize(this->N_bin_Mag,0);
 #pragma omp parallel for
     for(int i=0;i<this->N_bin_Mag;++i)
       this->v_Magnitude[i]=this->MK_min+(i+0.5)*deltaMK;
-
-
     this->Pzc_from_PzMk.clear();
     this->Pzc_from_PzMk.resize(this->N_bin_z);
 #pragma omp parallel for
     for(int i=0;i<Pzc_from_PzMk.size();++i)
        Pzc_from_PzMk[i].resize(this->N_bin_Mag, 0);
-
-
 #pragma omp parallel for collapse(3)
     for(int i=0 ; i< this->N_bin_z; ++i)
        for(int j=0 ; j < this->N_bin_color; ++j)
            for(int k=0; k < this->N_bin_Mag; ++k)
 #pragma omp atomic update
               this->Pzc_from_PzMk[i][j]+=this->PcMk[j][k]*this->S[i][k]*this->Vshell[i]*deltaMK;
-
     So.DONE();
 
     string of="2d_grid_z_c_mcmc.txt";
@@ -1920,10 +1649,6 @@ void GALAXY::get_Pzc_from_PcMk(){
       for(int j=0;j<this->N_bin_color;j++)
         te<<this->zn[i]<<"\t"<<this->v_color[j]<<"\t"<<(this->Pzc_from_PzMk[i][j])<<endl;
     te.close();
-
-
-
-
     So.message_screen("Computing Phi(Mk) from P(c,Mk)");
     this->Pm.clear();
     this->Pm.resize(this->N_bin_Mag,0);
@@ -1931,54 +1656,41 @@ void GALAXY::get_Pzc_from_PcMk(){
      for(int k=0; k < this->N_bin_Mag; ++k)
        for(int j=0 ; j < this->N_bin_color; ++j)
          this->Pm[k]+=this->PcMk[j][k];
-
    So.DONE();
-   this->File.write_to_file(this->output_file_LF,this->v_Magnitude,this->Pm);
-
+   //this->File.write_to_file(this->output_file_LF,this->v_Magnitude,this->Pm);
   So.message_screen("Computing N(z) from P(z,c)");
-
   this->dNdz_lf.clear();
   this->dNdz_lf.resize(this->N_bin_z,0);
-
 #pragma omp parallel for
     for(int i=0;i<this->N_bin_z;++i)
       for(int j=0; j<this->N_bin_Mag ; ++j)
 #pragma omp atomic update
         this->dNdz_lf[i]+=this->Pzc_from_PzMk[i][j];
     So.DONE();
-
-    real_prec acount=0;
+    real_prec  acount=0;
 #pragma omp parallel for reduction(+:acount)
     for(int i=0;i<this->N_bin_z;++i)
       acount+=this->dNdz_lf[i];
     So.message_screen("Check: Predicted number of objects from P(z,c) = ", static_cast<ULONG>(acount));
     this->Ngal_expected=acount;
-
       // Divide to obtain the number of objects in the bin
 #pragma omp parallel for
   for(int i=0;i<this->dNdz_lf.size();i++)
-    this->dNdz_lf[i]/=static_cast<double>(deltaz);
+    this->dNdz_lf[i]/=static_cast<real_prec>(deltaz);
   So.DONE();
-
-
 }
-// ######################################################################
-// ######################################################################
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_Pzc(bool c_weight){
-
   int NTHREADS = omp_get_max_threads();
   omp_set_num_threads(NTHREADS);
-
   So.message_screen("Measuring  P(z,c)");
-  real_prec deltac=(this->color_max-this->color_min)/(double)this->N_bin_color;
-  real_prec deltaz=(this->z_max-this->z_min)/(double)this->N_bin_z;
-
+  real_prec  deltac=(this->color_max-this->color_min)/(real_prec)this->N_bin_color;
+  real_prec  deltaz=(this->z_max-this->z_min)/(real_prec)this->N_bin_z;
   this->Pzc.resize(this->N_bin_z);
-
 #pragma omp parallel for
   for(int i=0;i<Pzc.size();++i)
      this->Pzc[i].resize(this->N_bin_color, 0);
-
   if(false==c_weight)
     {
       v_color.resize(this->N_bin_color,0);
@@ -1987,16 +1699,14 @@ void GALAXY::get_Pzc(bool c_weight){
         v_color[i]=this->color_min+(i+0.5)*deltac;
     }
 
-
-
   if(false==c_weight)
   {
 #pragma omp parallel for
   for(int i=0;i<this->NGAL;++i)
     if(this->Gal_inside_intervals_z_m_c[i]>0)
       {
-         real_prec zgal=this->prop[i_z+i*this->NCOLS];
-         real_prec JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
+         real_prec  zgal=this->prop[i_z+i*this->NCOLS];
+         real_prec  JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
          int iz=get_bin(zgal,this->z_min,this->N_bin_z,deltaz,true);
          int ic=get_bin(JKcolor,this->color_min,this->N_bin_color,deltac,true);
 #pragma omp atomic update
@@ -2010,7 +1720,7 @@ void GALAXY::get_Pzc(bool c_weight){
     {
       if(this->Gal_inside_intervals_z_m_c[i]>0)
         {
-          real_prec JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
+          real_prec  JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS];
           int iz=get_bin(this->prop[i_z+i*this->NCOLS],this->z_min,this->N_bin_z,deltaz,true);
           int ic=get_bin(JKcolor,this->color_min,this->N_bin_color,deltac,true);
 #pragma omp atomic update
@@ -2018,11 +1728,7 @@ void GALAXY::get_Pzc(bool c_weight){
         }
     }
   }
-
-
-
   So.DONE();
-
   if(false==c_weight)
     {
       string of="2d_grid_z_c.txt";
@@ -2033,7 +1739,7 @@ void GALAXY::get_Pzc(bool c_weight){
           te<<this->zn[i]<<"\t"<<this->v_color[j]<<"\t"<<(this->Pzc[i][j])<<endl;
       te.close();
 
-      real_prec acount =0;
+      real_prec  acount =0;
 #pragma omp parallel for reduction (+:acount) collapse(2)
       for(int i=0;i<this->Pzc.size();++i)
           for(int j=0;j<this->Pzc[0].size();j++)
@@ -2042,39 +1748,25 @@ void GALAXY::get_Pzc(bool c_weight){
       So.message_screen("Check: Number of objects from P(z,c) = ", acount);
   }
 }
-
-
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_PKc(){
-
   int NTHREADS = omp_get_max_threads();
   omp_set_num_threads(NTHREADS);
-
-
-  double deltaK=(this->mK_max-this->mK_min)/(double)this->N_bin_mag;
-  double deltac=(this->color_max-this->color_min)/(double)this->N_bin_color;
-
-
+  real_prec  deltaK=(this->mK_max-this->mK_min)/(real_prec)this->N_bin_mag;
+  real_prec  deltac=(this->color_max-this->color_min)/(real_prec)this->N_bin_color;
   this->PKc.resize(this->N_bin_mag);
   for(int i=0;i<PKc.size();++i)PKc[i].resize(this->N_bin_color, 0);
   v_color.clear();
   for(int i=0;i<this->N_bin_color;++i)v_color.push_back(this->color_min+(i+0.5)*deltac);
-
   v_mk.clear();
-  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((double)i)*deltaK);
-
-
-
-
+  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((real_prec)i)*deltaK);
   std::cout<<CYAN<<"Measuring  N(mK,c)"<<RESET<<std::endl;
-
   for(int i=0;i<this->NGAL;++i){
     if(this->gal_mask[i]==this->observed_pixels_in_mask){
       if(this->prop[i_z+i*this->NCOLS]>=zzns){
         if(this->prop[this->i_mK+i*this->NCOLS]<this->mK_max && this->prop[this->i_mK+i*this->NCOLS]>=this->mK_min){
-	  double JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS]-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_zp+i*this->NCOLS]);
+      real_prec  JKcolor=this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS]-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_zp+i*this->NCOLS]);
 	  if(JKcolor>=this->color_min && JKcolor<this->color_max){
 	    int ik=(int)floor((this->prop[i_mK+i*this->NCOLS]- this->mK_min)/deltaK);
 	    int ic=(int)floor((JKcolor-this->color_min)/deltac);
@@ -2092,51 +1784,35 @@ void GALAXY::get_PKc(){
   count =0;
   for(int i=0;i<this->N_bin_mag;++i)for(int j=0;j<this->N_bin_color;j++)count+=this->PKc[i][j];
   cout<<BLUE<<count<<" objects in Pkc, in file "<<of<<RESET<<endl;
-
 }
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_NS(){
-
   std::cout<<CYAN<<"Using "<< omp_get_max_threads()<<" threads"<<RESET<<std::endl;
   time_t start_all;
   time(&start_all);
   time_t end;
-
-  double delta_mk=(this->mK_max-this->mK_min)/((double)this->N_bin_mag);
-
+  real_prec  delta_mk=(this->mK_max-this->mK_min)/((real_prec)this->N_bin_mag);
   this->Amax_v.resize(this->N_bin_mag,1.0);
-
   //  this->Amax_v.resize(this->N_bin_mag,this->total_area);
   this->v_mk.clear();
-  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((double)(i+0.5))*delta_mk);
-
-
+  for(int i=0;i<this->N_bin_mag;++i)v_mk.push_back(this->mK_min+((real_prec)(i+0.5))*delta_mk);
   omp_set_num_threads(omp_get_max_threads());
-
   // Get here Amax
   this->dNdmk.clear();
   this->dNdmk.resize(this->N_bin_mag,0);
-
   /*
     for(int k=0;k<this->N_bin_mag;++k){
     for(int i=0;i<this->prop.size();++i){
     if(this->prop[i][this->i_gal_mask]==this->observed_pixels_in_mask){
     if(this->prop[i][i_zs]>=this->zzns){
-    double aux_var=(prop[i][i_mK]<v_mk[k]? 1./this->Amax_v[k]:0);
+    real_prec  aux_var=(prop[i][i_mK]<v_mk[k]? 1./this->Amax_v[k]:0);
     this->dNdmk[k]+=aux_var;
     }
     }
     }
     }
   */
-
   for(int i=0;i<this->NGAL;++i){
     if(this->gal_mask[i]==this->observed_pixels_in_mask){
       if(this->prop[i_zs+i*this->NCOLS]>=this->zzns){
@@ -2147,82 +1823,50 @@ void GALAXY::get_NS(){
       }
     }
   }
-
   So.DONE();
-
   for(auto i=0;i<dNdmk.size();i++){
-    auto Nk=(double)this->dNdmk[i]*this->total_area;
+    auto Nk=(real_prec)this->dNdmk[i]*this->total_area;
     this->edNdz[i]= Nk==0? 0 : dNdmk[i]/sqrt(Nk);
   }
-
-
-  this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
-
-
+  //this->File.write_to_file(this->output_file_dndmk,v_mk,dNdmk, edNdz);
   time(&end);
-  double lapse=difftime(end,start_all);
+  real_prec  lapse=difftime(end,start_all);
   std::cout<<BLUE<<"Time elapsed: "<<lapse<<"  secs \r"<<RESET<<std::endl;
   time(&start_all);
   std::cout<<CYAN<<"*******************************************************"<<RESET<<endl;
-
 }
 
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_LF_Vmax(ULONG number_gal){
-
   const gsl_rng_type * T;
   gsl_rng * r;
- 
-
-  So.message_screen("Measuring LF (Vmax standard estimator)");
+   So.message_screen("Measuring LF (Vmax standard estimator)");
   time_t start_all;
   time(&start_all);
   time_t end;
-
   int NTHREADS = omp_get_max_threads();
   omp_set_num_threads(NTHREADS);
-
-
-  double deltaMK_h=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag;
-  double deltaMK_l=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag_low_res;
-
+  real_prec  deltaMK_h=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag;
+  real_prec  deltaMK_l=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag_low_res;
   this->number_z.clear();
   this->number_z.resize(this->N_bin_z,0);
-
   this->Pm.clear();
   this->Pm.resize(this->N_bin_Mag,0);
-
   this->Pm_low_res.clear();
   this->Pm_low_res.resize(this->N_bin_Mag_low_res,0);
-
   this->number_m.clear();
   this->number_m.resize(this->N_bin_Mag,0);
-
   this->number_m_low_res.clear();
   this->number_m_low_res.resize(this->N_bin_Mag_low_res,0);
-
-
-
-
   vector<int>vseeds(NTHREADS,0);
   for(int i=0;i<vseeds.size();++i)vseeds[i]=12+105*i;   
-
 #ifdef _USE_LF_COLE_
   this->index_z_Gal.resize(this->NGAL,0); //This iwll be use only for COle estimator: allocate mags and read them in the iterations
   this->index_Mk_Gal.resize(this->NGAL,0); //This iwll be use only for COle estimator: allocate mags and read them in the iterations
   this->index_Mk_low_Gal.resize(this->NGAL,0); //This iwll be use only for COle estimator: allocate mags and read them in the iterations
   this->Gal_inside_intervals.resize(this->NGAL,0); //This iwll be use only for COle estimator: allocate mags and read them in the iterations
 #endif
-
-
 #ifdef _USE_PDF_PHOT2SPEC_   //tjis is to speed up the code, ut has to be given in accordance to parameter file
 #pragma omp parallel private(T, r)
   {
@@ -2241,7 +1885,7 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
         if(this->Gal_inside_intervals_z_m_c[i]>0) //This was filled when measuring the dNdz
           {
 
-            real_prec zgal=this->prop[i_z+i*this->NCOLS];
+            real_prec  zgal=this->prop[i_z+i*this->NCOLS];
 		    
 	    // If p_s or ps_s, assign spectroscopic redshift to this photometric ones
 	    // Using the PDF calibrated in paper I
@@ -2250,20 +1894,15 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
 	    if(this->redshift_type=="ps_s" || this->redshift_type=="p_s")
 	      {
 		// Width of the Gaussian
-		double zvpdf=0.03*tanh(-20.78*zgal*zgal+7.76*zgal+0.05)/(1.0+zgal);
-		double dist=gsl_ran_gaussian(r,zvpdf);
+        real_prec  zvpdf=0.03*tanh(-20.78*zgal*zgal+7.76*zgal+0.05)/(1.0+zgal);
+        real_prec  dist=gsl_ran_gaussian(r,zvpdf);
 		zgal+=dist;
 	      }
 #endif
-		    
-
-	    real_prec MKs;
-	    real_prec color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
-
-	    real_prec color2=0.0;//this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mH+i*this->NCOLS];
-
+        real_prec  MKs;
+        real_prec  color1=this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mK+i*this->NCOLS];
+        real_prec  color2=0.0;//this->prop[i_mJ+i*this->NCOLS]-this->prop[i_mH+i*this->NCOLS];
 	    this->get_MK(zgal, this->prop[i_mK+i*this->NCOLS],color1,color2, MKs); //Compute ABsolute magnitude
-
 	    if(MKs>=this->MK_min && MKs<this->MK_max)
 	      { 	  // Check boundaries in abs Mag
 			    
@@ -2276,8 +1915,7 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
 		this->index_Mk_low_Gal[i]=im_l;
 		this->index_z_Gal[i]=iz;
 #endif
-
-		real_prec vmax=1;
+        real_prec  vmax=1;
 		if(this->LF_estimator=="Vmax" || this->LF_estimator=="Vmax_dc")
 		  vmax=this->Vmax_v[im_h];
 		else
@@ -2287,14 +1925,13 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
 		      scp_aux=scp;
 		      scp_aux.Mabs=MKs;
 		      scp_aux.mlim=this->mK_max;
-		      real_prec zmax=this->Cf.zmax((void *)&scp_aux);
-		      real_prec rmax_v=gsl_inter_new(scp_aux.zv, scp_aux.rv, zmax);
+              real_prec  zmax=this->cosmology.zmax();
+              real_prec  rmax_v=gsl_inter_new(scp_aux.zv, scp_aux.rv, zmax);
 		      vmax=this->total_area*pow(rmax_v,3)/3.;
 		    }
 #ifdef _USE_LF_COLE_
 		this->Gal_inside_intervals[i]=1;
 #endif
-
 #pragma omp atomic update
 		this->number_z[iz]++;
 #pragma omp atomic update
@@ -2305,18 +1942,14 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
 		this->Pm[im_h]+=1./(vmax*deltaMK_h);
 #pragma omp atomic update
 		this->Pm_low_res[im_l]+=1./(vmax*deltaMK_l);
-
 	      }
-	  }
-	
+	  }	
       }
 #ifdef _USE_PDF_PHOT2SPEC_   //tjis is to speed up the code, ut has to be given in accordance to parameter file
   }
 #endif
-
   So.DONE();
 
-  
   number_gal  =0;
 #pragma omp parallel for reduction(+:number_gal)
   for(int i=0;i<this->number_z.size();++i)
@@ -2333,27 +1966,15 @@ void GALAXY::get_LF_Vmax(ULONG number_gal){
       te.close();
       So.message_screen("Writting output file ",this->output_file_LF);
       So.DONE();
-      this->File.write_to_file(this->output_file_NM,this->v_Magnitude_low_res,this->number_m_low_res);
+      //this->File.write_to_file(this->output_file_NM,this->v_Magnitude_low_res,this->number_m_low_res);
 
     }
-  
-  
-}
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
+ }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_LF_Cole2(){
-
   So.message_screen("Using iteration method by Cole (2012)");
-
   omp_set_num_threads(omp_get_max_threads());
-
-
 #ifdef  _USE_PDF_PHOT2SPEC_
   const gsl_rng_type * T;
   gsl_rng * r;
@@ -2368,11 +1989,11 @@ void GALAXY::get_LF_Cole2(){
   time_t end;
 
 
-  double deltaMK_h=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag;
-  double deltaMK_l=(this->MK_max-this->MK_min)/(double)this->N_bin_Mag_low_res;
+  real_prec  deltaMK_h=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag;
+  real_prec  deltaMK_l=(this->MK_max-this->MK_min)/(real_prec)this->N_bin_Mag_low_res;
 
 
-  double factor=1.0;
+  real_prec  factor=1.0;
   
   this->Delta_it.clear();
   this->Delta_it.resize(this->N_bin_z,1.0);
@@ -2435,32 +2056,32 @@ void GALAXY::get_LF_Cole2(){
 
 
 #ifdef  _USE_PDF_PHOT2SPEC_
-                    double zgal=this->prop[i_z+i*this->NCOLS];
+                    real_prec  zgal=this->prop[i_z+i*this->NCOLS];
                     // If p_s or ps_s, assign spectroscopic redshift to this photometric ones
                     // Using the PDF calibrated in paper I
                     if(this->redshift_type=="ps_s" || this->redshift_type=="p_s")
                       {
                         // Width of the Gaussian
-                        double zvpdf=0.03*tanh(-20.78*zgal*zgal+7.76*zgal+0.05)/(1.0+zgal);
-                        double dist=gsl_ran_gaussian(r,zvpdf);
+                        real_prec  zvpdf=0.03*tanh(-20.78*zgal*zgal+7.76*zgal+0.05)/(1.0+zgal);
+                        real_prec  dist=gsl_ran_gaussian(r,zvpdf);
                         zgal+=dist;
                       }
 #endif
 		    // Here we compute the density weighted Vmax.
 		    // The function Sij already contains the information on the limits in redshift
 		    // for the given magnitde and limiting flux, so we do the intergral up to the maximum index
-		    // instead of computing zmax from Cf.zmax() and get the index up to which izh must go.
+            // instead of computing zmax from cosmology.zmax() and get the index up to which izh must go.
                     // This also generates a factor of 1 below, so the LF so computed predicts the right number of galaxies.
 
                     int im_h=this->index_Mk_Gal[i];
 
-                    real_prec vmax=0;
+                    real_prec  vmax=0;
 #pragma omp parallel for reduction (+:vmax)
                     for(int izh=0;izh< this->Vshell.size() ;++izh)
                       vmax+=this->Vshell[izh]*this->Delta_it[izh]*this->S[izh][im_h];
 
-		    double control= isnan(vmax) || vmax==0 ? 0.0: factor;
-		    double vmax_mm = vmax ==0? 1.0 : vmax;
+            real_prec  control= isnan(vmax) || vmax==0 ? 0.0: factor;
+            real_prec  vmax_mm = vmax ==0? 1.0 : vmax;
 
                     int iz=this->index_z_Gal[i];
 #pragma omp atomic update
@@ -2485,7 +2106,7 @@ void GALAXY::get_LF_Cole2(){
 	    if(isnan(Pm[j]))Pm[j]=0;
 	  
 	  //GET THE NUMBER OF OBSERVED OBJECTS AS GIVEN BY THE LUM FUNCTION
-          real_prec nobs=0.;
+          real_prec  nobs=0.;
 #pragma omp parallel for collapse(2) reduction(+:nobs)
 	  for(int i=0;i<this->N_bin_z;++i)
 	    for(int j=0;j<this->N_bin_Mag;++j)
@@ -2498,19 +2119,14 @@ void GALAXY::get_LF_Cole2(){
 	  
           So.message_screen(" Observed  Number of observed objects =",nobs0);
           So.message_screen(" Predicted Number of observed objects =",nobs);
-          factor=1;//(static_cast<double>(nobs))/(static_cast<double>(nobs0));
+          factor=1;//(static_cast<real_prec>(nobs))/(static_cast<real_prec>(nobs0));
 
 	} //end if IT >0
-      
-      
       // ****************************************
       
       // get the nbar from LF
 
-	
-      vector<double>v_nbar(this->N_bin_z,0);
-
-
+      vector<real_prec>v_nbar(this->N_bin_z,0);
 #pragma omp parallel for
       for(int i=0;i<this->N_bin_z;++i)
 	for(int j=0;j<this->N_bin_Mag;++j)
@@ -2546,14 +2162,16 @@ void GALAXY::get_LF_Cole2(){
 	  string file2="Luminosity_Function/delta"+this->redshift_type+"_mk" +to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+"_"+this->hemisphere+"_it"+to_string(IT)+".txt";
 	  ta.open(file2.c_str());
 	  cout<<BLUE<<"Writing file  "<<CYAN<<file2<<RESET<<endl;
-	  for(int i=0;i<this->N_bin_z_low_res;i++)
+
+      vector<double>ddelta(this->Delta_it.size(), 0);
+      for(int i =0;i<ddelta.size();++i)ddelta[i]=static_cast<double>(this->Delta_it[i]);
+      for(int i=0;i<this->N_bin_z_low_res;i++)
 	    {
-	      double dmm=gsl_inter_new(this->zn,this->Delta_it, this->zn_low_res[i]);
+          real_prec  dmm=gsl_inter_new(this->zn,ddelta, this->zn_low_res[i]);
 	      ta<<this->zn_low_res[i]<<"\t"<<dmm<<endl;
 	    }
 	  ta.close();
 	}
-
     }
 #ifdef  _USE_PDF_PHOT2SPEC_
 }
@@ -2561,63 +2179,46 @@ void GALAXY::get_LF_Cole2(){
   
   So.DONE();
 }
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
-
-
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-void GALAXY::get_MK(double z, double mk, double &MKS)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void GALAXY::get_MK(real_prec  z, real_prec  mk, real_prec  &MKS)
 {
-  double DMk=gsl_inter_new(this->zv, this->Dm, z);
-  double Kcorr;
+  real_prec  DMk=gsl_inter_new(this->zv, this->Dm, z);
+  real_prec  Kcorr;
   
   if(true==this->use_K_correction)
     {
-      Kcorr= type_of_K_correction=="analytical" ?  this->Cf.K_correction(z,(void *)&(this->scp)): gsl_inter_new(this->v_z_Kcorr,this->v_Kcorr,z);
+      Kcorr= type_of_K_correction=="analytical" ?  this->cosmology.K_correction(z): gsl_inter_new(this->v_z_Kcorr,this->v_Kcorr,z);
     }
   else
     Kcorr=0;
   
-  double e_corr= this->use_e_correction ? this->Cf.e_correction(z,(void *)&(this->scp)): 0.0 ;
+  real_prec  e_corr= this->use_e_correction ? this->cosmology.e_correction(z): 0.0 ;
   DMk+=Kcorr+e_corr;
   MKS=mk-DMk;  //Compute M=m-(DM+Kcorreection)
 }
 
-// ######################################################################
-// ######################################################################
-void GALAXY::get_MK(double z, double mk, real_prec color1, real_prec color2,double &MKS)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void GALAXY::get_MK(real_prec  z, real_prec  mk, real_prec  color1, real_prec  color2,real_prec  &MKS)
 {
-  double DMk=gsl_inter_new(this->zv, this->Dm, z);
-  double Kcorr;
+  real_prec  DMk=gsl_inter_new(this->zv, this->Dm, z);
+  real_prec  Kcorr;
 
   if(true==this->use_K_correction)
     {
-      Kcorr= type_of_K_correction=="analytical" ?  this->Cf.K_correction(z,color1, color2,(void *)&(this->scp)): gsl_inter_new(this->v_z_Kcorr,this->v_Kcorr,z);
+      Kcorr= type_of_K_correction=="analytical" ?  this->cosmology.K_correction(z,color1, color2): gsl_inter_new(this->v_z_Kcorr,this->v_Kcorr,z);
     }
   else
     Kcorr=0;
 
-  double e_corr= this->use_e_correction ? this->Cf.e_correction(z,(void *)&(this->scp)): 0.0 ;
+  real_prec  e_corr= this->use_e_correction ? this->cosmology.e_correction(z): 0.0 ;
   DMk+=Kcorr+e_corr;
   MKS=mk-DMk;  //Compute M=m-(DM+Kcorreection)
 }
 
-
-
-// ######################################################################
-// ######################################################################
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_LF_Cole()
 {
   
@@ -2632,7 +2233,7 @@ void GALAXY::get_LF_Cole()
   this->Delta_it.resize(this->N_bin_z,1);
   this->nbarq.resize(this->N_bin_z,0);
 
-  double deltaMK_h=(this->MK_max-this->MK_min)/static_cast<double>(this->N_bin_Mag);
+  real_prec  deltaMK_h=(this->MK_max-this->MK_min)/static_cast<real_prec>(this->N_bin_Mag);
 
   // -----------------------------------------------------
   // Get the LF from the /Vmax. (this->Pm)
@@ -2642,16 +2243,14 @@ void GALAXY::get_LF_Cole()
   this->get_LF_Vmax(ngal_lf);
   // -----------------------------------------------------
 
-  double factor=1.00;
+  real_prec  factor=1.00;
   
 
-  vector<double>Vm=Vmax_v;
-  
+  vector<real_prec>Vm(Vmax_v.size(),9);
+  for(int i =0;i<Vm.size();++i)Vm[i]=Vmax_v[i];
   for(int IT=0;IT<this->N_iterations;++IT)
     {
-      
-      
-      // Get estimate of mean number density from luminosity function
+     // Get estimate of mean number density from luminosity function
       for(int i=0;i<this->N_bin_z;++i)
 	nbarq[i]=0;
       
@@ -2663,7 +2262,7 @@ void GALAXY::get_LF_Cole()
       // Get new values of delta
 #pragma omp parallel for
       for(int i=0;i<dNdz.size();++i)
-	Delta_it[i]= factor*((static_cast<double>(this->number_z[i]))/(this->Vshell[i]))/this->nbarq[i];
+    Delta_it[i]= factor*((static_cast<real_prec>(this->number_z[i]))/(this->Vshell[i]))/this->nbarq[i];
       
       
       // Get Vmax in Magnitude bins from values of delta
@@ -2678,12 +2277,12 @@ void GALAXY::get_LF_Cole()
 	  this->Vmax_v[j]+=Delta_it[i]*this->Vshell[i]*this->S[i][j]*deltaMK_h;
 
 
-      // vector<double>Mu;
-      // vector<double>Res;
+      // vector<real_prec>Mu;
+      // vector<real_prec>Res;
       // for(int im=100;im>=0;--im)
       // 	{
-      // 	  double mu=0.0+(20.0)*im/100.;
-      // 	  double res=0;
+      // 	  real_prec  mu=0.0+(20.0)*im/100.;
+      // 	  real_prec  res=0;
       // 	  for(int j=0;j<this->N_bin_Mag;++j)
       // 	    res+=this->Vmax_v[j]/(this->Vmax_v[j]+mu*Vm[j]);
       // 	  Res.push_back(res);
@@ -2691,7 +2290,7 @@ void GALAXY::get_LF_Cole()
       // 	  //	  cout<<mu<<"  "<<res<<endl;
       // 	} 
 
-      double Muu=0;//gsl_inter_new(Res,Mu,1.0);
+      real_prec  Muu=0;//gsl_inter_new(Res,Mu,1.0);
 
 #pragma omp parallel for
       for(int j=0;j<this->N_bin_Mag;++j)
@@ -2701,12 +2300,12 @@ void GALAXY::get_LF_Cole()
       for(int j=0;j<this->N_bin_Mag;++j)
 	this->Pm[j]=(Vmax_v[j]==0 ? 0.0 : factor*this->number_m[j]/(this->Vmax_v[j] +Muu*Vm[j]));
       
-      //      double nobs=0.;
+      //      real_prec  nobs=0.;
       // for(int i=0;i<this->N_bin_z;++i)
       // 	for(int j=0;j<this->N_bin_Mag;++j)
       // 	  nobs+=this->Vshell[i]*this->Delta_it[i]*this->Pm[j]*this->S[i][j]*deltaMK_h;
       
-      //      factor=(static_cast<double>(nobs))/(static_cast<double>(this->Ngal_dndz));
+      //      factor=(static_cast<real_prec>(nobs))/(static_cast<real_prec>(this->Ngal_dndz));
       
       if(IT==N_iterations-1)
 	{
@@ -2715,13 +2314,24 @@ void GALAXY::get_LF_Cole()
 	  te.open(file.c_str());
 	  
 	  cout<<BLUE<<"Writing file  "<<CYAN<<file<<RESET<<endl;
-	  
-	  for(int i=0;i<this->N_bin_Mag_low_res;++i)
+
+#ifdef SINGLE_PREC
+      vector<double>dPm(Pm.size(),0);
+      for(int i =0;i<Pm.size();++i)dPm[i]=static_cast<double>(Pm[i]);
+      vector<double>dMag(v_Magnitude.size(),0);
+      for(int i =0;i<dMag.size();++i)dMag[i]=static_cast<double>(this->v_Magnitude[i]);
+#endif
+
+      for(int i=0;i<this->N_bin_Mag_low_res;++i)
 	    {
 	      if(this->number_m_low_res[i]!=0)
 		{
-		  double pmm=gsl_inter_new(this->v_Magnitude,this->Pm,this->v_Magnitude_low_res[i]);
-		  te<<this->v_Magnitude_low_res[i]<<"\t"<<pmm<<"  "<<pmm/sqrt(this->number_m_low_res[i])<<endl;
+#ifdef SINGLE_PREC
+             real_prec  pmm=gsl_inter_new(dMag,dPm,this->v_Magnitude_low_res[i]);
+#elif
+              real_prec  pmm=gsl_inter_new(this->v_Magnitude,Pm,this->v_Magnitude_low_res[i]);
+#endif
+              te<<this->v_Magnitude_low_res[i]<<"\t"<<pmm<<"  "<<pmm/sqrt(this->number_m_low_res[i])<<endl;
 		}
 	    }
 	  te.close();
@@ -2729,43 +2339,32 @@ void GALAXY::get_LF_Cole()
 	  string file2="Luminosity_Function/delta_it"+to_string(IT)+".txt";
 	  
 	  ta.open(file2.c_str());
+      vector<double>ddelta(this->Delta_it.size(), 0);
+      for(int i =0;i<ddelta.size();++i)ddelta[i]=static_cast<double>(this->Delta_it[i]);
+
 	  cout<<BLUE<<"Writing file  "<<CYAN<<file2<<RESET<<endl;
 	  for(int i=0;i<this->N_bin_z_low_res;i++){
-	    double dmm=gsl_inter_new(this->zn,Delta_it, this->zn_low_res[i]);
+        real_prec  dmm=gsl_inter_new(this->zn,ddelta, this->zn_low_res[i]);
 	    ta<<this->zn_low_res[i]<<"\t"<<dmm<<endl;
 	    //	    cout<<this->zn_low_res[i]<<"\t"<<dmm<<endl;
 	    
 	  }
 	  ta.close();
 	}
-      
-    }
-  
-  
+   }
   time(&end);
-  double lapse=difftime(end,start_all);
+  real_prec  lapse=difftime(end,start_all);
   std::cout<<BLUE<<"Time elapsed: "<<lapse<<"  secs \r"<<RESET<<std::endl;
   time(&start_all);
 }
-
-// ######################################################################
-// ######################################################################
-// ######################################################################
-// ######################################################################
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void GALAXY::get_dndz_LF()
 {
   omp_set_num_threads(omp_get_max_threads());
-
   So.message_screen("Measuring dNdz from LF");
-
-
-
   this->dNdz_lf.resize(this->N_bin_z,0);
-  
-  double deltaMK=(this->MK_max-this->MK_min)/static_cast<double>(this->N_bin_Mag);
-
+  real_prec  deltaMK=(this->MK_max-this->MK_min)/static_cast<real_prec>(this->N_bin_Mag);
 #pragma omp parallel for
   for(int i=0;i<this->dNdz_lf.size();++i)
     this->dNdz_lf[i]=0;
@@ -2778,12 +2377,12 @@ void GALAXY::get_dndz_LF()
 
   So.DONE();
 
-  real_prec acount=0.;
+  real_prec  acount=0.;
 #pragma omp parallel for reduction(+:count)
   for(int i=0;i<this->dNdz_lf.size();i++)
     acount+=static_cast<real_prec>(this->dNdz_lf[i]);
 
-  real_prec Nfact=(static_cast<double>(this->Ngal_dndz))/(static_cast<double>(acount));
+  real_prec  Nfact=(static_cast<real_prec>(this->Ngal_dndz))/(static_cast<real_prec>(acount));
 
   //  for(int i=0;i<this->dNdz_lf.size();i++)this->dNdz_lf[i]*=Nfact;
 
@@ -2797,7 +2396,7 @@ void GALAXY::get_dndz_LF()
 
 #pragma omp parallel for
   for(int i=0;i<this->dNdz_lf.size();i++)
-    this->dNdz_lf[i]/=static_cast<double>(deltaz);
+    this->dNdz_lf[i]/=static_cast<real_prec>(deltaz);
   So.DONE();
 
 }
@@ -2807,15 +2406,15 @@ void GALAXY::get_dndz_LF()
 // ######################################################################
 
 struct aux_s{
-  vector<double>znv;
-  vector<double>dndzv;
+  vector<real_prec>znv;
+  vector<real_prec>dndzv;
 
 };
 
 // ######################################################################
 // ######################################################################
 
-double idndz_lf(double z, void *p){
+gsl_real idndz_lf(gsl_real z, void *p){
   aux_s *as = (aux_s *)p;
   if(z<as->znv[0])
     z=as->znv[0];
@@ -2836,17 +2435,18 @@ void GALAXY::get_dndz_LF_bins(){
   this->dNdz_lf_low_res.resize(this->N_bin_z_low_res,0);
 
   aux_s aux_s;
-  aux_s.znv=this->zn;
-  aux_s.dndzv=this->dNdz_lf;
+  for(int i =0;i<zn.size();++i)aux_s.znv[i]=static_cast<double>(zn[i]);
+  for(int i =0;i<dNdz_lf.size();++i)aux_s.dndzv[i]=static_cast<double>(dNdz_lf[i]);
 
-  int nz=(int)((double)this->N_bin_z/(double)this->N_bin_z_low_res);
+
+  int nz=(int)((real_prec)this->N_bin_z/(real_prec)this->N_bin_z_low_res);
   for(int i=0;i<this->dNdz_lf_low_res.size();i++)
-    this->dNdz_lf_low_res[i]=gsl_integration3(nz,idndz_lf,(void *)&aux_s,zn_low_res[i]-0.5*deltaz_low_res, zn_low_res[i]+0.5*deltaz_low_res)/deltaz_low_res;
+    this->dNdz_lf_low_res[i]=gsl_integration(nz,idndz_lf,(void *)&aux_s,zn_low_res[i]-0.5*deltaz_low_res, zn_low_res[i]+0.5*deltaz_low_res)/deltaz_low_res;
 
   // Divide to be written in a file and plotted
   //  for(int i=0;i<this->dNdz_lf_low_res.size();i++)this->dNdz_lf_low_res[i]/=deltaz_low_res;
 
-  this->File.write_to_file(this->output_file_dndz_lf,this->zn_low_res,this->dNdz_lf_low_res);
+  //this->File.write_to_file(this->output_file_dndz_lf,this->zn_low_res,this->dNdz_lf_low_res);
 
 
 }
@@ -2871,10 +2471,10 @@ void GALAXY::get_new_mask(string coord){
     int tnorth, tsouth;
 
     for(int i=0;i<mask_temp.size();++i){
-      double b= mask_temp[i][i_bpix];  //convert to galactic latitude
-      double la= mask_temp[i][i_lpix];
-      double alpha,  delta;
-      gal2equ(b,la,&alpha,&delta);
+      real_prec  b= mask_temp[i][i_bpix];  //convert to galactic latitude
+      real_prec  la= mask_temp[i][i_lpix];
+      real_prec  alpha,  delta;
+      galactic_to_equatorial(b,la,alpha,delta);
       if(delta>0){
         tsouth=0;
         if(mask_temp[i][this->i_mask_flag]==1)tnorth=1;
@@ -2899,8 +2499,8 @@ void GALAXY::get_new_mask(string coord){
 
     mnorth.open("../MASK/new_mask_north_galactic.dat");
     for(int i=0;i<mask_temp.size();++i){
-      double la= mask_temp[i][i_lpix];
-      double b= mask_temp[i][i_bpix];
+      real_prec  la= mask_temp[i][i_lpix];
+      real_prec  b= mask_temp[i][i_bpix];
       if(b>0)tnorth=mask_temp[i][this->i_mask_flag];
       else tnorth=0;
       mnorth<<i<<"\t"<<la<<"\t"<<b<<"\t"<<tnorth<<endl;
@@ -2910,8 +2510,8 @@ void GALAXY::get_new_mask(string coord){
 
     msouth.open("../MASK/new_mask_south_galactic.dat");
     for(int i=0;i<mask_temp.size();++i){
-      double b= mask_temp[i][i_bpix];
-      double la= mask_temp[i][i_lpix];
+      real_prec  b= mask_temp[i][i_bpix];
+      real_prec  la= mask_temp[i][i_lpix];
       if(b<0)tsouth=mask_temp[i][this->i_mask_flag];
       else tsouth=0;
       msouth<<i<<"\t"<<la<<"\t"<<b<<"\t"<<tsouth<<endl;
@@ -2954,13 +2554,13 @@ void GALAXY::get_new_cat(){
 /*
   
   // This uses the K-correction used by Enzo
-  //  double DMl_kc=gsl_inter_new(this->zv, this->Dm, z_min_vls)+Cf.K_correction(z_min_vls,(void *)&(this->scp))+Cf.e_correction(z_min_vls,(void *)&(this->scp));
+  //  real_prec  DMl_kc=gsl_inter_new(this->zv, this->Dm, z_min_vls)+cosmology.K_correction(z_min_vls,(void *)&(this->scp))+cosmology.e_correction(z_min_vls,(void *)&(this->scp));
 
   // This uses the K-correction privided by J Thomas
-  double DMl_kc=gsl_inter_new(this->zv, this->Dm, z_min_vls)+gsl_inter_new(this->v_z_Kcorr, this->v_Kcorr,z_min_vls)+Cf.e_correction(z_min_vls,(void *)&(this->scp));
+  real_prec  DMl_kc=gsl_inter_new(this->zv, this->Dm, z_min_vls)+gsl_inter_new(this->v_z_Kcorr, this->v_Kcorr,z_min_vls)+cosmology.e_correction(z_min_vls,(void *)&(this->scp));
 
   int izz=(this->i_magnitude_limit==6? i_zs:i_z);
-  Healpix_Map<double>mask_aux(log2(nside), RING);
+  Healpix_Map<real_prec>mask_aux(log2(nside), RING);
   for(int i=0;i<n_pixels;i++)mask_aux[i]=this->mask[this->i_mask_flag+i*this->NCOLS_MASK];
 
 
@@ -2972,23 +2572,23 @@ void GALAXY::get_new_cat(){
 	  {
 	    if(this->prop[this->i_mK+i*this->NCOLS]>=this->mK_min && this->prop[this->i_mK+i*this->NCOLS]<=this->mK_max)
 	      {
-		double JKcolor=(this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS])-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_z+i*this->NCOLS]);
+        real_prec  JKcolor=(this->prop[this->i_mJ+i*this->NCOLS]-this->prop[this->i_mK+i*this->NCOLS])-gsl_inter_new(this->v_z_Kcorr,this->v_color_correction_Kcorr,prop[i_z+i*this->NCOLS]);
 		//if(this->prop[i][i_zs]>=this->zzns){
-		double MKs;
+        real_prec  MKs;
 		get_MK(this->prop[i_z+i*this->NCOLS], this->prop[i_mK+i*this->NCOLS], MKs); //Compute ABsolute magnitude
 		if(iz_vls==0)
 		  { //full sample
 		    count++;
-		    //              double alpha=this->prop[i][this->i_lgal]+180.0;double alpha2;
+            //              real_prec  alpha=this->prop[i][this->i_lgal]+180.0;real_prec  alpha2;
 		    //             if(alpha>=360)alpha2=alpha-360.0; else alpha2=alpha;
 		    //            vdina<<alpha2<<"\t"<<this->prop[i][this->i_bgal]<<"\t"<<prop[i][i_z]<<"\t"<<this->prop[i][this->i_mK]<<"\t"<<MKs<<"\t"<<JKcolor<<"\t"<<endl;
-		    double zzm = this->prop[i_z+i*this->NCOLS]<zn[0] ? zn[0]: this->prop[i_z+i*this->NCOLS];
-		    double nb=gsl_inter_new(zn,nbar,zzm);
+            real_prec  zzm = this->prop[i_z+i*this->NCOLS]<zn[0] ? zn[0]: this->prop[i_z+i*this->NCOLS];
+            real_prec  nb=gsl_inter_new(zn,nbar,zzm);
 		    
 
                     //  if((this->prop[i][this->i_dec]<=10 && this->prop[i][this->i_dec]>=-10) && (this->prop[i][this->i_ra]<=225 && this->prop[i][this->i_ra]>=150)){
                     //  if(prop[i][i_zs]>=0){
-                    //  double x,y,z,xp,yp,zp;
+                    //  real_prec  x,y,z,xp,yp,zp;
                     //  GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zp],xp,yp,zp);
                     //  GO.equatorial_to_cartesian(this->prop[i][this->i_ra],0,prop[i][i_zs],x,y,z);
                     //  if(x*x+y*y<=pow(0.2,2))vdina<<x<<"\t"<<y<<"\t"<<xp<<"\t"<<yp<<"\t"<<prop[i][i_zs]<<"\t"<<prop[i][i_zp]<<"\t"<<nb<<endl;
@@ -3003,7 +2603,7 @@ void GALAXY::get_new_cat(){
 		  if(iz_vls>0){
 		    if(this->prop[i_z+i*this->NCOLS]>z_min_vls || (this->prop[i_z+i*this->NCOLS]<=z_min_vls && MKs<=this->mK_max-DMl_kc)  ){
 		      count++;
-		      double nb=gsl_inter_new(zn,nbar,this->prop[i_z+i*this->NCOLS]);
+              real_prec  nb=gsl_inter_new(zn,nbar,this->prop[i_z+i*this->NCOLS]);
 		      vdina<<this->prop[this->i_lgal+i*this->NCOLS]<<"\t"<<this->prop[this->i_bgal+i*this->NCOLS]<<"\t"<<prop[i_z+i*this->NCOLS]<<"\t"<<nb<<"\t"<<this->prop[this->i_mK+i*this->NCOLS]<<"\t"<<MKs<<"\t"<<JKcolor<<"\t"<<endl;
 		    }
 		  }
@@ -3028,12 +2628,12 @@ void GALAXY::get_new_cat(){
  this->dNdM.shrink_to_fit();
  this->dNdM.resize(this->N_bin_lmass,0);
 
- real_prec deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
+ real_prec  deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
 
   for(int i=0;i<this->NGAL;i++)
       {
-        real_prec zr= this->prop[this->i_z+i*this->NCOLS];
-        real_prec nb=0;
+        real_prec  zr= this->prop[this->i_z+i*this->NCOLS];
+        real_prec  nb=0;
         int iz_low=get_bin(zr,z_min_low_res,N_bin_z_low_res,deltaz_low_res,true);
         if(zr<=this->z_max && zr>=this->z_min)
             {
@@ -3045,12 +2645,12 @@ void GALAXY::get_new_cat(){
                    nb=  static_cast<real_prec>(gsl_spline_eval (spline, zr, acc));
 #ifdef _USE_MASS_
                 int indexm=get_bin(log10(this->prop[this->i_mass+i*this->NCOLS]),lmass_min,N_bin_lmass, deltam, true);
-           //    real_prec DeltaM= pow(10, lmass_min+(indexm+1)*deltam)-pow(10, lmass_min+(indexm)*deltam);
+           //    real_prec  DeltaM= pow(10, lmass_min+(indexm+1)*deltam)-pow(10, lmass_min+(indexm)*deltam);
 
 
                 dNdM[indexm]++;
                 ULONG idmz=index_2d(indexm,iz_low,N_bin_z_low_res);
-                real_prec alpha=this->NXY[idmz]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb sim nbar(z,M)
+                real_prec  alpha=this->NXY[idmz]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb sim nbar(z,M)
                 vdina<<static_cast<float>(prop[i_z+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_ra+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_dec+i*this->NCOLS])<<"\t"<<static_cast<float>(this->prop[this->i_mass+i*this->NCOLS])<<"\t"<<static_cast<float>(nb)<<"\t"<<static_cast<float>(nb*alpha)<<endl;
 
 #else
@@ -3075,7 +2675,7 @@ void GALAXY::get_new_cat(){
 
   for(auto i=0;i<dNdz_low_res.size();i++)
         mass_aux[i]=lmass_min+(i+0.5)*deltam;
-  this->File.write_to_file(this->output_dir+"dndM.txt",mass_aux,dNdM);
+  //this->File.write_to_file(this->output_dir+"dndM.txt",mass_aux,dNdM);
 
 
 
@@ -3092,17 +2692,17 @@ void GALAXY::get_new_cat(){
 // void GALAXY::get_alpha_rsd(){
 
 
-//     vector<vector<double> >propa;
+//     vector<vector<real_prec> >propa;
 //     ofstream daa;daa.open("alpha_rsd_zbin1.txt");
 //     Fo.read_file("/home/andres/data/Numerics/EUCLID/CODES/GitHub/Cl/2MPZ_dndz_zbin1_gaussian_sigmaz_var.dat", propa);
 //     int nzz=propa.size();
 
 
-//     vector<double> alpha_rsd(nzz+1,0);
-//     vector<double> dnbar(nzz+1,0);
-//     vector<double> nbaR(nzz+1,0);
-//     vector<double> DNDZ(nzz+1,0);
-//     vector<double> ZZ(nzz+1,0);
+//     vector<real_prec> alpha_rsd(nzz+1,0);
+//     vector<real_prec> dnbar(nzz+1,0);
+//     vector<real_prec> nbaR(nzz+1,0);
+//     vector<real_prec> DNDZ(nzz+1,0);
+//     vector<real_prec> ZZ(nzz+1,0);
 //     for(int i=0;i<nzz;i++)ZZ[i]=propa[0+i*this->NCOLS];
 //     for(int i=0;i<nzz;i++)DNDZ[i]=propa[i][2];
 
@@ -3116,7 +2716,7 @@ void GALAXY::get_new_cat(){
 
 //     for(int i=0;i<nzz;++i){
 //       if(DNDZ[i]!=0){
-//         double rr=gsl_inter_new(this->zv,this->rv,ZZ[i]);
+//         real_prec  rr=gsl_inter_new(this->zv,this->rv,ZZ[i]);
 //         alpha_rsd[i]=(dnbar[i]/nbaR[i])*gsl_inter_new(this->zv,this->Hv,ZZ[i])/Constants::speed_light   + 2./rr;
 //         daa<<ZZ[i]<<"  "<<rr<<"  "<<alpha_rsd[i]<<endl;
 //         cout<<ZZ[i]<<"  "<<rr<<"  "<<nbaR[i]<<"  "<<alpha_rsd[i]<<endl;
@@ -3143,18 +2743,18 @@ void GALAXY::get_new_cat(){
 //   vdina.width(6);
 //   vdina.open(file.c_str());
 //   int count=0;
-//   double aa=((double)prop.size())/((double)prop_r.size());
+//   real_prec  aa=((real_prec)prop.size())/((real_prec)prop_r.size());
 //   if(cat=="g"){
 //     for(int i=0;i<this->prop.size();++i){
 //       count++;
-//       double nb=aa*gsl_inter_new(this->zn,this->nbar,this->prop[i_z+i*this->NCOLS]);
+//       real_prec  nb=aa*gsl_inter_new(this->zn,this->nbar,this->prop[i_z+i*this->NCOLS]);
 //       vdina<<this->prop[this->i_ra+i*this->NCOLS]<<"\t"<<this->prop[this->i_dec+i*this->NCOLS]<<"\t"<<prop[i_z+i*this->NCOLS]<<"\t"<<nb<<endl;
 //     }
 //   }
 //   else{
 //     for(int i=0;i<this->prop_r.size();++i){
 //       count++;
-//       double nb=aa*gsl_inter_new(this->zn,this->nbar,this->prop_r[i][i_z]);
+//       real_prec  nb=aa*gsl_inter_new(this->zn,this->nbar,this->prop_r[i][i_z]);
 //       vdina<<this->prop_r[i][this->i_ra]<<"\t"<<this->prop_r[i][this->i_dec]<<"\t"<<prop_r[i][i_z]<<"\t"<<nb<<endl;
 //     }
 //   }
@@ -3167,52 +2767,39 @@ void GALAXY::get_new_cat(){
 
 // ######################################################################
 // ######################################################################
- 
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+#define _USE_OMP_rangen_
   
 void GALAXY::get_random_cat(string file, long n_random){
   
-  ofstream vdina;
-  cout<<file<<endl;
-  vdina.open(file.c_str());
-  vdina.precision(12);
-  vdina.setf(ios::showpoint);
-  vdina.setf(ios::scientific);
-  vdina.width(6);
-
-  const gsl_rng_type * T;
-  gsl_rng * ral;
-  gsl_rng_env_setup();
-  gsl_rng_default_seed=224;
-  T = gsl_rng_ranlux;
-  ral = gsl_rng_alloc (T);
 
 
-  this->prop.clear(); prob.shrink_to_fit();
-  this->NCOLS=5;
-  this->prop.resize(n_random*this->NCOLS);
 
 
-  this->prob.clear(); prob.shrink_to_fit();
-  this->prob.resize(this->zn_new.size(),0);
-
-  real_prec lka=-100.;
-  real_prec lkb=0.;
-  for(ULONG i=0;i<this->nbar_new.size();++i)
+  real_prec  lka=-100.;
+  real_prec  lkb=0.;
+  for(int i=0;i<this->nbar.size();++i)
      {
-        lkb=max(static_cast<real_prec>(this->nbar_new[i]), lka);
+        lkb=max(static_cast<real_prec>(this->nbar[i]), lka);
         lka=lkb;
      }
 
-   std::cout<<"max = "<<lka<<endl;
-
-#pragma omp parallel for
-   for(ULONG i=0;i<this->nbar_new.size();++i)
-        this->prob[i]=this->nbar_new[i]/lka;
-
+   this->prob.clear(); prob.shrink_to_fit();
+   this->prob.resize(this->nbar.size(),0);
+   for(int i=0;i<this->nbar.size();++i)
+        this->prob[i]=this->nbar[i]/lka;
 
   std::cout<<"zmin = "<<z_min<<endl;
   std::cout<<"zmax = "<<z_max<<endl;
 
+  deltaz=this->zn_new[1]-this->zn_new[0];// this is for the dNdz computed on the fly
 
   gsl_interp_accel *acc;
 
@@ -3220,15 +2807,12 @@ void GALAXY::get_random_cat(string file, long n_random){
   gsl_spline *spline_zr  = gsl_spline_alloc (gsl_interp_linear, zv.size());
   gsl_spline_init (spline_zr, &(zv[0]), &(rv[0]), zv.size());
 
-  real_prec rmax=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_max, acc)); // gsl_inter_new(zv,rv,this->z_max);
-  real_prec rmin=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_min, acc));//  gsl_inter_new(zv,rv,this->z_min);
+  real_prec  rmax=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_max, acc)); // gsl_inter_new(zv,rv,this->z_max);
+  real_prec  rmin=static_cast<real_prec>(gsl_spline_eval(spline_zr, z_min, acc));//  gsl_inter_new(zv,rv,this->z_min);
   gsl_spline_free(spline_zr);
-//  gsl_interp_accel_free(acc);
 
 
-  ULONG count=0;
 
-  std::cout<<"Generating random catalog with "<<n_random<<" objects"<<endl;
 
   // get z(r) given r
   gsl_interp_accel *acc_rz;
@@ -3247,120 +2831,175 @@ void GALAXY::get_random_cat(string file, long n_random){
   // get nbar(z) given z
   gsl_interp_accel *acc_zn;
   acc_zn = gsl_interp_accel_alloc ();
-  gsl_spline *spline_n    = gsl_spline_alloc (gsl_interp_linear, this->nbar_new.size());
-  gsl_spline_init (spline_n, &(this->zn_new[0]), &(this->nbar_new[0]), this->nbar_new.size());
+  gsl_spline *spline_n    = gsl_spline_alloc (gsl_interp_linear, this->nbar.size());
+  gsl_spline_init (spline_n, &(this->zn_new[0]), &(this->nbar[0]), this->nbar.size());
 
 
   std::cout<<"r min = "<<rmin<<endl;
   std::cout<<"r max = "<<rmax<<endl;
 
 
-  vector<real_prec>dNdz_random(this->dNdz_low_res.size(),0);
 //  this->dNdz_low_res.clear();
 //  this->dNdz_low_res.shrink_to_fit();
 //  this->dNdz_low_res.resize(this->N_bin_z_low_res,0);
-  this->dNdM.clear();
-  this->dNdM.shrink_to_fit();
-  this->dNdM.resize(this->N_bin_lmass,0);
+//  this->dNdM.clear();
+//  this->dNdM.shrink_to_fit();
+//  this->dNdM.resize(this->N_bin_lmass,0);
 
 
-#ifdef _USE_MASS_
-  real_prec deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
+#ifdef _USE_MASSa_
+  real_prec  deltam=(lmass_max-lmass_min)/static_cast<real_prec>(N_bin_lmass);
 #endif
 
 #ifdef _USE_MASK_
-  Healpix_Map<double>map_aux(log2(nside), RING);
+  Healpix_Map<real_prec>map_aux(log2(nside), RING);
 #endif
 
- real_prec factor=M_PI/180.0;
-  while(count<n_random){
+ real_prec  factor=M_PI/180.0;
 
-    real_prec rd  = rmax*pow(gsl_rng_uniform(ral), 1./3.);
-    if(rd >=rmin){
-      real_prec ra = (2.*M_PI)*gsl_rng_uniform(ral);       // ra
-      real_prec theta= acos(-1.0+2.0*gsl_rng_uniform(ral));     // theta
-      real_prec dec= 0.5*M_PI-theta;                          //delta
-#ifdef _USE_MASK_
-      long ipix;
-      point.phi=lg;
-      point.theta=0.5*M_PI-bg;
-      ipix=map_aux.ang2pix(point);
-      if(mask[this->i_mask_flag+ipix*NCOLS_MASK]==1)
-          {
-#else
-       if((ra<=this->phi_max*factor && ra>= this->phi_min*factor) && (dec<=this->dec_max*factor && dec>=this->dec_min*factor) )
-            {
+ const gsl_rng_type * rng_t;
+ gsl_rng * gBaseRand;
+#ifndef _USE_OMP_rangen_
+ gsl_rng_env_setup();
+ gsl_rng_default_seed=224;
+ rng_t = gsl_rng_ranlux;
+ gBaseRand = gsl_rng_alloc (rng_t);
 #endif
-        real_prec zr   =  static_cast<real_prec>(gsl_spline_eval (spline, rd, acc_rz)); //
-        real_prec proba=0;
-        if(zr>this->zn_new[zn_new.size()-1])
-            proba = this->prob[zn_new.size()-1];
-        else if(zr<=this->zn_new[0])
-           proba = this->prob[0];
-        else
-           proba =  static_cast<real_prec>(gsl_spline_eval (spline_p, zr, acc_zp)) ;
-
-        real_prec xr   = gsl_rng_uniform (ral);
-        if(proba>=xr)
-          {
-           real_prec nb = 0;
-           if(zr>this->zn_new[zn_new.size()-1])
-                nb = this->nbar_new[zn_new.size()-1];
-           else if(zr<=this->zn_new[0])
-               nb = this->nbar_new[0];
-           else
-               nb= static_cast<real_prec>(gsl_spline_eval (spline_n, zr, acc_zn));
 
 
-           int iz_low=get_bin(zr,z_min,N_bin_z_low_res,deltaz_low_res, true);
-           int iz=    get_bin(zr,z_min,N_bin_z,deltaz, true);
-           dNdz_random[iz_low]++;
+ int Nran_files=10;
+ std::cout<<"Generating random catalog with "<<n_random*Nran_files<<" objects in chuncks of"<<Nran_files<<" files"<<endl;
 
-#ifdef _USE_MASS_
-           bool accept=false;
-           while(false==accept)
-            {
-              real_prec lmass=lmass_min+(lmass_max-lmass_min)*gsl_rng_uniform(ral);
-              int indexm=get_bin(lmass,lmass_min,N_bin_lmass, deltam, true);
-              ULONG id=index_2d(indexm,iz_low,N_bin_z_low_res);
-              real_prec proba_mz=this->PXY[id];
-              real_prec xm   = gsl_rng_uniform (ral);
 
-              if(proba_mz>=xm)
+#ifdef _USE_OMP_rangen_
+ int jthread;
+
+  omp_set_num_threads(Nran_files);
+ vector<ULONG>vseeds(Nran_files,0);
+ for(int i=0;i<vseeds.size();++i)
+   vseeds[i]=3+static_cast<ULONG>(i+27*i*i)*56145;
+#endif
+
+#ifdef _USE_OMP_rangen_
+#pragma omp parallel private (jthread, gBaseRand, rng_t)
+   {
+
+
+#pragma omp for
+#endif
+     for(int ir=0;ir<Nran_files;++ir)
+     {
+         string new_file=file+"_ranfile"+to_string(ir);
+         ofstream vdina;
+         vdina.open(new_file.c_str());
+         vdina.precision(6);
+         vdina.setf(ios::showpoint);
+         vdina.setf(ios::scientific);
+         vdina.width(3);
+
+         vector<real_prec>dNdz_random(this->dNdz_new.size(),0);
+
+         jthread=omp_get_thread_num();
+         gsl_rng_default_seed=vseeds[jthread];
+         rng_t = gsl_rng_mt19937;//_default;
+         gBaseRand = gsl_rng_alloc (rng_t);
+
+         ULONG count=0;
+
+         while(count<n_random)
+        {
+
+        real_prec  rd  = rmax*pow(gsl_rng_uniform(gBaseRand), 1./3.);
+
+        if(rd >=rmin)
+         {
+          real_prec  ra = (2.*M_PI)*gsl_rng_uniform(gBaseRand);       // ra
+          real_prec  theta= acos(-1.0+2.0*gsl_rng_uniform(gBaseRand));     // theta
+          real_prec  dec= 0.5*M_PI-theta;                          //delta
+    #ifdef _USE_MASK_
+          long ipix;
+          point.phi=lg;
+          point.theta=0.5*M_PI-bg;
+          ipix=map_aux.ang2pix(point);
+          if(mask[this->i_mask_flag+ipix*NCOLS_MASK]==1)
               {
-                accept=true;
-                prop[i_zs+count*this->NCOLS]=static_cast<float>(zr);
-                prop[i_ra+count*this->NCOLS]=static_cast<float>(180*ra/M_PI);
-                prop[i_dec+count*this->NCOLS]=static_cast<float>(180*dec/M_PI);
-                prop[i_mass+count*this->NCOLS]=static_cast<float>(pow(10,lmass));
-                real_prec alpha=this->NXY[id]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb \sim nbar(z,M)
-                vdina<<static_cast<float>(zr)<<"\t"<<static_cast<float>(180*ra/M_PI)<<"\t"<<static_cast<float>(180.*dec/M_PI)<<"\t"<<static_cast<float>(pow(10,lmass))<<"\t"<<"\t"<<static_cast<float>(nb)<<"\t"<<static_cast<float>(alpha*nb)<<endl;
-                dNdM[indexm]++;
+    #else
+           if((ra<=this->phi_max*factor && ra>= this->phi_min*factor) && (dec<=this->dec_max*factor && dec>=this->dec_min*factor) )
+              {
+#endif
+               real_prec  zr   =  static_cast<real_prec>(gsl_spline_eval (spline, rd, acc_rz)); //
+               real_prec  proba= 0 ;
+               if(zr>=this->zn_new[zn_new.size()-1])
+                   proba = this->prob[zn_new.size()-1];
+               else if(zr<=this->zn_new[0])
+                  proba = this->prob[0];
+               else
+                 proba =  static_cast<real_prec>(gsl_spline_eval (spline_p, zr, acc_zp)) ;
+               real_prec  xr   = gsl_rng_uniform (gBaseRand);
+                    if(proba>=xr)
+                      {
+                       real_prec  nb = 0;
+                       if(zr>this->zn_new[zn_new.size()-1])
+                            nb = this->nbar[zn_new.size()-1];
+                       else if(zr<=this->zn_new[0])
+                           nb = this->nbar[0];
+                       else
+                           nb= static_cast<real_prec>(gsl_spline_eval (spline_n, zr, acc_zn));
 
+                       //     int iz_low=get_bin(zr,z_min,N_bin_z_low_res,deltaz_low_res, true);
+                       int iz=    get_bin(zr,zn_new[0],zn_new.size(), deltaz, true);
+                       dNdz_random[iz]+=1./deltaz;
+
+            #ifdef _USE_MASSa_
+                       bool accept=false;
+                       while(false==accept)
+                        {
+                          real_prec  lmass=lmass_min+(lmass_max-lmass_min)*gsl_rng_uniform(ral);
+                          int indexm=get_bin(lmass,lmass_min,N_bin_lmass, deltam, true);
+                          ULONG id=index_2d(indexm,iz_low,N_bin_z_low_res);
+                          real_prec  proba_mz=this->PXY[id];
+                          real_prec  xm   = gsl_rng_uniform (gBaseRand);
+
+                          if(proba_mz>=xm)
+                          {
+                            accept=true;
+                            prop[i_zs+count*this->NCOLS]=static_cast<float>(zr);
+                            prop[i_ra+count*this->NCOLS]=static_cast<float>(180*ra/M_PI);
+                            prop[i_dec+count*this->NCOLS]=static_cast<float>(180*dec/M_PI);
+                            prop[i_mass+count*this->NCOLS]=static_cast<float>(pow(10,lmass));
+                            real_prec  alpha=this->NXY[id]/(this->dNdz_low_res[iz_low]*deltaz_low_res);// this is N(z,M)/N(z) such that alpha * nb \sim nbar(z,M)
+                            vdina<<static_cast<float>(zr)<<"\t"<<static_cast<float>(180*ra/M_PI)<<"\t"<<static_cast<float>(180.*dec/M_PI)<<"\t"<<static_cast<float>(pow(10,lmass))<<"\t"<<"\t"<<static_cast<float>(nb)<<"\t"<<static_cast<float>(alpha*nb)<<endl;
+                            dNdM[indexm]++;
+
+                          }
+                        }
+    #else
+               vdina<<180*ra/M_PI<<"\t"<<180.*dec/M_PI<<"\t"<<zr<<"\t"<<nb<<endl;
+    #endif
+               count++;
+                }
               }
             }
-#else
-           vdina<<zr<<"\t"<<180*ra/M_PI<<"\t"<<180.*dec/M_PI<<"\t"<<nb<<endl;
+   //   So.message_screen_flush("Number of random objects = ",static_cast<int>(count));
+     } // closes while
+         vdina.close();
+
+//         this->File.write_to_file(this->output_dir+"dndz_random.txt_file"+to_string(ir), zn_new,dNdz_random);
+         gsl_rng_free (gBaseRand);
+
+     }// closes loop over files
+
+
+
+#ifdef _USE_OMP_rangen_
+   }
 #endif
 
-           count++;
-            }
-          }
-        }
-    So.message_screen_flush("Number of random objects = ",static_cast<int>(count));
 
-      }
-  vdina.close();
+  this->So.DONE();
 
 
-#ifdef _USE_OMP_
-#pragma omp parallel for
-#endif
-  for(auto i=0;i<dNdz_random.size();i++)
-     dNdz_random[i]/=(this->deltaz_low_res*static_cast<real_prec>(count));
-  this->File.write_to_file(this->output_dir+"dndz_random.txt", zn_low_res,dNdz_random);
-
-
+#ifdef _USE_MASSa_
   vector<real_prec>mass_aux(N_bin_lmass,0);
 #ifdef _USE_OMP_
 #pragma omp parallel for
@@ -3371,8 +3010,8 @@ void GALAXY::get_random_cat(string file, long n_random){
 
   for(auto i=0;i<dNdz_low_res.size();i++)
         mass_aux[i]=lmass_min+(i+0.5)*deltam;
-  this->File.write_to_file(this->output_dir+"dndM_random.txt",mass_aux,dNdM);
-
+  //this->File.write_to_file(this->output_dir+"dndM_random.txt",mass_aux,dNdM);
+#endif
 
 
   gsl_spline_free(spline);
@@ -3383,13 +3022,14 @@ void GALAXY::get_random_cat(string file, long n_random){
   gsl_interp_accel_free(acc_zn);
 
 
-this->So.message_screen("Random catalogue written in file ", file);
-  this->So.message_screen("with ",count," objects");
-  this->So.DONE();
-  gsl_rng_free (ral);
+  gsl_rng_free (gBaseRand);
 
   
 }
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
 // ######################################################################
 // ######################################################################
 
@@ -3436,7 +3076,7 @@ void GALAXY::bspline(int u,int n){
       zn_new=za;
       for(int i=0;i<nv.size();i++)
           this->nbar_new[i]=fabs(new_nb0[i]);
-      this->File.write_to_file(this->output_dir+"nbar_smooth.txt",za,this->nbar_new);
+      //this->File.write_to_file(this->output_dir+"nbar_smooth.txt",za,this->nbar_new);
     }
   
   if(u==2)
@@ -3444,10 +3084,263 @@ void GALAXY::bspline(int u,int n){
       dNdz_new.resize(zn.size());
       zn_new.resize(zn.size());
       for(int i=0;i<zn.size();i++)this->dNdz_new[i]=gsl_inter_new(za,new_nb0,this->zn[i]);
-      this->File.write_to_file(this->output_dir+"dNdz_smooth.txt",zn,dNdz_new);
+      //this->File.write_to_file(this->output_dir+"dNdz_smooth.txt",zn,dNdz_new);
       zn_new=za;
     }
 }
+
+
+
+// ######################################################################
+// ######################################################################
+// ######################################################################
+// ######################################################################
+
+void GALAXY::get_nbar(){
+
+
+  this->nbar.clear();
+  this->nbar.shrink_to_fit();
+
+  this->deltaz=this->zn_new[1]-this->zn_new[0];
+
+  this->nbar.resize(dNdz_new.size(),0);
+  So.message_screen("Computing Mean number density");
+  for(int i=0;i<dNdz_new.size();i++)
+    {
+//      real_prec  dr_dz=Constants::speed_light/cosmology.Hubble_function(this->zn_new[i]);
+      real_prec  distance_i=cosmology.comoving_distance(this->zn_new[i]-0.5*deltaz); // gsl_inter_new(this->zv,this->rv,zn[i]);
+      real_prec  distance_j=cosmology.comoving_distance(this->zn_new[i]+0.5*deltaz); // gsl_inter_new(this->zv,this->rv,zn[i]);
+//      real_prec Vshell=this->total_area*pow(distance,2)*(dr_dz)*deltaz;
+      real_prec Vshell=this->total_area*(pow(distance_j,3)-pow(distance_i,3));
+      this->nbar[i]=dNdz_new[i]/Vshell; // dz is not included here as dNdz does not included it neither
+  }
+ // string filezs=this->output_dir+this->name_cat+"_nbar_p_mk"+to_string(this->i_magnitude_limit)+"_zmax"+to_string(this->i_z_limit)+".txt";
+  string filezs=this->output_dir+"nbar.txt";
+
+
+ this->So.message_screen("Writting to file ", filezs);
+  ofstream sal(filezs);
+  for(int i=0;i<this->dNdz_new.size();++i)
+    sal<<this->zn_new[i]<<"\t"<<this->nbar[i]<<endl;
+ sal.close();
+ So.DONE();
+
+
+}
+
+
+// ######################################################################
+// ######################################################################
+
+void GALAXY::bspline(string input_file,int nfactor){
+  std::cout<<CYAN<<"Smoothing dNdz and nbar  ... "<<RESET<<endl;
+
+
+  const gsl_rng_type * rng_t;
+  gsl_rng * gBaseRand;
+  gsl_rng_env_setup();
+
+
+  int nlines=0;
+  ifstream infile;
+  infile.open(input_file.c_str());
+  std::cout<<CYAN<<"Reading "<<input_file<<endl;
+
+  // container for original input
+  vector<gsl_real>nv;
+  vector<gsl_real>za;
+
+  real_prec  az, nz, aux;
+  while(!infile.eof())
+    {
+      infile>>az>>nz>>aux;
+      nv.push_back(nz);
+      za.push_back(az);
+  }
+  za.pop_back();
+  nv.pop_back();
+  nlines=za.size();
+  for(int i=0;i<nv.size();++i)nv[i]/=nv.size(); // Dividir histograma entre el nḿuero de bines para que al sumar de el
+
+  ULONG Ntot=0;
+  for(int i=0;i<nv.size();++i)Ntot+=nv[i];
+
+
+  infile.close();
+  std::cout<<CYAN<<"TOtal number of galaxies in hist "<<Ntot<<endl;
+  std::cout<<CYAN<<"Done "<<nlines<<endl;
+
+  // make a copy of the original zbins
+  vector<gsl_real>za_original(za.size());
+  for(int i=0;i<za.size();i++)za_original[i]=static_cast<real_prec>(za[i]); // ensure positiviness
+  vector<gsl_real>nz_original(za.size());
+  for(int i=0;i<nv.size();i++)nz_original[i]=static_cast<real_prec>(nv[i]); // ensure positiviness
+
+
+  // containers whose size will be reduced
+  vector<gsl_real> new_zn;
+  vector<gsl_real> new_nb;
+
+  int nn0=nlines; // this is key
+  int fraction=static_cast<int>(floor(nlines/nfactor));
+
+  cout<<fraction<<endl;
+  nn0=fraction;
+
+      new_zn.resize(nn0);
+      new_nb.resize(nn0);
+
+      cout<<"Smooth"<<endl;
+      gsl_bspline(za,nv, new_zn, new_nb);// smooth the nv(zn) array to a new new_nb(new_zn)
+
+      for(int i=0;i<nv.size();i++)new_nb[i]=abs(new_nb[i]); // ensure positiviness
+
+      // now sample randomly the z interval using the real_prec of points
+      cout<<"Interpol"<<endl;
+
+      gsl_rng_default_seed=25225;
+      rng_t = gsl_rng_ranlux;
+      gBaseRand = gsl_rng_alloc (rng_t);
+
+      vector<real_prec>zran(2*nlines,0);
+
+      for(int ir=0;ir<zran.size();++ir)
+          zran[ir]=this->z_min+(this->z_max-this->z_min)*gsl_rng_uniform(gBaseRand);
+
+      vector<real_prec>zran_s(zran.size(),0);
+      sort_1d_vectors<real_prec>(zran,zran_s);
+
+      vector<real_prec>dNran(zran.size(),0);
+      for(int ir=0;ir<zran_s.size();++ir)// INterpola el prodcto de lbspline en los nuevos z randoms sorted
+        if(zran_s[ir]<new_zn[new_zn.size()-1] && zran_s[ir]>=new_zn[0])
+            dNran[ir]=gsl_inter_pointers(&new_zn[0], &new_nb[0], new_zn.size(), zran_s[ir]);
+
+    // bautiza de nuevo
+      za.clear();za.shrink_to_fit(); za.resize(zran_s.size(),0);
+      for(int i=0;i<za.size();i++)za[i]=zran_s[i]; // ensure positiviness
+      nv.clear();nv.shrink_to_fit();nv.resize(zran_s.size(),0);
+      for(int i=0;i<nv.size();i++)nv[i]=dNran[i]; // ensure positiviness
+
+      this->dNdz.clear();this->dNdz.shrink_to_fit();
+      this->dNdz.resize(dNdz_new.size(),0);
+      this->dNdz_new.clear();dNdz_new.shrink_to_fit();
+      this->zn_new.clear();this->zn_new.shrink_to_fit();
+      gsl_interp_accel *acc = gsl_interp_accel_alloc ();
+      gsl_spline *spline = gsl_spline_alloc (gsl_interp_linear,  za.size());
+      gsl_spline_init (spline, &za[0], &nv[0], za.size());
+      for(int i=0;i<nlines;i++)
+      {
+        if((za_original[i]>=za[0] && za_original[i]>=this->z_min) && (za_original[i]<=za[za.size()-1] && za_original[i]<=this->z_max))
+          {
+             this->dNdz_new.push_back(gsl_spline_eval (spline, za_original[i], acc)) ; //gsl_inter_new(za,new_nb,za_original[i]);
+             this->zn_new.push_back(za_original[i]);
+           }
+       }
+
+//      this->File.write_to_file(this->output_dir+"dndz_smooth_bspline.txt",this->zn_new,this->dNdz_new);
+
+
+      this->dNdz = this->dNdz_new;
+  /*
+//========================================
+// Now we apply a second method: Fourier transform and a low pass filter:
+
+  std::cout<<CYAN<<"Applying low pass filter "<<endl;
+
+  ULONG Nft_HR=static_cast<ULONG>(nlines);
+  ULONG Nft_LR=static_cast<ULONG>(floor(nlines/nfactor));
+
+  complex_prec *in =  (complex_prec *)fftw_malloc(Nft_HR*sizeof(complex_prec));
+  complex_prec *out = (complex_prec *)fftw_malloc(Nft_HR*sizeof(complex_prec));
+  //vector<real_prec>inv(Nft_HR,0);
+
+  for(int i = 0 ; i < Nft_HR; ++i )
+  {
+    in[i][REAL]=static_cast<real_prec>(nz_original[i]);
+  //  in[i][REAL]=static_cast<real_prec>(i*i);
+    in[i][IMAG]=0;
+  //  inv[i]=static_cast<real_prec>(nz_original[i]);
+  }
+
+
+  do_fftw_1d(Nft_HR, in ,out, FFTW_FORWARD);
+  //do_fftw_1d_r2c(Nft_HR, inv ,out);
+
+  real_prec lenght=za_original[nlines-1]-za_original[0];
+  real_prec delta_box_hr=za_original[1]-za_original[0];//   lenght/static_cast<real_prec>(Nft_HR);
+  real_prec alpha=Nft_HR/Nft_LR; //static_cast<real_prec>(Nft_HR)/static_cast<real_prec>(Nft_LR);
+  real_prec delta_shift= 0.5*(alpha-1.0)*delta_box_hr; //Yu
+
+  real_prec delta_k= 2*M_PI/lenght;
+  vector<real_prec> kmodes_lr(Nft_LR,0.0);
+
+   for(int i = 0 ; i < Nft_LR; ++i )
+    {
+       int coords= i < Nft_LR/2? i: i-Nft_LR;
+       kmodes_lr[i]=static_cast<real_prec>(coords)*delta_k;
+    }
+
+   complex_prec *out_lr = (complex_prec *)fftw_malloc(Nft_LR*sizeof(complex_prec));
+   complex_prec *in_lr =  (complex_prec *)fftw_malloc(Nft_LR*sizeof(complex_prec));
+
+  for(ULONG i=0;i<Nft_LR;++i)
+    {
+      ULONG i_hr = i < Nft_LR/2 +1 ? i : i+Nft_HR-Nft_LR;
+      real_prec new_real=out[i_hr][REAL];
+      real_prec new_imag=out[i_hr][IMAG];
+      real_prec shift=  delta_shift*kmodes_lr[i];
+      out_lr[i][REAL] = (cos(shift)*new_real - sin(shift)*new_imag); //This follows the convention delta_2-> exp(iks)*delta_2
+      out_lr[i][IMAG] = (cos(shift)*new_imag + sin(shift)*new_real);
+    }
+
+
+  int ii=0; real_prec a,b;
+   a  =  out_lr[ii][REAL];
+   b  =  out_lr[ii][IMAG];
+   out_lr[ii][REAL]=sqrt(a*a+b*b);
+   out_lr[ii][IMAG]=0.0;
+   ii=Nft_LR/2-1;
+   a  =  out_lr[ii][REAL];
+   b  =  out_lr[ii][IMAG];
+   out_lr[ii][REAL]=sqrt(a*a+b*b);
+   out_lr[ii][IMAG]=0.0;
+
+
+   do_fftw_1d(Nft_LR, out_lr ,in_lr, FFTW_BACKWARD);
+   cout<<alpha<<"  "<<delta_shift<<"   "<<za_original[0]<<endl;
+
+   vector<gsl_real>new_z(Nft_LR,0);
+   vector<gsl_real>new_dn(Nft_LR,0);
+    for(int i = 0 ; i < Nft_LR; ++i )
+      {
+        new_z[i]=za_original[0]+(i+0.5)*delta_box_hr*alpha;
+        new_dn[i]=in_lr[i][REAL]/alpha;
+      }
+    this->File.write_to_file(this->output_dir+"dndz_fourier.txt",new_z,new_dn);
+
+    spline = gsl_spline_alloc (gsl_interp_linear, Nft_LR);
+    gsl_spline_init (spline, &new_z[0], &new_dn[0], new_z.size());
+
+    this->dNdz_new.clear();
+    this->dNdz_new.shrink_to_fit();
+    this->dNdz_new.resize(Nft_HR,0);
+    for(int i=0;i<Nft_HR-1;i++)
+    {
+        if(za_original[i]>=new_z[0] && za_original[i]<=new_z[new_z.size()-1])
+            this->dNdz_new[i]=gsl_spline_eval (spline, za_original[i], acc) ; //gsl_inter_new(za,new_nb,za_original[i]);
+      }
+    gsl_spline_free (spline);
+    gsl_interp_accel_free (acc);
+
+    cout<<this->dNdz_new.size()<<"  "<<Nft_HR<<endl;
+    this->File.write_to_file(this->output_dir+"dndz_smooth_fourier"+to_string(nfactor)+".txt",za_original,this->dNdz_new);
+    this->N_bin_z=this->dNdz_new.size();
+
+*/
+
+}
+ 
 // ######################################################################
 // ######################################################################
 void GALAXY::get_jacknife_mask(){
@@ -3469,7 +3362,7 @@ void GALAXY::get_jacknife_mask(){
     gsl_rng * r;
     gsl_rng_env_setup();
     
-    Healpix_Map<double>mask_aux2(log2(this->nside), RING);
+    Healpix_Map<real_prec>mask_aux2(log2(this->nside), RING);
     int count=0;
     
     
@@ -3487,8 +3380,8 @@ void GALAXY::get_jacknife_mask(){
     
     do{
     init:
-    double lg = (2.*M_PI)*gsl_rng_uniform(r);       // define galactic longitude
-    double bg= acos(-1.0+2.0*gsl_rng_uniform(r));   // define galactic latitude (-PI, PI)
+    real_prec  lg = (2.*M_PI)*gsl_rng_uniform(r);       // define galactic longitude
+    real_prec  bg= acos(-1.0+2.0*gsl_rng_uniform(r));   // define galactic latitude (-PI, PI)
     bg =  0.5*M_PI-bg;                              // Convert to theta (0, PI)
     point_aux_high.phi=lg;
     point_aux_high.theta=0.5*M_PI-bg;
@@ -3514,10 +3407,10 @@ void GALAXY::get_jacknife_mask(){
   
   
   int Nside_new=4;
-  Healpix_Map<double>mask_aux_low(log2(Nside_new), RING);
+  Healpix_Map<real_prec>mask_aux_low(log2(Nside_new), RING);
   
   int n_pixels_new=12*Nside_new*Nside_new;
-  double Npp=pow(this->nside,2)/pow(Nside_new,2);
+  real_prec  Npp=pow(this->nside,2)/pow(Nside_new,2);
   std::cout<<RED<<"In the low resolution mask, each pixel contains "<< Npp<<" pixels in the high res mask."<<RESET<<std::endl;
   
   int count_regions=0;
@@ -3628,7 +3521,7 @@ void GALAXY::get_jacknife_mask(){
 		{
 		  long pixel=mask_aux_low.ang2pix(point);
 		  if(pixel==il){
-		    double alpha=this->prop[this->i_lgal+i*this->NCOLS]+180.0;double alpha2;
+            real_prec  alpha=this->prop[this->i_lgal+i*this->NCOLS]+180.0;real_prec  alpha2;
 
 		    if(alpha>=360)alpha2=alpha-360.0; else alpha2=alpha;
 
@@ -3686,7 +3579,7 @@ void GALAXY::get_jacknife_mask(){
 
     for(int i=0;i<count_regions;++i){
     for(int j=i+1;j<count_regions;++j){
-    if(i!=j){
+    if(i!j){
     for(int k=j+1;k<count_regions;++k){
     nmk++;
     string new_mask="../MASK/new_mask_jacknife_Nside_"+to_string(Nside_new)+"_d3_"+to_string(nmk)+".txt";
